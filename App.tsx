@@ -1229,6 +1229,93 @@ const MonetizationPage: React.FC<{
         </div>
       </div>
 
+      {/* Getting Paid Guide Section */}
+      <div className="mt-16 pt-16 border-t border-white/5">
+        <div className="flex items-center space-x-4 mb-8">
+          <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
+            <HelpCircle className="text-[#967bb6]" size={24} />
+          </div>
+          <div>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">How to Get Paid</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Complete guide to content selling & payouts</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
+              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">1</span>
+              Set Up Your Stripe Account
+            </h3>
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
+                We use Stripe to handle all financial transactions securely. To get paid, you must have a Stripe account.
+              </p>
+              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
+                <li>Go to <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" className="text-[#967bb6] hover:underline">Stripe.com</a> and sign up for a free account.</li>
+                <li>Complete your business profile and link your bank account for direct deposits.</li>
+                <li>In your Stripe Dashboard, go to <strong>Settings &gt; Account Details</strong>.</li>
+                <li>Find your <strong>Account ID</strong> (it starts with <code className="text-[#967bb6]">acct_</code>).</li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
+              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">2</span>
+              Link Account to ShareBares
+            </h3>
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
+                Once you have your Account ID, you need to tell us where to send your money.
+              </p>
+              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
+                <li>Go to your <strong>Profile Settings</strong> on ShareBares.</li>
+                <li>Find the <strong>Stripe Account ID</strong> field in the Creator section.</li>
+                <li>Paste your <code className="text-[#967bb6]">acct_...</code> ID and click <strong>Save Changes</strong>.</li>
+                <li>Your account is now linked! You will see it reflected on this page.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
+              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">3</span>
+              Start Selling Content
+            </h3>
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
+                Now you're ready to monetize your presence.
+              </p>
+              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
+                <li>Activate your store by paying the one-time $10 fee.</li>
+                <li>Use the <strong>Store Manager</strong> to upload photos or videos.</li>
+                <li>Set a price for each item. We recommend high-quality content.</li>
+                <li>Fans can now purchase your items directly from your profile.</li>
+              </ol>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
+            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
+              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">4</span>
+              Automatic Payouts
+            </h3>
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
+                Getting paid is simple and automatic.
+              </p>
+              <ul className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-disc ml-4">
+                <li>You keep <strong>80%</strong> of every sale you make.</li>
+                <li>The remaining 20% covers platform fees and processing.</li>
+                <li>Funds are transferred directly to your Stripe account.</li>
+                <li>Stripe handles the final payout to your bank account.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Sales History Section */}
       <div className="mt-16 pt-16 border-t border-white/5">
         <div className="flex items-center justify-between mb-8">

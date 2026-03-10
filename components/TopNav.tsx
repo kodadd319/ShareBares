@@ -47,8 +47,8 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isGamesSubMenuOpen, setIsGamesSubMenuOpen] = React.useState(false);
   const [isEditProfileSubMenuOpen, setIsEditProfileSubMenuOpen] = React.useState(false);
-  const [isMoreVideoSubMenuOpen, setIsMoreVideoSubMenuOpen] = React.useState(false);
-  const [isMoreVideoMobileOpen, setIsMoreVideoMobileOpen] = React.useState(false);
+  const [isMoreVideosSubMenuOpen, setIsMoreVideosSubMenuOpen] = React.useState(false);
+  const [isMoreVideosMobileOpen, setIsMoreVideosMobileOpen] = React.useState(false);
   const [showResults, setShowResults] = React.useState(false);
 
   const filteredUsers = searchQuery.length > 1 
@@ -90,7 +90,7 @@ const TopNav: React.FC<TopNavProps> = ({
       style={{ backgroundColor: customStyle?.menuBarColor || undefined }}
     >
       {/* Left: Brand, Mobile Menu & Search Bar */}
-      <div className="flex items-center space-x-2 lg:space-x-4 flex-grow max-w-2xl">
+      <div className="flex items-center space-x-2 lg:space-x-4 flex-grow max-w-xl">
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="p-2 text-slate-400 hover:text-white lg:hidden transition-colors"
@@ -248,7 +248,7 @@ const TopNav: React.FC<TopNavProps> = ({
                     <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-black ${item.id === 'messages' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={item.id !== 'messages' ? { backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` } : {}}></div>
                   )}
                 </div>
-                <span className="text-[10px] uppercase font-black tracking-widest">{item.label}</span>
+                <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">{item.label}</span>
                 {isActive && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` }}></div>
                 )}
@@ -256,26 +256,29 @@ const TopNav: React.FC<TopNavProps> = ({
             );
           })}
 
-          {/* More Video Desktop Dropdown */}
+          {/* More Videos Desktop Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setIsMoreVideoSubMenuOpen(!isMoreVideoSubMenuOpen)}
-              className="px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group text-slate-400 hover:text-slate-100 hover:bg-white/5"
+              onClick={() => setIsMoreVideosSubMenuOpen(!isMoreVideosSubMenuOpen)}
+              className="px-2 xl:px-3 py-2 rounded-xl transition-all relative flex items-center space-x-1 xl:space-x-2 group text-slate-400 hover:text-slate-100 hover:bg-white/5"
             >
               <Video size={18} />
-              <span className="text-[10px] uppercase font-black tracking-widest">More Video</span>
-              <ChevronDown size={14} className={`transition-transform duration-300 ${isMoreVideoSubMenuOpen ? 'rotate-180' : ''}`} />
+              <span className="text-[9px] xl:text-[10px] uppercase font-black tracking-widest whitespace-nowrap hidden xl:inline">More Videos</span>
+              <ChevronDown size={14} className={`transition-transform duration-300 ${isMoreVideosSubMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {isMoreVideoSubMenuOpen && (
-              <div className="absolute left-0 mt-3 w-48 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border">
+            {isMoreVideosSubMenuOpen && (
+              <div className="absolute right-0 mt-3 w-56 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border z-[100]">
                 <a 
                   href="https://spankbang.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
+                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all border-b border-white/5"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest">SpankBang</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold uppercase tracking-widest">SpankBang</span>
+                    <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
+                  </div>
                   <ExternalLink size={14} />
                 </a>
                 <a 
@@ -284,7 +287,10 @@ const TopNav: React.FC<TopNavProps> = ({
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest">XVideos</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold uppercase tracking-widest">XVideos</span>
+                    <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
+                  </div>
                   <ExternalLink size={14} />
                 </a>
               </div>
@@ -298,19 +304,22 @@ const TopNav: React.FC<TopNavProps> = ({
               className="px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group text-slate-400 hover:text-slate-100 hover:bg-white/5"
             >
               <Dices size={18} />
-              <span className="text-[10px] uppercase font-black tracking-widest">Game$</span>
+              <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">Game$</span>
               <ChevronDown size={14} className={`transition-transform duration-300 ${isGamesSubMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isGamesSubMenuOpen && (
-              <div className="absolute left-0 mt-3 w-48 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border">
+              <div className="absolute right-0 mt-3 w-56 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border z-[100]">
                 <a 
                   href="https://www.crowncoins.com" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all"
+                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all border-b border-white/5"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest">Crown Coins</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold uppercase tracking-widest">Crown Coins</span>
+                    <span className="text-[8px] text-emerald-500 font-black uppercase tracking-widest">Affiliate Link</span>
+                  </div>
                   <ExternalLink size={14} />
                 </a>
                 <a 
@@ -319,7 +328,10 @@ const TopNav: React.FC<TopNavProps> = ({
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all"
                 >
-                  <span className="text-xs font-bold uppercase tracking-widest">Pulse</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold uppercase tracking-widest">Pulse</span>
+                    <span className="text-[8px] text-emerald-500 font-black uppercase tracking-widest">Affiliate Link</span>
+                  </div>
                   <ExternalLink size={14} />
                 </a>
               </div>
@@ -547,21 +559,21 @@ const TopNav: React.FC<TopNavProps> = ({
 
                 <div className="pt-2">
                   <button
-                    onClick={() => setIsMoreVideoMobileOpen(!isMoreVideoMobileOpen)}
+                    onClick={() => setIsMoreVideosMobileOpen(!isMoreVideosMobileOpen)}
                     className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all relative ${
-                      isMoreVideoMobileOpen 
+                      isMoreVideosMobileOpen 
                       ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
                       : 'text-slate-400 hover:bg-white/5'
                     }`}
                   >
                     <div className="flex items-center space-x-4">
                       <Video size={24} />
-                      <span className="text-sm font-black uppercase tracking-widest">More Video</span>
+                      <span className="text-sm font-black uppercase tracking-widest">More Videos</span>
                     </div>
-                    <ChevronDown size={18} className={`transition-transform duration-300 ${isMoreVideoMobileOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={18} className={`transition-transform duration-300 ${isMoreVideosMobileOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  {isMoreVideoMobileOpen && (
+                  {isMoreVideosMobileOpen && (
                     <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
                       <a 
                         href="https://spankbang.com" 
@@ -569,7 +581,10 @@ const TopNav: React.FC<TopNavProps> = ({
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
                       >
-                        <span className="text-xs font-black uppercase tracking-widest">SpankBang</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase tracking-widest">SpankBang</span>
+                          <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
+                        </div>
                         <ExternalLink size={14} />
                       </a>
                       <a 
@@ -578,7 +593,10 @@ const TopNav: React.FC<TopNavProps> = ({
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
                       >
-                        <span className="text-xs font-black uppercase tracking-widest">XVideos</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase tracking-widest">XVideos</span>
+                          <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
+                        </div>
                         <ExternalLink size={14} />
                       </a>
                     </div>
@@ -611,7 +629,10 @@ const TopNav: React.FC<TopNavProps> = ({
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
                       >
-                        <span className="text-xs font-black uppercase tracking-widest">Crown Coins</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase tracking-widest">Crown Coins</span>
+                          <span className="text-[8px] text-emerald-500 font-black uppercase tracking-widest">Affiliate Link</span>
+                        </div>
                         <ExternalLink size={14} />
                       </a>
                       <a 
@@ -620,7 +641,10 @@ const TopNav: React.FC<TopNavProps> = ({
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
                       >
-                        <span className="text-xs font-black uppercase tracking-widest">Pulse</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black uppercase tracking-widest">Pulse</span>
+                          <span className="text-[8px] text-emerald-500 font-black uppercase tracking-widest">Affiliate Link</span>
+                        </div>
                         <ExternalLink size={14} />
                       </a>
                     </div>

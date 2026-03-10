@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag } from 'lucide-react';
+import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag, CreditCard } from 'lucide-react';
 import { User } from '../types';
 
 interface EditProfilePageProps {
@@ -24,6 +24,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
   const [isCreator, setIsCreator] = useState(user.isCreator);
   const [avatar, setAvatar] = useState(user.avatar);
   const [coverImage, setCoverImage] = useState(user.coverImage);
+  const [stripeConnectId, setStripeConnectId] = useState(user.stripeConnectId || '');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +44,8 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
       },
       isCreator,
       avatar,
-      coverImage
+      coverImage,
+      stripeConnectId
     });
   };
 
@@ -242,11 +244,11 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
             </div>
           </div>
 
-          <div className="p-6 bg-[#967bb6]/5 rounded-2xl border border-[#967bb6]/10 space-y-4">
+          <div className="p-6 bg-[#967bb6]/5 rounded-2xl border border-[#967bb6]/10 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-100">Creator Mode</h3>
-                <p className="text-xs text-slate-500">Enable creator features on your profile.</p>
+                <h3 className="font-bold text-slate-100 uppercase tracking-tight">Creator Mode</h3>
+                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Enable creator features on your profile.</p>
               </div>
               <button 
                 type="button"
@@ -255,6 +257,21 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
               >
                 <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isCreator ? 'left-8' : 'left-1'}`} />
               </button>
+            </div>
+
+            <div className="space-y-2 pt-4 border-t border-white/5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center">
+                <CreditCard size={12} className="mr-2" />
+                Stripe Account ID (acct_...)
+              </label>
+              <input 
+                type="text" 
+                value={stripeConnectId}
+                onChange={(e) => setStripeConnectId(e.target.value)}
+                placeholder="acct_1234567890"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
+              />
+              <p className="text-[9px] text-slate-600 uppercase font-bold">Find this in your Stripe Dashboard under Settings &gt; Account Details</p>
             </div>
           </div>
 
