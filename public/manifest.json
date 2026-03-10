@@ -1,0 +1,44 @@
+{
+  "name": "ShareBares",
+  "short_name": "ShareBares",
+  "description": "Exclusive content platform for creators and fans. Meet barebear and join the community.",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#967bb6",
+  "categories": ["social", "entertainment"],
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/barebear/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://picsum.photos/seed/barebear/512/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://picsum.photos/seed/barebear/192/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "url": "/?tab=feed",
+      "icons": [{ "src": "https://picsum.photos/seed/barebear/96/96", "sizes": "96x96" }]
+    },
+    {
+      "name": "Messages",
+      "url": "/?tab=messages",
+      "icons": [{ "src": "https://picsum.photos/seed/barebear/96/96", "sizes": "96x96" }]
+    }
+  ]
+}
