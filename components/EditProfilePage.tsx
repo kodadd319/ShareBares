@@ -275,13 +275,22 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
             </div>
           </div>
 
-          <button 
-            type="submit"
-            className="w-full bg-black text-[#967bb6] py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border"
-          >
-            Save Changes
-            <Check className="group-hover:translate-x-1 transition-transform" size={24} />
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <button 
+              type="submit"
+              className="flex-grow bg-black text-[#967bb6] py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border"
+            >
+              Save Changes
+              <Check className="group-hover:translate-x-1 transition-transform" size={24} />
+            </button>
+            <button 
+              type="button"
+              onClick={onBack}
+              className="sm:w-1/3 bg-white/5 hover:bg-white/10 text-slate-500 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border border-white/10"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       </div>
     </div>

@@ -1033,7 +1033,8 @@ const MonetizationPage: React.FC<{
   me: User;
   onRequestPayment: (type: 'store' | 'stable', isBundle?: boolean) => void;
   onGoToStoreManager: () => void;
-}> = ({ me, onRequestPayment, onGoToStoreManager }) => {
+  onTestPayment: () => void;
+}> = ({ me, onRequestPayment, onGoToStoreManager, onTestPayment }) => {
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="text-center mb-12">
@@ -1054,6 +1055,14 @@ const MonetizationPage: React.FC<{
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            {me.isAdmin && (
+              <button 
+                onClick={onTestPayment}
+                className="px-8 py-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/20 text-emerald-500 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/30 transition-all"
+              >
+                Test Payment Flow
+              </button>
+            )}
             <button 
               disabled={true}
               className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-slate-500 font-black text-[10px] uppercase tracking-widest cursor-not-allowed opacity-50"
@@ -1139,7 +1148,7 @@ const MonetizationPage: React.FC<{
             </li>
             <li className="flex items-center space-x-2">
               <Check size={12} className="text-emerald-500" />
-              <span>In person services</span>
+              <span>Escort Services</span>
             </li>
           </ul>
           <button 
@@ -1159,7 +1168,7 @@ const MonetizationPage: React.FC<{
               <Dices className="text-emerald-500" size={24} />
             </div>
             <h3 className="text-xl font-black text-white uppercase tracking-tight">Store Bundle</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">In person services listing in The Stable and in your store</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Escort service listing in The Stable and in your store</p>
           </div>
           <div className="mb-8">
             <span className="text-4xl font-black text-white">$15.00</span>
@@ -1445,16 +1454,6 @@ const MonetizationPage: React.FC<{
                 </ul>
               </div>
             </div>
-
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">06</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">The Stable Advantage</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Joining "The Stable" gives you a verified badge and puts you in our professional directory for in-person services, significantly increasing your visibility.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1594,9 +1593,35 @@ const App: React.FC = () => {
   const [friendsListUserId, setFriendsListUserId] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
+
+  const addNotification = useCallback((type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
+    const newNotification: AppNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      ...data
+    };
+
+    setAppNotifications(prev => [newNotification, ...prev]);
+
+    // Browser Push Notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      console.log('Notification:', title, message);
+    }
+  }, []);
   
   const meRaw = users.find(u => u.id === currentUserId)!;
-  const me = { ...meRaw, isAdmin: meRaw.isAdmin || meRaw.email === 'jtothek319@gmail.com' };
+  const isAdminUser = meRaw.isAdmin || meRaw.email === 'jtothek319@gmail.com';
+  const me = { 
+    ...meRaw, 
+    isAdmin: isAdminUser,
+    hasPaidStoreFee: meRaw.hasPaidStoreFee || isAdminUser,
+    hasPaidStableFee: meRaw.hasPaidStableFee || isAdminUser,
+    hasPaidStableBundle: meRaw.hasPaidStableBundle || isAdminUser
+  };
 
   const currentProfileCustomization = (activeTab === 'profile' || activeTab === 'custom-profile') 
     ? me.profileCustomization 
@@ -1632,6 +1657,28 @@ const App: React.FC = () => {
 
   const selectedUserIdRef = useRef<string | null>(null);
 
+  const leaveCall = useCallback(() => {
+    setCallEnded(true);
+    if ((window as any)._ringtone) {
+      (window as any)._ringtone.pause();
+      (window as any)._ringtone = null;
+    }
+    if (connectionRef.current) {
+      connectionRef.current.destroy();
+    }
+    socket?.emit('end_call', { to: call?.from || selectedUserId });
+    // Reset state
+    setCall(null);
+    setCallAccepted(false);
+    setCallEnded(false);
+    setIsCalling(false);
+    setStream(null);
+    setRemoteStream(null);
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+  }, [socket, call, selectedUserId, stream]);
+
   const callUser = useCallback((id: string, type: 'voice' | 'video') => {
     setCallType(type);
     setIsCalling(true);
@@ -1654,9 +1701,18 @@ const App: React.FC = () => {
         setRemoteStream(remoteStream);
       });
 
+      peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        leaveCall();
+      });
+
       connectionRef.current = peer;
+    }).catch(err => {
+      console.error('Failed to get local stream', err);
+      setIsCalling(false);
+      addNotification(NotificationType.SYSTEM, 'Call Failed', 'Could not access camera or microphone.');
     });
-  }, [socket, currentUserId, me]);
+  }, [socket, currentUserId, me, leaveCall]);
 
   const answerCall = useCallback(() => {
     setCallAccepted(true);
@@ -1674,28 +1730,20 @@ const App: React.FC = () => {
         setRemoteStream(remoteStream);
       });
 
+      peer.on('error', (err) => {
+        console.error('Peer error:', err);
+        leaveCall();
+      });
+
       peer.signal(call?.signal);
       connectionRef.current = peer;
+    }).catch(err => {
+      console.error('Failed to get local stream', err);
+      setCall(null);
+      setCallAccepted(false);
+      addNotification(NotificationType.SYSTEM, 'Call Failed', 'Could not access camera or microphone.');
     });
-  }, [socket, call]);
-
-  const leaveCall = useCallback(() => {
-    setCallEnded(true);
-    if (connectionRef.current) {
-      connectionRef.current.destroy();
-    }
-    socket?.emit('end_call', { to: call?.from || selectedUserId });
-    // Reset state
-    setCall(null);
-    setCallAccepted(false);
-    setCallEnded(false);
-    setIsCalling(false);
-    setStream(null);
-    setRemoteStream(null);
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-  }, [socket, call, selectedUserId, stream]);
+  }, [socket, call, leaveCall]);
 
   useEffect(() => {
     selectedUserIdRef.current = selectedUserId;
@@ -1743,25 +1791,6 @@ const App: React.FC = () => {
 
     return () => clearInterval(jadeActivity);
   }, [isLoggedIn, posts]);
-
-  const addNotification = (type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
-    const newNotification: AppNotification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      title,
-      message,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-      ...data
-    };
-
-    setAppNotifications(prev => [newNotification, ...prev]);
-
-    // Browser Push Notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      console.log('Notification:', title, message);
-    }
-  };
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1858,10 +1887,19 @@ const App: React.FC = () => {
     // Call Signaling
     newSocket.on('incoming_call', ({ from, name, signal, type }) => {
       setCall({ isReceivingCall: true, from, name, signal, type });
+      // Play ringtone
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+      audio.loop = true;
+      audio.play().catch(e => console.warn('Ringtone failed to play:', e));
+      (window as any)._ringtone = audio;
     });
 
     newSocket.on('call_accepted', (signal) => {
       setCallAccepted(true);
+      if ((window as any)._ringtone) {
+        (window as any)._ringtone.pause();
+        (window as any)._ringtone = null;
+      }
       if (connectionRef.current) {
         connectionRef.current.signal(signal);
       }
@@ -1869,15 +1907,27 @@ const App: React.FC = () => {
 
     newSocket.on('call_ended', () => {
       setCallEnded(true);
+      if ((window as any)._ringtone) {
+        (window as any)._ringtone.pause();
+        (window as any)._ringtone = null;
+      }
       if (connectionRef.current) {
         connectionRef.current.destroy();
       }
+      
+      // Stop local tracks
+      setStream(prevStream => {
+        if (prevStream) {
+          prevStream.getTracks().forEach(track => track.stop());
+        }
+        return null;
+      });
+
       // Reset state
       setCall(null);
       setCallAccepted(false);
       setCallEnded(false);
       setIsCalling(false);
-      setStream(null);
       setRemoteStream(null);
     });
 
@@ -2001,11 +2051,22 @@ const App: React.FC = () => {
   const handleProfileUpdate = (profileData: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...profileData } : u));
     if (!hasCreatedProfile) setHasCreatedProfile(true);
+    
+    // Emit update to server
+    if (socket) {
+      socket.emit('user:update', { userId: currentUserId, updates: profileData });
+    }
+    
     setActiveTab('feed');
   };
 
   const handleUpdateUser = (profileData: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...profileData } : u));
+    
+    // Emit update to server
+    if (socket) {
+      socket.emit('user:update', { userId: currentUserId, updates: profileData });
+    }
   };
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2449,8 +2510,11 @@ const App: React.FC = () => {
   };
 
   const handlePaymentSuccess = () => {
+    let updates: Partial<User> = {};
+    
     if (paymentType === 'store') {
-      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, hasPaidStoreFee: true } : u));
+      updates = { hasPaidStoreFee: true };
+      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...updates } : u));
       setIsPaying(false);
       setActiveTab('store-management');
       
@@ -2461,7 +2525,11 @@ const App: React.FC = () => {
       );
     } else if (paymentType === 'stable') {
       const isBundle = stableBundleSelected;
-      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, hasPaidStableFee: true, hasPaidStableBundle: isBundle || u.hasPaidStableBundle } : u));
+      updates = { 
+        hasPaidStableFee: true, 
+        hasPaidStableBundle: isBundle || (users.find(u => u.id === currentUserId)?.hasPaidStableBundle || false)
+      };
+      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...updates } : u));
       
       if (pendingStableListing) {
         const newListing: StableListing = {
@@ -2522,6 +2590,11 @@ const App: React.FC = () => {
       }
       setPendingStoreItem(null);
       setIsPaying(false);
+    }
+
+    // Emit update to server
+    if (socket && Object.keys(updates).length > 0) {
+      socket.emit('user:update', { userId: currentUserId, updates });
     }
   };
 
@@ -2658,7 +2731,7 @@ const App: React.FC = () => {
                 <div className="flex items-center space-x-3 mb-2">
                   <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase chrome-text drop-shadow-2xl" style={{ color: fontColor }}>{user.displayName}</h1>
                   {stableListings.some(l => l.userId === user.id) && (
-                    <div className="flex items-center space-x-1 border border-white/20 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)]" title="Stable Member - In person services" style={{ backgroundColor: '#000000', color: '#967bb6' }}>
+                    <div className="flex items-center space-x-1 border border-white/20 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)]" title="Stable Member - Escort Services" style={{ backgroundColor: '#000000', color: '#967bb6' }}>
                       <Briefcase size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Stable Member</span>
                     </div>
@@ -3032,6 +3105,7 @@ const App: React.FC = () => {
                       author={user} 
                       isMe={isOwnProfile} 
                       isAdmin={me.isAdmin} 
+                      isFan={user.fanIds?.includes(currentUserId)}
                       onLike={() => handleLikePost(post)}
                       onComment={() => handleCommentPost(post)}
                       onProfileClick={navigateToProfile}
@@ -3231,12 +3305,16 @@ const App: React.FC = () => {
         )}
         {activeTab === 'monetization' && (
           <MonetizationPage 
-            me={me}
-            onGoToStoreManager={() => setActiveTab('store-management')}
+            me={me} 
             onRequestPayment={(type, isBundle) => {
               setPaymentType(type);
               if (type === 'stable') setStableBundleSelected(!!isBundle);
               setIsPaying(true);
+            }}
+            onGoToStoreManager={() => setActiveTab('store-management')}
+            onTestPayment={() => {
+              setPaymentType('store');
+              handlePaymentSuccess();
             }}
           />
         )}

@@ -90,7 +90,7 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter chrome-text uppercase mb-2">The Stable</h1>
-          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Premium In person services & Companionship</p>
+          <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Find & View Escort Service Listings (In-Person Services)</p>
           
           {isRadiusFilterActive && userLocation && (
             <div className="flex items-center space-x-2 mt-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg w-fit">

@@ -1,18 +1,30 @@
 
 import React from 'react';
 import { ExternalLink, Info, Image as ImageIcon } from 'lucide-react';
+import AdSense from './AdSense';
 
 interface AdPlaceholderProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  adSlot?: string;
 }
 
-const AdPlaceholder: React.FC<AdPlaceholderProps> = ({ size = 'md', className = '' }) => {
+const AdPlaceholder: React.FC<AdPlaceholderProps> = ({ size = 'md', className = '', adSlot }) => {
   const heights = {
     sm: 'h-24',
     md: 'h-48',
     lg: 'h-80'
   };
+
+  const adClient = process.env.VITE_ADSENSE_CLIENT_ID;
+
+  if (adClient) {
+    return (
+      <div className={`w-full ${heights[size]} ${className}`}>
+        <AdSense adClient={adClient} adSlot={adSlot} format={size === 'sm' ? 'rectangle' : 'auto'} />
+      </div>
+    );
+  }
 
   return (
     <div className={`w-full ${heights[size]} bg-white/[0.02] border border-white/5 rounded-3xl overflow-hidden relative group flex flex-col items-center justify-center p-6 text-center ${className}`}>

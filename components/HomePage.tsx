@@ -112,6 +112,7 @@ const HomePage: React.FC<HomePageProps> = ({
                       author={author} 
                       isMe={false} 
                       isAdmin={me.isAdmin}
+                      isFan={author.fanIds?.includes(me.id)}
                       onLike={() => onLikePost?.(post)}
                       onComment={() => onCommentPost?.(post)}
                       onProfileClick={onProfileClick}
@@ -120,6 +121,8 @@ const HomePage: React.FC<HomePageProps> = ({
                   </React.Fragment>
                 );
               })}
+              {/* Another Ad Placement at the bottom of the feed */}
+              <AdPlaceholder size="md" className="mt-8" />
             </div>
           ) : (
             <div className="glass-panel rounded-3xl p-12 text-center border-dashed border-white/10">

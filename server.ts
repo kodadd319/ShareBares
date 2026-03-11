@@ -42,6 +42,12 @@ async function startServer() {
       socket.emit("message_history", userMessages);
     });
 
+    socket.on("user:update", (data: { userId: string, updates: any }) => {
+      console.log(`User update for ${data.userId}:`, data.updates);
+      // Broadcast the update to all other clients
+      socket.broadcast.emit("user:updated", data);
+    });
+
     socket.on("send_message", (data: { senderId: string, receiverId: string, text: string }) => {
       const newMessage = {
         id: `msg-${Date.now()}`,

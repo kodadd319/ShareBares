@@ -6,6 +6,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { User, MediaItem } from '../types';
+import AdPlaceholder from './AdPlaceholder';
 
 interface MyProfilePageProps {
   me: User;
@@ -360,6 +361,11 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
             </div>
           </div>
         )}
+      </div>
+      
+      {/* Ad Placement at the bottom of Profile Management */}
+      <div className="mt-12">
+        <AdPlaceholder size="md" />
       </div>
     </div>
   );

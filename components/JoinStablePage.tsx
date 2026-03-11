@@ -70,7 +70,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Must Monetize First</h2>
           <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8 max-w-md mx-auto leading-relaxed">
-            Access to "Join The Stable" is blocked. You must pay the "Basic Listing" or "Store Bundle" fee via the Stripe payment link on the monetization page to unlock your professional listing.
+            Access to "Join The Stable" is blocked. You must pay the "Basic Listing" or "Store Bundle" fee via the Stripe payment link on the monetization page to create your escort service listing.
           </p>
           <button 
             onClick={onGoToMonetization}
@@ -96,7 +96,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
       <div className="glass-panel rounded-[3rem] p-8 md:p-12 border-[#c0c0c0]/10 shadow-2xl chrome-border">
         <div className="text-center mb-10">
           <h1 className="text-4xl font-black text-white tracking-tighter uppercase chrome-text mb-2">Join The Stable</h1>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Create your professional service listing</p>
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Create your escort service (in-person) listing</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -140,11 +140,11 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
             </div>
 
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">In person services Offered</label>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Escort Services Offered</label>
               <textarea 
                 value={services}
                 onChange={(e) => setServices(e.target.value)}
-                placeholder="List your services (e.g. Modeling, Companionship, Massage...)"
+                placeholder="List your in-person services (e.g. Modeling, Companionship, Massage...)"
                 rows={4}
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 placeholder:text-slate-700 resize-none"
                 required

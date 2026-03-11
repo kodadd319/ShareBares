@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 
 const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ className, size = 'md' }) => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v2'));
+  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v4'));
   const [loading, setLoading] = useState(!logoUrl);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           if (part.inlineData) {
             const url = `data:image/png;base64,${part.inlineData.data}`;
             setLogoUrl(url);
-            localStorage.setItem('share_bares_logo_v2', url);
+            localStorage.setItem('share_bares_logo_v4', url);
             break;
           }
         }

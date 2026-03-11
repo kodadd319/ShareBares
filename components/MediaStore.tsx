@@ -134,7 +134,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                 className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
                 style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'services' ? 1 : 0.5 }}
               >
-                In person services
+                Escort Services
               </button>
             )}
           </div>
@@ -227,14 +227,14 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
           </div>
         )}
 
-        {/* In person services Section - Smaller and at the bottom */}
+        {/* Escort Services Section - Smaller and at the bottom */}
         {(activeSection === 'all' || activeSection === 'services') && stableListings.length > 0 && (
           <div className="mt-24 pt-12 border-t border-white/5">
             <div className="flex items-center space-x-4 mb-8">
               <div className="p-2 rounded-xl" style={{ backgroundColor: `${customization.accentColor}20`, color: customization.accentColor }}>
                 <Briefcase size={20} />
               </div>
-              <h3 className="text-xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>In person services</h3>
+              <h3 className="text-xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Escort Services</h3>
               <div className="flex-grow h-px bg-white/5"></div>
             </div>
             

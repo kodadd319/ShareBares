@@ -125,7 +125,8 @@ export enum NotificationType {
   PURCHASE = 'PURCHASE',
   LIKE = 'LIKE',
   COMMENT = 'COMMENT',
-  FOLLOW = 'FOLLOW'
+  FOLLOW = 'FOLLOW',
+  SYSTEM = 'SYSTEM'
 }
 
 export interface AppNotification {

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Post, PostVisibility, User } from '../types';
-import { Heart, MessageCircle, Eye, Star, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Star, Trash2, Lock } from 'lucide-react';
 
 interface PostCardProps {
   post: Post;
@@ -15,7 +15,7 @@ interface PostCardProps {
   isFan?: boolean;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, onLike, onComment, onDelete, onProfileClick }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan, onLike, onComment, onDelete, onProfileClick }) => {
   const [liked, setLiked] = useState(false);
   
   const handleLike = () => {
@@ -30,7 +30,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, onLike
     }
   };
 
-  const isLocked = false;
+  const isLocked = post.visibility === PostVisibility.PRIVATE && !isMe && !isAdmin && !isFan;
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden mb-6 shadow-xl transition-all hover:border-[#967bb6]/40 chrome-border">

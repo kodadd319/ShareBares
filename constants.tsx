@@ -1,7 +1,7 @@
 
 import { User, Post, PostVisibility, StoreItem, StableListing } from './types';
 
-export const CURRENT_USER_ID = 'me-123';
+export const CURRENT_USER_ID = 'admin-1';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
   {
@@ -133,38 +133,6 @@ export const MOCK_USERS: User[] = [
     isAdmin: true,
     subscribersCount: 0,
     followingCount: 0,
-    friendIds: [],
-    pendingFriendRequestsSent: [],
-    pendingFriendRequestsReceived: [],
-    fwbIds: [],
-    pendingFwbRequestsSent: [],
-    pendingFwbRequestsReceived: [],
-    fwbRequestsResetDate: new Date().toISOString(),
-    fwbRequestsSentCount: 0,
-    fanIds: [],
-    profileCustomization: {},
-    photos: [],
-    storeUploads: [],
-    blockedUserIds: [],
-    settings: {
-      pushNotifications: true,
-      emailNotifications: true,
-      profileVisibility: 'public',
-      messagingPrivacy: 'everyone'
-    }
-  },
-  {
-    id: 'me-123',
-    username: 'alex_admin',
-    displayName: 'Alex Admin',
-    email: 'jtothek319@gmail.com',
-    avatar: 'https://picsum.photos/seed/alex/200',
-    coverImage: 'https://picsum.photos/seed/cover1/800/300',
-    bio: 'Platform Administrator. Full access enabled.',
-    isCreator: true,
-    isAdmin: true,
-    subscribersCount: 1420,
-    followingCount: 88,
     friendIds: [],
     pendingFriendRequestsSent: [],
     pendingFriendRequestsReceived: [],
