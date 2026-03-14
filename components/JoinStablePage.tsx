@@ -240,7 +240,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                     <span className="text-[#967bb6] font-black">$10.00</span>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "Visit The Stable" feed only</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "The Stable" feed only</p>
               </div>
 
               <div 
@@ -261,7 +261,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                     <span className="text-[#967bb6] font-black">$15.00</span>
                   </div>
                 </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "Visit The Stable" AND your personal store</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "The Stable" AND your personal store</p>
               </div>
             </div>
           </div>
