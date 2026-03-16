@@ -56,7 +56,11 @@ const BareBear: React.FC<BareBearProps> = ({
           if (part.inlineData) {
             const url = `data:image/png;base64,${part.inlineData.data}`;
             setImageUrl(url);
-            localStorage.setItem(`barebear_${action}`, url);
+            try {
+              localStorage.setItem(`barebear_${action}`, url);
+            } catch (e) {
+              console.warn('Failed to cache Bare Bear image in localStorage:', e);
+            }
             break;
           }
         }

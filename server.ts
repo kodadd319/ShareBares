@@ -21,7 +21,7 @@ async function startServer() {
     }
   });
 
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // In-memory store for messages (in a real app, use a database)
   const messages: any[] = [];
@@ -145,7 +145,7 @@ async function startServer() {
   } else {
     // Serve static files in production
     app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (req, res) => {
+    app.get("*all", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }

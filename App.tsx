@@ -192,11 +192,11 @@ const CallOverlay: React.FC<{
 };
 
 const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) => void; onCancel: () => void }> = ({ user, onSave, onCancel }) => {
-  const [displayName, setDisplayName] = useState(user.displayName);
-  const [username, setUsername] = useState(user.username);
-  const [bio, setBio] = useState(user.bio);
-  const [avatar, setAvatar] = useState(user.avatar);
-  const [cover, setCover] = useState(user.coverImage);
+  const [displayName, setDisplayName] = useState(user.displayName || '');
+  const [username, setUsername] = useState(user.username || '');
+  const [bio, setBio] = useState(user.bio || '');
+  const [avatar, setAvatar] = useState(user.avatar || '');
+  const [cover, setCover] = useState(user.coverImage || '');
   const [isCreator, setIsCreator] = useState(user.isCreator);
   const [location, setLocation] = useState(user.location || '');
   const [occupation, setOccupation] = useState(user.occupation || '');

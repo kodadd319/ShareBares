@@ -107,13 +107,13 @@ const StoreCustomizationPage: React.FC<StoreCustomizationPageProps> = ({ user, o
                 <div className="flex items-center space-x-2">
                   <input 
                     type="color" 
-                    value={customization.backgroundColor}
+                    value={customization.backgroundColor || '#000000'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, backgroundColor: e.target.value }))}
                     className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
                   />
                   <input 
                     type="text"
-                    value={customization.backgroundColor}
+                    value={customization.backgroundColor || '#000000'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, backgroundColor: e.target.value }))}
                     className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono w-full"
                   />
@@ -124,13 +124,13 @@ const StoreCustomizationPage: React.FC<StoreCustomizationPageProps> = ({ user, o
                 <div className="flex items-center space-x-2">
                   <input 
                     type="color" 
-                    value={customization.accentColor}
+                    value={customization.accentColor || '#967bb6'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, accentColor: e.target.value }))}
                     className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
                   />
                   <input 
                     type="text"
-                    value={customization.accentColor}
+                    value={customization.accentColor || '#967bb6'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, accentColor: e.target.value }))}
                     className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono w-full"
                   />
@@ -167,13 +167,13 @@ const StoreCustomizationPage: React.FC<StoreCustomizationPageProps> = ({ user, o
                 <div className="flex items-center space-x-2">
                   <input 
                     type="color" 
-                    value={customization.fontColor}
+                    value={customization.fontColor || '#ffffff'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, fontColor: e.target.value }))}
                     className="w-10 h-10 rounded-lg bg-transparent border-none cursor-pointer"
                   />
                   <input 
                     type="text"
-                    value={customization.fontColor}
+                    value={customization.fontColor || '#ffffff'}
                     onChange={(e) => setCustomization(prev => ({ ...prev, fontColor: e.target.value }))}
                     className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono w-full"
                   />

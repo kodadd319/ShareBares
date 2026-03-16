@@ -119,7 +119,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Background Color</label>
                   <input 
                     type="color" 
-                    value={config.backgroundColor}
+                    value={config.backgroundColor || '#050505'}
                     onChange={(e) => setConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl cursor-pointer"
                   />
@@ -128,7 +128,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Menu Bar Color</label>
                   <input 
                     type="color" 
-                    value={config.menuBarColor}
+                    value={config.menuBarColor || '#050505'}
                     onChange={(e) => setConfig(prev => ({ ...prev, menuBarColor: e.target.value }))}
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl cursor-pointer"
                   />
@@ -137,7 +137,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Button Color</label>
                   <input 
                     type="color" 
-                    value={config.buttonColor}
+                    value={config.buttonColor || '#967bb6'}
                     onChange={(e) => setConfig(prev => ({ ...prev, buttonColor: e.target.value }))}
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl cursor-pointer"
                   />
@@ -146,7 +146,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Accent Color</label>
                   <input 
                     type="color" 
-                    value={config.accentColor}
+                    value={config.accentColor || '#967bb6'}
                     onChange={(e) => setConfig(prev => ({ ...prev, accentColor: e.target.value }))}
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-xl cursor-pointer"
                   />
@@ -186,7 +186,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Font Color</label>
                   <input 
                     type="color" 
-                    value={config.fontColor}
+                    value={config.fontColor || '#ffffff'}
                     onChange={(e) => setConfig(prev => ({ ...prev, fontColor: e.target.value }))}
                     className="w-full h-10 bg-white/5 border border-white/10 rounded-xl cursor-pointer"
                   />

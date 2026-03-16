@@ -10,9 +10,9 @@ interface EditProfilePageProps {
 }
 
 const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack }) => {
-  const [displayName, setDisplayName] = useState(user.displayName);
-  const [username, setUsername] = useState(user.username);
-  const [bio, setBio] = useState(user.bio);
+  const [displayName, setDisplayName] = useState(user.displayName || '');
+  const [username, setUsername] = useState(user.username || '');
+  const [bio, setBio] = useState(user.bio || '');
   const [tagline, setTagline] = useState(user.tagline || '');
   const [occupation, setOccupation] = useState(user.occupation || '');
   const [location, setLocation] = useState(user.location || '');
@@ -77,7 +77,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 <img src={avatar} className="w-16 h-16 rounded-2xl object-cover border border-white/10" alt="Avatar Preview" />
                 <input 
                   type="url" 
-                  value={avatar}
+                  value={avatar || ''}
                   onChange={(e) => setAvatar(e.target.value)}
                   placeholder="https://..." 
                   className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
@@ -93,7 +93,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 <img src={coverImage} className="w-16 h-16 rounded-2xl object-cover border border-white/10" alt="Cover Preview" />
                 <input 
                   type="url" 
-                  value={coverImage}
+                  value={coverImage || ''}
                   onChange={(e) => setCoverImage(e.target.value)}
                   placeholder="https://..." 
                   className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
@@ -108,7 +108,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
               <input 
                 type="text" 
                 required
-                value={displayName}
+                value={displayName || ''}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Display Name" 
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100"
@@ -121,7 +121,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 <input 
                   type="text" 
                   required
-                  value={username}
+                  value={username || ''}
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
                   placeholder="username" 
                   className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100"
@@ -133,7 +133,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
           <div className="space-y-2">
             <label className="text-xs font-black uppercase tracking-widest text-slate-500">Bio</label>
             <textarea 
-              value={bio}
+              value={bio || ''}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell others about yourself..." 
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 min-h-[100px] focus:ring-1 focus:ring-[#967bb6] outline-none resize-none text-slate-100"
