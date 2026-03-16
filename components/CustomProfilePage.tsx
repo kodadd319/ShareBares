@@ -18,6 +18,10 @@ const WALLPAPERS = [
   { id: 'circuit', name: 'Cyber Circuit', url: 'https://www.transparenttextures.com/patterns/circuit-board.png' },
   { id: 'honeycomb', name: 'Neon Hex', url: 'https://www.transparenttextures.com/patterns/hexellence.png' },
   { id: 'noise', name: 'Static Glitch', url: 'https://www.transparenttextures.com/patterns/broken-noise.png' },
+  { id: 'wood', name: 'Dark Wood', url: 'https://www.transparenttextures.com/patterns/dark-wood.png' },
+  { id: 'leather', name: 'Black Leather', url: 'https://www.transparenttextures.com/patterns/black-leather.png' },
+  { id: 'denim', name: 'Dark Denim', url: 'https://www.transparenttextures.com/patterns/dark-denim.png' },
+  { id: 'marble', name: 'White Marble', url: 'https://www.transparenttextures.com/patterns/white-diamond.png' },
 ];
 
 const FONTS = [
@@ -26,6 +30,9 @@ const FONTS = [
   { id: 'mono', name: 'Tech Mono', value: 'JetBrains Mono, monospace' },
   { id: 'display', name: 'Bold Display', value: 'Anton, sans-serif' },
   { id: 'cursive', name: 'Script', value: 'Cormorant Garamond, serif' },
+  { id: 'retro', name: 'Retro Pixel', value: '"Press Start 2P", system-ui' },
+  { id: 'futuristic', name: 'Cyber Future', value: '"Orbitron", sans-serif' },
+  { id: 'handwritten', name: 'Handwritten', value: '"Permanent Marker", cursive' },
 ];
 
 const LAYOUTS = [
@@ -34,6 +41,9 @@ const LAYOUTS = [
   { id: 'minimal', name: 'Minimalist', description: 'Clean and focused' },
   { id: 'sidebar', name: 'Dual Column', description: 'Content with sidebar' },
   { id: 'magazine', name: 'Magazine', description: 'Editorial style' },
+  { id: 'gallery', name: 'Visual Gallery', description: 'Focus on media first' },
+  { id: 'timeline', name: 'Vertical Timeline', description: 'Chronological story' },
+  { id: 'cards', name: 'Masonry Cards', description: 'Dynamic card grid' },
 ];
 
 const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onBack }) => {

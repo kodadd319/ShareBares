@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, ArrowLeft, Lock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from './Logo';
+import { useBareBear } from './BareBearContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from './StripePaymentForm';
@@ -34,6 +35,15 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { showMascot } = useBareBear();
+
+  useEffect(() => {
+    showMascot({
+      action: 'point',
+      message: `Time to secure your ${itemName}! I've got your back. 🛡️`,
+      duration: 6000
+    });
+  }, [itemName, showMascot]);
 
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads
@@ -69,6 +79,12 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
 
   const handlePaymentSuccess = () => {
     setIsSuccess(true);
+    showMascot({
+      action: 'dance',
+      message: "YESSS! Payment successful! You're officially legendary! 🕺✨",
+      duration: 5000,
+      position: 'center'
+    });
     setTimeout(() => {
       onSuccess();
     }, 3000);

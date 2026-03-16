@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Post, PostVisibility, User } from '../types';
 import { Heart, MessageCircle, Eye, Star, Trash2, Lock } from 'lucide-react';
+import { useBareBear } from './BareBearContext';
 
 interface PostCardProps {
   post: Post;
@@ -17,6 +18,7 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan, onLike, onComment, onDelete, onProfileClick }) => {
   const [liked, setLiked] = useState(false);
+  const { showMascot } = useBareBear();
   
   const handleLike = () => {
     if (!liked && onLike) onLike();
@@ -31,6 +33,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan,
   };
 
   const isLocked = post.visibility === PostVisibility.PRIVATE && !isMe && !isAdmin && !isFan;
+
+  const handleLockedClick = () => {
+    showMascot({
+      action: 'wink',
+      message: `Want to see what's behind the curtain? Join ${author.displayName}'s Fan Club to unlock this! 😉💎`,
+      duration: 5000
+    });
+  };
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden mb-6 shadow-xl transition-all hover:border-[#967bb6]/40 chrome-border">
@@ -72,7 +82,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan,
       </div>
 
       {/* Media */}
-      <div className="relative aspect-video bg-black flex items-center justify-center overflow-hidden">
+      <div 
+        className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
+        onClick={isLocked ? handleLockedClick : undefined}
+      >
         {post.mediaUrl && (
           <img 
             src={post.mediaUrl} 

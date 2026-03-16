@@ -17,6 +17,7 @@ import JoinStablePage from './components/JoinStablePage';
 import MyProfilePage from './components/MyProfilePage';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
 import CustomProfilePage from './components/CustomProfilePage';
+import { BareBearProvider, useBareBear } from './components/BareBearContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization } from './types';
 import { 
@@ -1541,7 +1542,7 @@ const usePWA = () => {
   return { showPrompt, install, dismiss };
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const { showPrompt, install, dismiss } = usePWA();
   const [showSplash, setShowSplash] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
@@ -1549,6 +1550,8 @@ const App: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string>(CURRENT_USER_ID);
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
+  const { showMascot } = useBareBear();
+
   const [profileTab, setProfileTab] = useState('posts');
   const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
   const [storeItems, setStoreItems] = useState<StoreItem[]>(MOCK_STORE_ITEMS);
@@ -2690,6 +2693,9 @@ const App: React.FC = () => {
       mono: 'font-mono',
       display: 'font-display',
       cursive: 'font-cursive',
+      retro: 'font-retro',
+      futuristic: 'font-futuristic',
+      handwritten: 'font-handwritten',
     };
 
     const accentColor = custom?.accentColor || '#967bb6';
@@ -2979,15 +2985,15 @@ const App: React.FC = () => {
 
       {/* Main Content Layout */}
       <div className={`grid gap-12 ${
-        custom?.layout === 'minimal' ? 'grid-cols-1 max-w-3xl mx-auto' : 
-        custom?.layout === 'bento' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
-        custom?.layout === 'magazine' ? 'grid-cols-1 lg:grid-cols-12' :
+        custom?.layout === 'minimal' || custom?.layout === 'timeline' ? 'grid-cols-1 max-w-3xl mx-auto' : 
+        custom?.layout === 'bento' || custom?.layout === 'cards' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' :
+        custom?.layout === 'magazine' || custom?.layout === 'gallery' ? 'grid-cols-1 lg:grid-cols-12' :
         'grid-cols-1 lg:grid-cols-12'
       }`}>
         {/* Sidebar: About & Info */}
-        {(custom?.layout === 'default' || custom?.layout === 'sidebar' || custom?.layout === 'magazine' || !custom?.layout) && (
+        {(custom?.layout === 'default' || custom?.layout === 'sidebar' || custom?.layout === 'magazine' || custom?.layout === 'gallery' || !custom?.layout) && (
           <div className={`${
-            custom?.layout === 'magazine' ? 'lg:col-span-4' : 'lg:col-span-4'
+            custom?.layout === 'magazine' || custom?.layout === 'gallery' ? 'lg:col-span-4' : 'lg:col-span-4'
           } space-y-8`}>
             <div className="glass-panel rounded-[2.5rem] p-10 chrome-border bg-white/[0.02] shadow-2xl">
               <div className="mb-10">
@@ -3061,9 +3067,9 @@ const App: React.FC = () => {
 
         {/* Main Feed: Tabs & Content */}
         <div className={`${
-          custom?.layout === 'minimal' ? 'col-span-1' :
-          custom?.layout === 'bento' ? 'col-span-full' :
-          custom?.layout === 'magazine' ? 'lg:col-span-8' :
+          custom?.layout === 'minimal' || custom?.layout === 'timeline' ? 'col-span-1' :
+          custom?.layout === 'bento' || custom?.layout === 'cards' ? 'col-span-full' :
+          custom?.layout === 'magazine' || custom?.layout === 'gallery' ? 'lg:col-span-8' :
           'lg:col-span-8'
         }`}>
           <div className="flex space-x-12 border-b border-white/5 mb-12 overflow-x-auto scrollbar-hide">
@@ -3096,7 +3102,7 @@ const App: React.FC = () => {
 
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {profileTab === 'posts' && (
-              <div className={`${custom?.layout === 'bento' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : 'space-y-8'}`}>
+              <div className={`${custom?.layout === 'bento' || custom?.layout === 'cards' ? 'grid grid-cols-1 md:grid-cols-2 gap-8' : custom?.layout === 'gallery' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-8'}`}>
                 {posts.filter(p => p.userId === user.id).length > 0 ? (
                   posts.filter(p => p.userId === user.id).map(post => (
                     <PostCard 
@@ -3124,7 +3130,9 @@ const App: React.FC = () => {
 
             {profileTab === 'photos' && (
               <div className={`grid gap-6 ${
-                custom?.layout === 'bento' ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'
+                custom?.layout === 'bento' || custom?.layout === 'cards' ? 'grid-cols-2 md:grid-cols-4' : 
+                custom?.layout === 'gallery' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' :
+                'grid-cols-2 sm:grid-cols-3'
               }`}>
                 {user.photos.length > 0 ? (
                   user.photos.map(photo => (
@@ -3537,6 +3545,14 @@ const App: React.FC = () => {
 
       {showPrompt && <InstallPrompt onInstall={install} onDismiss={dismiss} />}
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BareBearProvider>
+      <AppContent />
+    </BareBearProvider>
   );
 };
 

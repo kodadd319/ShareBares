@@ -1,6 +1,7 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, Check, ArrowLeft, Shield, Lock } from 'lucide-react';
+import { useBareBear } from './BareBearContext';
 import { StableListing } from '../types';
 
 interface JoinStablePageProps {
@@ -12,6 +13,16 @@ interface JoinStablePageProps {
 
 const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetization, onSubmit, hasPaidStableFee }) => {
   const [name, setName] = useState('');
+  const { showMascot } = useBareBear();
+
+  useEffect(() => {
+    showMascot({
+      action: 'wink',
+      message: "Ready to join the elite? The Stable is where the real money is made! 🐎💰",
+      duration: 6000
+    });
+  }, [showMascot]);
+
   const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'transgender'>('female');
   const [services, setServices] = useState('');
   const [city, setCity] = useState('');

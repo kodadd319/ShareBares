@@ -28,7 +28,7 @@ export interface ProfileCustomization {
   fontType?: string;
   buttonColor?: string;
   accentColor?: string;
-  layout?: 'default' | 'bento' | 'minimal' | 'sidebar' | 'magazine';
+  layout?: 'default' | 'bento' | 'minimal' | 'sidebar' | 'magazine' | 'gallery' | 'timeline' | 'cards';
   themeSongUrl?: string;
 }
 
