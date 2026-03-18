@@ -5,6 +5,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import Stripe from "stripe";
+import { createInitialGameState, handleMove, getBlackjackValue } from "./games";
+import { GameState, GameInvite } from "./types";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +28,7 @@ async function startServer() {
   // In-memory store for messages (in a real app, use a database)
   const messages: any[] = [];
   const users: Map<string, string> = new Map(); // socketId -> userId
+  const activeGames: Map<string, GameState> = new Map(); // gameId -> GameState
 
   io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
@@ -81,6 +84,157 @@ async function startServer() {
 
     socket.on("end_call", (data: { to: string }) => {
       io.to(data.to).emit("call_ended");
+    });
+
+    // Game Room Events
+    socket.on("game:invite_send", (invite: GameInvite) => {
+      console.log(`Game invite from ${invite.from.id} to ${invite.toId} for ${invite.gameType}`);
+      io.to(invite.toId).emit("game:invite_received", invite);
+    });
+
+    socket.on("game:invite_accept", (invite: GameInvite) => {
+      const gameId = `game-${Date.now()}`;
+      const players = [invite.from, { id: invite.toId, name: "Opponent" }]; // Simplified player info
+      const initialGameState = createInitialGameState(gameId, invite.gameType, players);
+      
+      activeGames.set(gameId, initialGameState);
+      
+      // Notify both players
+      io.to(invite.from.id).emit("game:started", initialGameState);
+      io.to(invite.toId).emit("game:started", initialGameState);
+    });
+
+    socket.on("game:bot_start", (data: { userId: string, gameType: any, user: any }) => {
+      const gameId = `game-bot-${Date.now()}`;
+      const players = [
+        { ...data.user, isReady: true }, 
+        { id: 'bot', name: 'BareBear', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=BareBear', isReady: true }
+      ];
+      const initialGameState = createInitialGameState(gameId, data.gameType, players);
+      initialGameState.status = 'playing'; // Start immediately for bot games
+      
+      activeGames.set(gameId, initialGameState);
+      socket.emit("game:started", initialGameState);
+    });
+
+    socket.on("game:ready", (data: { gameId: string }) => {
+      const game = activeGames.get(data.gameId);
+      if (game) {
+        const player = game.players.find(p => p.id === socket.data.user.id);
+        if (player) {
+          player.isReady = true;
+        }
+
+        // If it's a bot game, bot is always ready
+        if (game.players.some(p => p.id === 'bot')) {
+          const bot = game.players.find(p => p.id === 'bot');
+          if (bot) bot.isReady = true;
+        }
+
+        const allReady = game.players.every(p => p.isReady);
+        if (allReady) {
+          game.status = 'playing';
+        }
+
+        // Notify all players in the game
+        game.players.forEach(p => {
+          if (p.id !== 'bot') {
+            io.to(p.id).emit("game:updated", game);
+          }
+        });
+      }
+    });
+
+    socket.on("game:move", (data: { gameId: string, userId: string, move: any }) => {
+      const game = activeGames.get(data.gameId);
+      if (game) {
+        const updatedGame = handleMove(game, data.userId, data.move);
+        activeGames.set(data.gameId, updatedGame);
+        
+        // Broadcast update
+        io.to(game.players[0].id).emit("game:updated", updatedGame);
+        if (game.players[1].id !== 'bot') {
+          io.to(game.players[1].id).emit("game:updated", updatedGame);
+        } else if (updatedGame.status === 'playing' && updatedGame.turn === 'bot') {
+          // Automated Bot Turn
+          setTimeout(() => {
+            let botMove: any = null;
+            const data = updatedGame.data;
+
+            if (updatedGame.type === 'checkers') {
+              const moves: any[] = [];
+              const myColor = 2; // Bot is always player 2
+              for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                  const piece = data.board[r][c];
+                  if (Math.floor(piece) === myColor) {
+                    const isKing = piece > 2;
+                    const directions = isKing ? [[1, 1], [1, -1], [-1, 1], [-1, -1]] : [[1, 1], [1, -1]];
+                    for (const [dr, dc] of directions) {
+                      const tr = r + dr;
+                      const tc = c + dc;
+                      if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8 && data.board[tr][tc] === 0) {
+                        moves.push({ from: [r, c], to: [tr, tc] });
+                      }
+                      // Jumps
+                      const jr = r + dr * 2;
+                      const jc = c + dc * 2;
+                      if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && data.board[jr][jc] === 0) {
+                        const mr = r + dr;
+                        const mc = c + dc;
+                        const mid = data.board[mr][mc];
+                        if (mid !== 0 && Math.floor(mid) !== myColor) {
+                          moves.push({ from: [r, c], to: [jr, jc] });
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+              if (moves.length > 0) botMove = moves[Math.floor(Math.random() * moves.length)];
+            } else if (updatedGame.type === '10000') {
+              if (data.currentTurnScore >= 500 || (data.currentTurnScore > 0 && Math.random() > 0.7)) {
+                botMove = { type: 'bank' };
+              } else {
+                botMove = { type: 'roll' };
+              }
+            } else if (updatedGame.type === 'blackjack') {
+              // Dealer logic is handled in handleMove when player stands
+              // But if bot is a "player", it would hit until 17
+              const val = getBlackjackValue(data.playerHand);
+              if (val < 17) botMove = { type: 'hit' };
+              else botMove = { type: 'stand' };
+            } else if (updatedGame.type === 'rummy') {
+              if (!data.hasDrawn) {
+                botMove = { type: 'draw' };
+              } else {
+                botMove = { type: 'discard', index: 0 };
+              }
+            } else if (updatedGame.type === 'billiards') {
+              botMove = { type: 'shoot' };
+            }
+
+            if (botMove) {
+              const botUpdatedGame = handleMove(updatedGame, 'bot', botMove);
+              activeGames.set(data.gameId, botUpdatedGame);
+              io.to(game.players[0].id).emit("game:updated", botUpdatedGame);
+            }
+          }, 1500);
+        }
+      }
+    });
+
+    socket.on("game:quit", (data: { gameId: string, userId: string }) => {
+      const game = activeGames.get(data.gameId);
+      if (game) {
+        game.status = 'finished';
+        game.winner = game.players.find(p => p.id !== data.userId)?.id;
+        io.to(game.players[0].id).emit("game:updated", game);
+        if (game.players[1].id !== 'bot') {
+          io.to(game.players[1].id).emit("game:updated", game);
+        }
+        activeGames.delete(data.gameId);
+      }
     });
 
     socket.on("disconnect", () => {

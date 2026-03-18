@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 
 const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ className, size = 'md' }) => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v4'));
+  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v6'));
   const [loading, setLoading] = useState(!logoUrl);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           contents: {
             parts: [
               {
-                text: 'A professional high-quality logo for a social media app called "ShareBares". The mascot is "barebear", a cute but edgy bear that slightly resembles a Care Bear but with a provocative and mischievous vibe. The bear is wearing a stylish black harness and has a playful wink. The bear is sitting on a glowing full moon. The background is a dark, starry night sky with subtle nebula colors (purples and blues). The typography "ShareBares" is bold, modern, and clean. The overall aesthetic is premium, sleek, and atmospheric.',
+                text: 'A high-quality professional logo for "ShareBares". The mascot is a cute, light-blue bear with a mischievous wink and a purple eye. The bear is wearing a detailed black leather harness. On its white belly is a light-blue glowing heart with a flame inside. The bear is sitting on a large, glowing full moon. The background is a dark, starry night sky with purple and dark blue clouds. Below the bear, the text "ShareBares" is written in a bold, silver/chrome 3D font. The overall style is premium, sleek, and atmospheric.',
               },
             ],
           },
@@ -26,14 +26,25 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           if (part.inlineData) {
             const url = `data:image/png;base64,${part.inlineData.data}`;
             setLogoUrl(url);
-            localStorage.setItem('share_bares_logo_v4', url);
+            try {
+              localStorage.setItem('share_bares_logo_v6', url);
+            } catch (e) {
+              console.warn('Failed to cache logo in localStorage:', e);
+            }
             break;
           }
         }
-      } catch (error) {
-        console.error('Error generating logo:', error);
-        // Fallback to a placeholder if generation fails
-        setLogoUrl('https://picsum.photos/seed/barebear/512/512');
+      } catch (error: any) {
+        const errorString = JSON.stringify(error);
+        const isQuotaError = errorString.includes('429') || errorString.includes('quota') || (error.message && (error.message.includes('429') || error.message.includes('quota')));
+        
+        if (isQuotaError) {
+          console.warn('Logo generation paused: Gemini API quota exceeded. Using fallback logo.');
+        } else {
+          console.error('Error generating logo:', error);
+        }
+        // Fallback to a reliable placeholder if generation fails
+        setLogoUrl('https://images.unsplash.com/photo-1589656966895-2f33e7653819?q=80&w=512&h=512&auto=format&fit=crop');
       } finally {
         setLoading(false);
       }
@@ -57,9 +68,9 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
   }
 
   return (
-    <div className={`${sizeClasses[size]} ${className} flex items-center justify-center`}>
+    <div className={`${sizeClasses[size]} ${className} flex items-center justify-center bg-black`}>
       <img 
-        src={logoUrl || ''} 
+        src={logoUrl || undefined} 
         className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(150,123,182,0.3)]" 
         alt="ShareBares - barebear mascot" 
         referrerPolicy="no-referrer"

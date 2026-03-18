@@ -81,6 +81,7 @@ const TopNav: React.FC<TopNavProps> = ({
     { id: 'monetization', icon: DollarSign, label: 'Monetize' },
     { id: 'notifications', icon: Bell, label: 'Alerts' },
     { id: 'messages', icon: MessageSquare, label: 'Chat' },
+    { id: 'games', icon: Dices, label: 'Gameroom' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
@@ -140,7 +141,7 @@ const TopNav: React.FC<TopNavProps> = ({
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                       >
-                        <img src={u.avatar} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                        <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
                         <div>
                           <p className="text-xs font-bold text-white">{u.displayName}</p>
                           <p className="text-[10px] text-slate-500">@{u.username}</p>
@@ -354,7 +355,7 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className={`p-0.5 rounded-2xl border-2 transition-all shrink-0 flex items-center space-x-2 ${isProfileMenuOpen ? 'border-[#967bb6] shadow-lg shadow-[#967bb6]/20' : 'border-transparent hover:border-white/20'}`}
           >
-            <img src={userAvatar} className="w-8 h-8 rounded-[14px] object-cover" alt="Profile" />
+            <img src={userAvatar || undefined} className="w-8 h-8 rounded-[14px] object-cover" alt="Profile" />
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -468,7 +469,7 @@ const TopNav: React.FC<TopNavProps> = ({
                             }}
                             className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                           >
-                            <img src={u.avatar} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                            <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
                             <div>
                               <p className="text-xs font-bold text-white">{u.displayName}</p>
                               <p className="text-[10px] text-slate-500">@{u.username}</p>

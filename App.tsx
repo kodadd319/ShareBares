@@ -17,6 +17,7 @@ import JoinStablePage from './components/JoinStablePage';
 import MyProfilePage from './components/MyProfilePage';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
 import CustomProfilePage from './components/CustomProfilePage';
+import GameRoom from './components/GameRoom';
 import { BareBearProvider, useBareBear } from './components/BareBearContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization } from './types';
@@ -264,7 +265,7 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
       <form onSubmit={handleSubmit} className="glass-panel rounded-3xl p-8 border-[#c0c0c0]/10 shadow-2xl space-y-8 relative overflow-hidden chrome-border">
         <div className="relative mb-28">
           <div className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5">
-            <img src={cover} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+            <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
             <input 
               type="file" 
               ref={coverInputRef} 
@@ -285,7 +286,7 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
 
           <div className="absolute -bottom-16 left-8 group">
             <div className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border">
-              <img src={avatar} className="w-full h-full object-cover" alt="Avatar" />
+              <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
               <input 
                 type="file" 
                 ref={avatarInputRef} 
@@ -783,8 +784,8 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [avatar, setAvatar] = useState('https://picsum.photos/seed/default/200');
-  const [cover, setCover] = useState('https://picsum.photos/seed/defaultcover/800/300');
+  const [avatar, setAvatar] = useState('https://picsum.photos/seed/sharebares_user/200');
+  const [cover, setCover] = useState('https://picsum.photos/seed/sharebares_cover/1200/400');
   const [isCreator, setIsCreator] = useState(false);
   const [location, setLocation] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -835,7 +836,7 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
 
           <div className="relative mb-28">
             <div className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5">
-              <img src={cover} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+              <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
                 <button 
                   type="button" 
@@ -849,7 +850,7 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
 
             <div className="absolute -bottom-16 left-8 group">
               <div className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border">
-                <img src={avatar} className="w-full h-full object-cover" alt="Avatar" />
+                <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60">
                    <button 
                     type="button" 
@@ -1999,8 +2000,8 @@ const AppContent: React.FC = () => {
       email,
       password,
       isBanned: false,
-      avatar: `https://picsum.photos/seed/${username}/200`,
-      coverImage: `https://picsum.photos/seed/${username}_cover/800/300`,
+      avatar: `https://picsum.photos/seed/sharebares_${username}/200`,
+      coverImage: `https://picsum.photos/seed/sharebares_${username}_cover/1200/400`,
       bio: '',
       isCreator: false,
       isAdmin: email === 'jtothek319@gmail.com',
@@ -2685,8 +2686,19 @@ const AppContent: React.FC = () => {
     />
   );
 
-    const renderProfile = (user: User, isOwnProfile: boolean) => {
-    const custom = user.profileCustomization;
+    const renderProfile = (user: User | undefined, isOwnProfile: boolean) => {
+      if (!user) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto animate-pulse">
+              <Bell size={32} className="text-slate-700" />
+            </div>
+            <p className="text-slate-500 font-black uppercase tracking-widest text-xs">User not found</p>
+            <button onClick={() => setActiveTab('feed')} className="text-[#967bb6] text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Back to Feed</button>
+          </div>
+        </div>
+      );
+      const custom = user.profileCustomization;
     const fontStyles: Record<string, string> = {
       sans: 'font-sans',
       serif: 'font-serif',
@@ -2724,14 +2736,14 @@ const AppContent: React.FC = () => {
       {/* Header Section: Cover & Avatar Integration */}
       <div className="relative mb-24">
         <div className="h-[350px] md:h-[450px] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl">
-          <img src={user.coverImage} className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" alt="" />
+          <img src={user.coverImage || undefined} className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" alt="" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
           
           {/* Stats Overlay on Cover */}
           <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex items-end space-x-6">
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] border-4 border-black overflow-hidden shadow-2xl bg-black chrome-border shrink-0 relative z-10">
-                <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                <img src={user.avatar || undefined} className="w-full h-full object-cover" alt="" />
               </div>
               <div className="pb-2">
                 <div className="flex items-center space-x-3 mb-2">
@@ -3251,7 +3263,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'messages' && renderMessages()}
         {activeTab === 'profile' && renderProfile(me, true)}
         {activeTab === 'user-profile' && viewingUserId && (
-          renderProfile(users.find(u => u.id === viewingUserId)!, (viewingUserId === currentUserId) && !isViewingAsPublic)
+          renderProfile(users.find(u => u.id === viewingUserId), (viewingUserId === currentUserId) && !isViewingAsPublic)
         )}
         {activeTab === 'profile-edit' && (
           <ProfileEditPage 
@@ -3280,7 +3292,7 @@ const AppContent: React.FC = () => {
         )}
         {activeTab === 'media-store' && viewingUserId && (
           <MediaStore 
-            user={users.find(u => u.id === viewingUserId)!}
+            user={users.find(u => u.id === viewingUserId) || me}
             items={storeItems.filter(i => i.userId === viewingUserId)}
             stableListings={stableListings.filter(l => l.userId === viewingUserId)}
             isOwnStore={viewingUserId === currentUserId}
@@ -3389,6 +3401,14 @@ const AppContent: React.FC = () => {
             onGoToMonetization={() => setActiveTab('monetization')}
             onSubmit={handleCreateStableListing} 
             hasPaidStableFee={me.hasPaidStableFee || me.isAdmin}
+          />
+        )}
+        {activeTab === 'games' && (
+          <GameRoom 
+            user={me} 
+            socket={socket} 
+            users={users} 
+            setActiveTab={setActiveTab} 
           />
         )}
         {activeTab === 'more' && (

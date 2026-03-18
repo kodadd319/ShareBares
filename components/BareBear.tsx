@@ -13,7 +13,7 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A cute but edgy bear named "barebear" that slightly resembles a Care Bear but with a provocative and mischievous vibe. The bear is wearing a stylish black harness. The overall aesthetic is premium, sleek, and atmospheric. Transparent or simple dark background.';
+const BARE_BEAR_BASE_PROMPT = 'A cute, light-blue bear named "barebear" with a mischievous vibe. The bear is wearing a detailed black leather harness. On its white belly is a light-blue glowing heart with a flame inside. The overall aesthetic is premium, sleek, and atmospheric. The bear has a playful and provocative personality.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
   dance: 'The bear is doing a silly, energetic dance with its arms up and a big mischievous grin.',
@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v2_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -52,20 +52,31 @@ const BareBear: React.FC<BareBearProps> = ({
           },
         });
 
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            const url = `data:image/png;base64,${part.inlineData.data}`;
-            setImageUrl(url);
-            try {
-              localStorage.setItem(`barebear_${action}`, url);
-            } catch (e) {
-              console.warn('Failed to cache Bare Bear image in localStorage:', e);
+        if (response.candidates && response.candidates.length > 0 && response.candidates[0].content.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+              const url = `data:image/png;base64,${part.inlineData.data}`;
+              setImageUrl(url);
+              try {
+                localStorage.setItem(`barebear_v2_${action}`, url);
+              } catch (e) {
+                console.warn('Failed to cache Bare Bear image in localStorage:', e);
+              }
+              break;
             }
-            break;
           }
+        } else {
+          throw new Error('No image generated in response');
         }
-      } catch (error) {
-        console.error('Error generating Bare Bear:', error);
+      } catch (error: any) {
+        const errorString = JSON.stringify(error);
+        const isQuotaError = errorString.includes('429') || errorString.includes('quota') || (error.message && (error.message.includes('429') || error.message.includes('quota')));
+        
+        if (isQuotaError) {
+          console.warn('Bare Bear generation paused: Gemini API quota exceeded. Using fallback mascot.');
+        } else {
+          console.error('Error generating Bare Bear:', error);
+        }
         setImageUrl('https://picsum.photos/seed/barebear_fallback/512/512');
       } finally {
         setLoading(false);
@@ -120,7 +131,7 @@ const BareBear: React.FC<BareBearProps> = ({
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
-                  src={imageUrl || ''}
+                  src={imageUrl || undefined}
                   className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(150,123,182,0.4)]"
                   alt="Bare Bear Mascot"
                   referrerPolicy="no-referrer"

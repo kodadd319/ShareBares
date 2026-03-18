@@ -155,3 +155,34 @@ export interface StableListing {
   photos?: string[];
   createdAt: string;
 }
+
+export type GameType = 'checkers' | '10000' | 'rummy' | 'blackjack' | 'billiards';
+
+export interface GameState {
+  id: string;
+  type: GameType;
+  players: {
+    id: string;
+    displayName: string;
+    avatar: string;
+    isReady: boolean;
+    isBot: boolean;
+  }[];
+  status: 'waiting' | 'playing' | 'finished';
+  turn: string; // userId
+  data: any; // Game specific data
+  winner?: string;
+  updatedAt: string;
+}
+
+export interface GameInvite {
+  id: string;
+  from: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  toId: string;
+  gameType: GameType;
+  timestamp: string;
+}

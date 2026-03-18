@@ -20,8 +20,15 @@ export const generateCaptionSuggestion = async (description: string) => {
     });
 
     return response.text || "Fresh content, no limits! 🔥";
-  } catch (error) {
-    console.error("Gemini Error:", error);
+  } catch (error: any) {
+    const errorString = JSON.stringify(error);
+    const isQuotaError = errorString.includes('429') || errorString.includes('quota') || (error.message && (error.message.includes('429') || error.message.includes('quota')));
+
+    if (isQuotaError) {
+      console.warn("Gemini API quota exceeded for caption suggestion.");
+    } else {
+      console.error("Gemini Error:", error);
+    }
     return "Check out my latest post. Unfiltered and raw. 🔓";
   }
 };
@@ -61,8 +68,15 @@ export const generateJadeResponse = async (userMessage: string, history: { role:
     });
 
     return response.text || "I'm busy right now, but I'll be back soon to play. 😈";
-  } catch (error) {
-    console.error("Jade AI Error:", error);
+  } catch (error: any) {
+    const errorString = JSON.stringify(error);
+    const isQuotaError = errorString.includes('429') || errorString.includes('quota') || (error.message && (error.message.includes('429') || error.message.includes('quota')));
+
+    if (isQuotaError) {
+      console.warn("Gemini API quota exceeded for Jade response.");
+    } else {
+      console.error("Jade AI Error:", error);
+    }
     return "You're making me speechless... 🖤";
   }
 };
