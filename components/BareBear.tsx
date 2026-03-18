@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v2_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v5_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -58,7 +58,7 @@ const BareBear: React.FC<BareBearProps> = ({
               const url = `data:image/png;base64,${part.inlineData.data}`;
               setImageUrl(url);
               try {
-                localStorage.setItem(`barebear_v2_${action}`, url);
+                localStorage.setItem(`barebear_v5_${action}`, url);
               } catch (e) {
                 console.warn('Failed to cache Bare Bear image in localStorage:', e);
               }

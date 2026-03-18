@@ -3438,14 +3438,7 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {activeTab !== 'messages' && (
-        <button 
-          onClick={() => setIsCreating(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-tr from-[#967bb6] to-[#6b46c1] rounded-2xl flex items-center justify-center text-white shadow-2xl hover:scale-110 active:scale-95 transition-all z-[60] chrome-border shadow-[#967bb6]/30"
-        >
-          <Plus size={32} strokeWidth={3} />
-        </button>
-      )}
+      {/* Floating action button removed as per user request */}
 
       {isCreating && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">

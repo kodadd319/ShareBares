@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 
 const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ className, size = 'md' }) => {
-  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v6'));
+  const [logoUrl, setLogoUrl] = useState<string | null>(localStorage.getItem('share_bares_logo_v11'));
   const [loading, setLoading] = useState(!logoUrl);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           contents: {
             parts: [
               {
-                text: 'A high-quality professional logo for "ShareBares". The mascot is a cute, light-blue bear with a mischievous wink and a purple eye. The bear is wearing a detailed black leather harness. On its white belly is a light-blue glowing heart with a flame inside. The bear is sitting on a large, glowing full moon. The background is a dark, starry night sky with purple and dark blue clouds. Below the bear, the text "ShareBares" is written in a bold, silver/chrome 3D font. The overall style is premium, sleek, and atmospheric.',
+                text: 'A high-quality professional logo for "ShareBares". The mascot is a cute, light-blue bear with a mischievous wink and a purple eye. The bear is wearing a detailed black leather harness. On its white belly is a light-blue glowing heart with a flame inside. The bear is sitting on a large, glowing full moon. The background is a dark, starry night sky with purple and dark blue clouds. Below the bear, the text "ShareBares" is written in a bold, silver/chrome 3D font. The overall style is premium, sleek, and atmospheric. This is the official original logo design.',
               },
             ],
           },
@@ -27,7 +27,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
             const url = `data:image/png;base64,${part.inlineData.data}`;
             setLogoUrl(url);
             try {
-              localStorage.setItem('share_bares_logo_v6', url);
+              localStorage.setItem('share_bares_logo_v11', url);
             } catch (e) {
               console.warn('Failed to cache logo in localStorage:', e);
             }
@@ -44,7 +44,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           console.error('Error generating logo:', error);
         }
         // Fallback to a reliable placeholder if generation fails
-        setLogoUrl('https://images.unsplash.com/photo-1589656966895-2f33e7653819?q=80&w=512&h=512&auto=format&fit=crop');
+        setLogoUrl('https://images.unsplash.com/photo-1534278931827-8a259344abe7?q=80&w=512&h=512&auto=format&fit=crop');
       } finally {
         setLoading(false);
       }
