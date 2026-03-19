@@ -457,18 +457,88 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTurn: boolean, myId: string }> = ({ game, onMove, isMyTurn, myId }) => {
   const board = game.data.board || [];
   const [selected, setSelected] = useState<[number, number] | null>(null);
+  const myColor = game.players[0].id === myId ? 1 : 2;
+
+  // Helper to get valid moves for the selected piece
+  const getValidMovesForPiece = (r: number, c: number) => {
+    const piece = board[r][c];
+    if (!piece || Math.floor(piece) !== myColor) return [];
+
+    const moves: [number, number][] = [];
+    const jumps: [number, number][] = [];
+
+    // Check if ANY jump is available for the player (forced jump rule)
+    const playerHasJumps = () => {
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const p = board[row][col];
+          if (Math.floor(p) !== myColor) continue;
+          const isK = p > 2;
+          const dirs = [];
+          if (myColor === 1 || isK) dirs.push([-1, -1], [-1, 1]);
+          if (myColor === 2 || isK) dirs.push([1, -1], [1, 1]);
+          for (const [dr, dc] of dirs) {
+            const jr = row + dr * 2;
+            const jc = col + dc * 2;
+            if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === 0) {
+              const mr = row + dr;
+              const mc = col + dc;
+              const mid = board[mr][mc];
+              if (mid !== 0 && Math.floor(mid) !== myColor) return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    const hasJumps = playerHasJumps();
+    const isKing = piece > 2;
+    const directions = [];
+    if (myColor === 1 || isKing) directions.push([-1, -1], [-1, 1]);
+    if (myColor === 2 || isKing) directions.push([1, -1], [1, 1]);
+
+    for (const [dr, dc] of directions) {
+      // Single move
+      if (!hasJumps) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === 0) {
+          moves.push([nr, nc]);
+        }
+      }
+
+      // Jump
+      const jr = r + dr * 2;
+      const jc = c + dc * 2;
+      if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === 0) {
+        const mr = r + dr;
+        const mc = c + dc;
+        const midPiece = board[mr][mc];
+        if (midPiece !== 0 && Math.floor(midPiece) !== myColor) {
+          jumps.push([jr, jc]);
+        }
+      }
+    }
+
+    return jumps.length > 0 ? jumps : moves;
+  };
+
+  const validMoves = selected ? getValidMovesForPiece(selected[0], selected[1]) : [];
 
   const handleClick = (r: number, c: number) => {
     if (!isMyTurn) return;
     
     const piece = board[r][c];
-    const myColor = game.players[0].id === myId ? 1 : 2;
 
     if (selected) {
-      if (selected[0] === r && selected[1] === c) {
-        setSelected(null);
-      } else {
+      const isValid = validMoves.some(m => m[0] === r && m[1] === c);
+      if (isValid) {
         onMove({ from: selected, to: [r, c] });
+        setSelected(null);
+      } else if (piece && Math.floor(piece) === myColor) {
+        setSelected([r, c]);
+      } else {
         setSelected(null);
       }
     } else if (piece && Math.floor(piece) === myColor) {
@@ -477,15 +547,28 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
   };
 
   return (
-    <div className="h-full flex items-center justify-center p-4">
+    <div className="h-full flex flex-col items-center justify-center p-4 space-y-4">
+      <div className="flex items-center space-x-4 mb-2">
+        <div className="flex items-center space-x-2">
+          <div className={`w-4 h-4 rounded-full ${myColor === 1 ? 'bg-red-500' : 'bg-slate-300'}`}></div>
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">You are {myColor === 1 ? 'Red' : 'White'}</span>
+        </div>
+        {isMyTurn && (
+          <div className="flex items-center space-x-2 animate-pulse">
+            <Sparkles size={12} className="text-[#967bb6]" />
+            <span className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest">Your Turn</span>
+          </div>
+        )}
+      </div>
+
       <div className="relative p-4 rounded-2xl bg-[#3d2b1f] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-8 border-[#2a1d15]">
-        {/* Wood Texture Overlay */}
         <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] rounded-lg"></div>
         
         <div className="grid grid-cols-8 gap-0 border-4 border-[#1a110a] shadow-inner">
           {board.map((row: any[], r: number) => row.map((cell: number, c: number) => {
             const isDark = (r + c) % 2 === 1;
             const isSelected = selected?.[0] === r && selected?.[1] === c;
+            const isValidMove = validMoves.some(m => m[0] === r && m[1] === c);
             
             return (
               <div 
@@ -495,18 +578,23 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
                   isDark ? 'bg-[#5d4037]' : 'bg-[#d7ccc8]'
                 } ${isSelected ? 'ring-4 ring-inset ring-[#967bb6] z-10' : ''}`}
               >
+                {isValidMove && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20">
+                    <div className="w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-[#967bb6]/40 border-2 border-[#967bb6]"></div>
+                  </div>
+                )}
+
                 {cell !== 0 && (
                   <motion.div 
                     layoutId={`piece-${r}-${c}`}
                     initial={{ scale: 0, y: -20 }}
                     animate={{ scale: 1, y: 0 }}
-                    className={`w-8 h-8 lg:w-11 lg:h-11 rounded-full shadow-[0_4px_0_rgba(0,0,0,0.4)] flex items-center justify-center relative overflow-hidden transition-transform ${
+                    className={`w-8 h-8 lg:w-11 lg:h-11 rounded-full shadow-[0_4px_0_rgba(0,0,0,0.4)] flex items-center justify-center relative overflow-hidden transition-transform z-10 ${
                       Math.floor(cell) === 1 
                       ? 'bg-gradient-to-br from-red-500 to-red-800 border-2 border-red-400/30' 
                       : 'bg-gradient-to-br from-slate-100 to-slate-400 border-2 border-white/40'
-                    } ${isSelected ? '-translate-y-2 scale-110' : ''}`}
+                    } ${isSelected ? '-translate-y-2 scale-110 shadow-[0_10px_20px_rgba(0,0,0,0.4)]' : ''}`}
                   >
-                    {/* Concentric circles for classic checker look */}
                     <div className="absolute inset-1 rounded-full border border-black/10"></div>
                     <div className="absolute inset-2 rounded-full border border-black/10"></div>
                     

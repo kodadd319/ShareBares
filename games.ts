@@ -1,5 +1,5 @@
 
-import { GameState, GameType } from './types';
+import { GameState, GameType } from './types.ts';
 
 export const createInitialGameState = (id: string, type: GameType, players: any[]): GameState => {
   const data: any = {};
@@ -165,50 +165,117 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
     const { from, to } = moveData;
     const [fr, fc] = from;
     const [tr, tc] = to;
-    const piece = newData.board[fr][fc];
+    const board = newData.board;
+    const piece = board[fr][fc];
     const myColor = game.players[0].id === userId ? 1 : 2;
 
-    // Basic validation
-    if (Math.floor(piece) !== myColor) return game;
-    if (newData.board[tr][tc] !== 0) return game;
+    // Helper to get all valid moves for a player
+    const getAllValidMoves = (currentBoard: number[][], color: number) => {
+      const moves: any[] = [];
+      const jumps: any[] = [];
 
-    const dr = tr - fr;
-    const dc = Math.abs(tc - fc);
-    const isKing = piece > 2;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = currentBoard[r][c];
+          if (Math.floor(p) !== color) continue;
 
-    // Move
-    if (dc === 1 && ((myColor === 1 && dr === -1) || (myColor === 2 && dr === 1) || (isKing && Math.abs(dr) === 1))) {
-      newData.board[tr][tc] = piece;
-      newData.board[fr][fc] = 0;
-      // Kinging
-      if ((myColor === 1 && tr === 0) || (myColor === 2 && tr === 7)) {
-        newData.board[tr][tc] = myColor + 2;
-      }
-      nextTurn = opponentId;
-    } 
-    // Jump
-    else if (dc === 2 && ((myColor === 1 && dr === -2) || (myColor === 2 && dr === 2) || (isKing && Math.abs(dr) === 2))) {
-      const mr = fr + dr / 2;
-      const mc = fc + (tc - fc) / 2;
-      const midPiece = newData.board[mr][mc];
-      if (midPiece !== 0 && Math.floor(midPiece) !== myColor) {
-        newData.board[tr][tc] = piece;
-        newData.board[fr][fc] = 0;
-        newData.board[mr][mc] = 0;
-        // Kinging
-        if ((myColor === 1 && tr === 0) || (myColor === 2 && tr === 7)) {
-          newData.board[tr][tc] = myColor + 2;
+          const isKing = p > 2;
+          const directions = [];
+          if (color === 1 || isKing) directions.push([-1, -1], [-1, 1]);
+          if (color === 2 || isKing) directions.push([1, -1], [1, 1]);
+
+          for (const [dr, dc] of directions) {
+            // Check single move
+            const nr = r + dr;
+            const nc = c + dc;
+            if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && currentBoard[nr][nc] === 0) {
+              moves.push({ from: [r, c], to: [nr, nc] });
+            }
+
+            // Check jump
+            const jr = r + dr * 2;
+            const jc = c + dc * 2;
+            if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && currentBoard[jr][jc] === 0) {
+              const mr = r + dr;
+              const mc = c + dc;
+              const midPiece = currentBoard[mr][mc];
+              if (midPiece !== 0 && Math.floor(midPiece) !== color) {
+                jumps.push({ from: [r, c], to: [jr, jc], jumped: [mr, mc] });
+              }
+            }
+          }
         }
-        // Check for double jump (simplified: always end turn for now, or add logic)
-        nextTurn = opponentId;
+      }
+      return jumps.length > 0 ? { jumps, type: 'jump' } : { moves, type: 'move' };
+    };
+
+    const validMoves = getAllValidMoves(board, myColor);
+    
+    // Validate the attempted move
+    let moveEffect: any = null;
+    if (validMoves.type === 'jump') {
+      moveEffect = validMoves.jumps.find((j: any) => j.from[0] === fr && j.from[1] === fc && j.to[0] === tr && j.to[1] === tc);
+    } else {
+      moveEffect = validMoves.moves.find((m: any) => m.from[0] === fr && m.from[1] === fc && m.to[0] === tr && m.to[1] === tc);
+    }
+
+    if (!moveEffect) return game;
+
+    // Execute move
+    board[tr][tc] = piece;
+    board[fr][fc] = 0;
+    if (moveEffect.jumped) {
+      board[moveEffect.jumped[0]][moveEffect.jumped[1]] = 0;
+    }
+
+    // Kinging
+    let justKinged = false;
+    if ((myColor === 1 && tr === 0 && piece === 1) || (myColor === 2 && tr === 7 && piece === 2)) {
+      board[tr][tc] = myColor + 2;
+      justKinged = true;
+    }
+
+    // Check for double jump
+    let canJumpAgain = false;
+    if (moveEffect.jumped && !justKinged) {
+      const p = board[tr][tc];
+      const isKing = p > 2;
+      const directions = [];
+      if (myColor === 1 || isKing) directions.push([-1, -1], [-1, 1]);
+      if (myColor === 2 || isKing) directions.push([1, -1], [1, 1]);
+
+      for (const [dr, dc] of directions) {
+        const jr = tr + dr * 2;
+        const jc = tc + dc * 2;
+        if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === 0) {
+          const mr = tr + dr;
+          const mc = tc + dc;
+          const midPiece = board[mr][mc];
+          if (midPiece !== 0 && Math.floor(midPiece) !== myColor) {
+            canJumpAgain = true;
+            break;
+          }
+        }
       }
     }
 
-    // Check win
-    const remainingOpponent = newData.board.flat().filter((p: number) => p !== 0 && Math.floor(p) !== myColor);
-    if (remainingOpponent.length === 0) {
+    if (!canJumpAgain) {
+      nextTurn = opponentId;
+    }
+
+    // Check win condition for the NEXT player
+    const nextPlayerColor = game.players[0].id === nextTurn ? 1 : 2;
+    const nextValidMoves = getAllValidMoves(board, nextPlayerColor);
+    if (nextValidMoves.type === 'move' && nextValidMoves.moves.length === 0) {
       status = 'finished';
       winner = userId;
+    } else if (nextValidMoves.type === 'jump' && nextValidMoves.jumps.length === 0) {
+       // This shouldn't happen if jumps are available, but for safety:
+       const remainingOpponent = board.flat().filter((p: number) => p !== 0 && Math.floor(p) !== myColor);
+       if (remainingOpponent.length === 0) {
+         status = 'finished';
+         winner = userId;
+       }
     }
 
   } else if (game.type === '10000') {

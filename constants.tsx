@@ -3,7 +3,7 @@ import { User, Post, PostVisibility, StoreItem, StableListing } from './types';
 
 export const CURRENT_USER_ID = 'admin-1';
 
-export const APP_LOGO_URL = 'https://picsum.photos/seed/sharebares_logo_v10/512/512';
+export const APP_LOGO_URL = 'https://picsum.photos/seed/sharebares_naughty_bear/512/512';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
   {

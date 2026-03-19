@@ -13,7 +13,7 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A cute, light-blue bear named "barebear" with a mischievous vibe. The bear is wearing a detailed black leather harness. On its white belly is a light-blue glowing heart with a flame inside. The overall aesthetic is premium, sleek, and atmospheric. The bear has a playful and provocative personality.';
+const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty "care bear". The bear has a mischievous expression and is smoking a thick cigar. He is holding a couple of small photographs in his hand to represent sharing media. Thick, swirling colorful smoke clouds surround and float above the bear. The style is edgy, detailed, and vibrant, like a modern 3D animated movie.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
   dance: 'The bear is doing a silly, energetic dance with its arms up and a big mischievous grin.',
@@ -31,16 +31,17 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v5_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v6_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
-    if (imageUrl) return;
-
     const generate = async () => {
+      // Only skip if we already have a generated image (data URL)
+      if (imageUrl && imageUrl.startsWith('data:image')) return;
+
       try {
         setLoading(true);
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
           contents: {
@@ -58,7 +59,7 @@ const BareBear: React.FC<BareBearProps> = ({
               const url = `data:image/png;base64,${part.inlineData.data}`;
               setImageUrl(url);
               try {
-                localStorage.setItem(`barebear_v5_${action}`, url);
+                localStorage.setItem(`barebear_v6_${action}`, url);
               } catch (e) {
                 console.warn('Failed to cache Bare Bear image in localStorage:', e);
               }

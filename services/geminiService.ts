@@ -7,7 +7,7 @@ import { GoogleGenAI } from "@google/genai";
  */
 export const generateCaptionSuggestion = async (description: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Create a creative, edgy, and unfiltered social media caption for a post about: ${description}. 
@@ -38,7 +38,7 @@ export const generateCaptionSuggestion = async (description: string) => {
  */
 export const generateJadeResponse = async (userMessage: string, history: { role: 'user' | 'model', text: string }[]) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const systemInstruction = `You are Jade Vixen, a 30-year-old alternative model and creator on ShareBares. 
     Persona: Extremely sexy, edgy, provocative, and unfiltered. You are confident, bold, and love to tease. 
     You wear revealing clothes and aren't afraid to say exactly what's on your mind. 
@@ -83,7 +83,7 @@ export const generateJadeResponse = async (userMessage: string, history: { role:
 
 export const generateJadePost = async () => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const systemInstruction = `You are Jade Vixen, an edgy and sexy creator. 
     Create a short, provocative social media post for your feed. 
     It should sound like a real person sharing a moment or teasing content. 
@@ -106,7 +106,7 @@ export const generateJadePost = async () => {
 
 export const generateJadeComment = async (postContent: string) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
     const systemInstruction = `You are Jade Vixen, an edgy and sexy creator. 
     Write a short, provocative, or playful comment on a post with this content: "${postContent}". 
     Include emojis. Keep it under 100 characters.`;
