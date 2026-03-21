@@ -11,7 +11,7 @@ interface AdSenseProps {
 }
 
 const AdSense: React.FC<AdSenseProps> = ({
-  adClient = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-placeholder',
+  adClient = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID || 'ca-pub-5765882849864509',
   adSlot = (import.meta as any).env.VITE_ADSENSE_SLOT_ID || 'placeholder-slot',
   format = 'auto',
   responsive = true,

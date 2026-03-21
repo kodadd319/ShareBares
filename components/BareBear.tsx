@@ -13,7 +13,7 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty "care bear". The bear has a mischievous expression and is smoking a thick cigar. He is holding a couple of small photographs in his hand to represent sharing media. Thick, swirling colorful smoke clouds surround and float above the bear. The style is edgy, detailed, and vibrant, like a modern 3D animated movie.';
+const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". The bear is a light lavender color with a silver chrome belly. It has a mischievous, seductive expression and is surrounded by soft grey and white smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). The bear is edgy, detailed, and vibrant.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
   dance: 'The bear is doing a silly, energetic dance with its arms up and a big mischievous grin.',
@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v6_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v9_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -53,13 +53,14 @@ const BareBear: React.FC<BareBearProps> = ({
           },
         });
 
-        if (response.candidates && response.candidates.length > 0 && response.candidates[0].content.parts) {
-          for (const part of response.candidates[0].content.parts) {
+        const parts = response.candidates?.[0]?.content?.parts;
+        if (parts) {
+          for (const part of parts) {
             if (part.inlineData) {
               const url = `data:image/png;base64,${part.inlineData.data}`;
               setImageUrl(url);
               try {
-                localStorage.setItem(`barebear_v6_${action}`, url);
+                localStorage.setItem(`barebear_v9_${action}`, url);
               } catch (e) {
                 console.warn('Failed to cache Bare Bear image in localStorage:', e);
               }

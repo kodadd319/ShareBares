@@ -16,7 +16,7 @@ const AdPlaceholder: React.FC<AdPlaceholderProps> = ({ size = 'md', className = 
     lg: 'h-80'
   };
 
-  const adClient = process.env.VITE_ADSENSE_CLIENT_ID;
+  const adClient = (import.meta as any).env.VITE_ADSENSE_CLIENT_ID;
 
   if (adClient) {
     return (
