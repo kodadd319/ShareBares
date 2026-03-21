@@ -3,7 +3,7 @@ import { User, Post, PostVisibility, StoreItem, StableListing } from './types';
 
 export const CURRENT_USER_ID = 'admin-1';
 
-export const APP_LOGO_URL = 'input_file_0.png';
+export const APP_LOGO_URL = '/logo.png';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
   {

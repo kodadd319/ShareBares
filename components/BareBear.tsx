@@ -13,7 +13,7 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". The bear is a light lavender color with a silver chrome belly. It has a mischievous, seductive expression and is surrounded by soft grey and white smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). The bear is edgy, detailed, and vibrant.';
+const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". The bear is a vibrant blue color with a white heart and blue flame on its belly, wearing a black leather harness. It has a mischievous, seductive expression with a wink, and is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). The bear is edgy, detailed, and vibrant.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
   dance: 'The bear is doing a silly, energetic dance with its arms up and a big mischievous grin.',
@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v9_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v10_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -54,20 +54,30 @@ const BareBear: React.FC<BareBearProps> = ({
         });
 
         const parts = response.candidates?.[0]?.content?.parts;
+        let imageFound = false;
         if (parts) {
           for (const part of parts) {
             if (part.inlineData) {
               const url = `data:image/png;base64,${part.inlineData.data}`;
               setImageUrl(url);
+              imageFound = true;
               try {
-                localStorage.setItem(`barebear_v9_${action}`, url);
+                localStorage.setItem(`barebear_v10_${action}`, url);
+                // Clear old mascot versions to save space
+                Object.keys(localStorage).forEach(key => {
+                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v10_')) {
+                    localStorage.removeItem(key);
+                  }
+                });
               } catch (e) {
                 console.warn('Failed to cache Bare Bear image in localStorage:', e);
               }
               break;
             }
           }
-        } else {
+        }
+        
+        if (!imageFound) {
           throw new Error('No image generated in response');
         }
       } catch (error: any) {
