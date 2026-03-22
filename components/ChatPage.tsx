@@ -38,6 +38,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
 }) => {
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [longPressedUserId, setLongPressedUserId] = useState<string | null>(null);
   const timerRef = useRef<any>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -81,6 +82,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
 
   const filteredUsers = users.filter(u => 
     u.id !== me.id && 
+    (searchQuery.length > 0 || chatMessages[u.id] || u.id === selectedUserId) &&
     (u.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || 
      u.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -100,7 +102,10 @@ const ChatPage: React.FC<ChatPageProps> = ({
               </button>
               <h2 className="text-2xl font-black uppercase tracking-tighter chrome-text">Messages</h2>
             </div>
-            <button className="p-2 bg-[#967bb6]/10 text-[#967bb6] rounded-xl hover:bg-[#967bb6]/20 transition-all">
+            <button 
+              onClick={() => searchInputRef.current?.focus()}
+              className="p-2 bg-[#967bb6]/10 text-[#967bb6] rounded-xl hover:bg-[#967bb6]/20 transition-all"
+            >
               <Plus size={20} />
             </button>
           </div>
@@ -108,6 +113,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#967bb6] transition-colors" size={16} />
             <input 
+              ref={searchInputRef}
               type="text" 
               placeholder="Search conversations..." 
               value={searchQuery}
@@ -277,7 +283,11 @@ const ChatPage: React.FC<ChatPageProps> = ({
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {isMe && (
-                          <CheckCheck size={12} className="text-[#967bb6]" />
+                          msg.isRead ? (
+                            <CheckCheck size={12} className="text-[#967bb6]" />
+                          ) : (
+                            <Check size={12} className="text-slate-500" />
+                          )
                         )}
                       </div>
                     </div>
@@ -338,7 +348,10 @@ const ChatPage: React.FC<ChatPageProps> = ({
               Connect with creators privately. Send messages, share media, and build deeper connections in a secure environment.
             </p>
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-8">
-              <button className="px-8 py-3 bg-gradient-to-tr from-[#967bb6] to-[#6b46c1] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-[#967bb6]/20">
+              <button 
+                onClick={() => searchInputRef.current?.focus()}
+                className="px-8 py-3 bg-gradient-to-tr from-[#967bb6] to-[#6b46c1] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-[#967bb6]/20"
+              >
                 Start a New Chat
               </button>
               <button 

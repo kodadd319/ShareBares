@@ -32,30 +32,39 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     data.playerHand = [drawCard(data.deck), drawCard(data.deck)];
     data.dealerHand = [drawCard(data.deck), drawCard(data.deck)];
     data.status = 'playing';
+    data.bet = 100; // Default bet
   } else if (type === 'rummy') {
     data.deck = createDeck();
-    data.hand = Array(7).fill(0).map(() => drawCard(data.deck));
+    data.hand = [];
+    for (let i = 0; i < 7; i++) data.hand.push(drawCard(data.deck));
     data.discardPile = [drawCard(data.deck)];
     data.melds = [];
     data.hasDrawn = false;
   } else if (type === 'billiards') {
     data.balls = [
       { id: 1, x: 70, y: 50, type: 'solid', number: 1 },
-      { id: 2, x: 75, y: 45, type: 'solid', number: 2 },
-      { id: 3, x: 75, y: 55, type: 'striped', number: 9 },
-      { id: 4, x: 80, y: 40, type: 'solid', number: 3 },
-      { id: 5, x: 80, y: 50, type: 'black', number: 8 },
-      { id: 6, x: 80, y: 60, type: 'striped', number: 10 },
-      { id: 7, x: 85, y: 35, type: 'solid', number: 4 },
-      { id: 8, x: 85, y: 45, type: 'striped', number: 11 },
-      { id: 9, x: 85, y: 55, type: 'solid', number: 5 },
-      { id: 10, x: 85, y: 65, type: 'striped', number: 12 },
+      { id: 2, x: 73, y: 48.5, type: 'solid', number: 2 },
+      { id: 3, x: 73, y: 51.5, type: 'striped', number: 9 },
+      { id: 4, x: 76, y: 47, type: 'solid', number: 3 },
+      { id: 5, x: 76, y: 50, type: 'black', number: 8 },
+      { id: 6, x: 76, y: 53, type: 'striped', number: 10 },
+      { id: 7, x: 79, y: 45.5, type: 'solid', number: 4 },
+      { id: 8, x: 79, y: 48.5, type: 'striped', number: 11 },
+      { id: 9, x: 79, y: 51.5, type: 'solid', number: 5 },
+      { id: 10, x: 79, y: 54.5, type: 'striped', number: 12 },
+      { id: 11, x: 82, y: 44, type: 'striped', number: 13 },
+      { id: 12, x: 82, y: 47, type: 'solid', number: 6 },
+      { id: 13, x: 82, y: 50, type: 'striped', number: 14 },
+      { id: 14, x: 82, y: 53, type: 'solid', number: 7 },
+      { id: 15, x: 82, y: 56, type: 'striped', number: 15 },
     ];
     data.cueBall = { x: 25, y: 50 };
-    data.power = 50;
+    data.power = 0;
     data.angle = 0;
     data.pocketed = [];
     data.playerType = {}; // userId -> 'solid' | 'striped'
+    data.lastPocketed = [];
+    data.foul = null;
   }
 
   return {
@@ -117,7 +126,15 @@ const calculateDiceScore = (dice: number[]) => {
   let score = 0;
   let usedCount = 0;
 
-  // 1s and 5s
+  // Special cases: Straight
+  if (Object.keys(counts).length === 6) return { score: 1500, usedCount: 6 };
+  
+  // Three pairs
+  let pairs = 0;
+  Object.values(counts).forEach(c => { if (c === 2) pairs++; });
+  if (pairs === 3) return { score: 1500, usedCount: 6 };
+
+  // 1s
   if (counts[1] >= 3) {
     score += 1000 * Math.pow(2, counts[1] - 3);
     usedCount += counts[1];
@@ -126,6 +143,7 @@ const calculateDiceScore = (dice: number[]) => {
     usedCount += (counts[1] || 0);
   }
 
+  // 5s
   if (counts[5] >= 3) {
     score += 500 * Math.pow(2, counts[5] - 3);
     usedCount += counts[5];
@@ -134,7 +152,7 @@ const calculateDiceScore = (dice: number[]) => {
     usedCount += (counts[5] || 0);
   }
 
-  // Others
+  // Others (2, 3, 4, 6)
   [2, 3, 4, 6].forEach(num => {
     if (counts[num] >= 3) {
       score += num * 100 * Math.pow(2, counts[num] - 3);
@@ -142,15 +160,30 @@ const calculateDiceScore = (dice: number[]) => {
     }
   });
 
-  // Special cases: Straight
-  if (Object.keys(counts).length === 6) return { score: 1500, allUsed: true };
-  
-  // Three pairs
-  let pairs = 0;
-  Object.values(counts).forEach(c => { if (c === 2) pairs++; });
-  if (pairs === 3) return { score: 1500, allUsed: true };
+  return { score, usedCount };
+};
 
-  return { score, allUsed: usedCount === dice.length };
+const isValidMeld = (cards: any[]) => {
+  if (cards.length < 3) return false;
+
+  // Check for Set (same rank)
+  const allSameRank = cards.every(c => c.value === cards[0].value);
+  if (allSameRank) return true;
+
+  // Check for Run (same suit, sequential rank)
+  const allSameSuit = cards.every(c => c.suit === cards[0].suit);
+  if (allSameSuit) {
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const indices = cards.map(c => values.indexOf(c.value)).sort((a, b) => a - b);
+    
+    // Check for sequential indices
+    for (let i = 0; i < indices.length - 1; i++) {
+      if (indices[i + 1] !== indices[i] + 1) return false;
+    }
+    return true;
+  }
+
+  return false;
 };
 
 export const handleMove = (game: GameState, userId: string, moveData: any): GameState => {
@@ -280,19 +313,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
 
   } else if (game.type === '10000') {
     if (moveData.type === 'roll') {
-      // Must have selected at least one scoring die from previous roll if not first roll
-      if (newData.rollCount > 0 && newData.tempSavedIndices.length === 0) return game;
-
-      // Calculate score of temp saved dice and add to turn score
-      if (newData.tempSavedIndices.length > 0) {
-        const tempDice = newData.tempSavedIndices.map((idx: number) => newData.dice[idx]);
-        const { score } = calculateDiceScore(tempDice);
-        newData.currentTurnScore += score;
-        newData.savedDice = [...newData.savedDice, ...newData.tempSavedIndices];
-        newData.tempSavedIndices = [];
-      }
-
-      // If all dice are saved, reset for hot dice
+      // If we have hot dice (all 6 saved), reset for a full roll
       if (newData.savedDice.length === 6) {
         newData.savedDice = [];
       }
@@ -311,6 +332,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       newData.dice = newDice;
       newData.rollCount++;
       newData.lastRollIndices = Array.from({length: 6}, (_, i) => i).filter(i => !newData.savedDice.includes(i));
+      newData.tempSavedIndices = []; // Reset selection for new roll
 
       // Check for Farkle
       const { score: rollScore } = calculateDiceScore(rolled);
@@ -321,16 +343,25 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         newData.rollCount = 0;
         nextTurn = opponentId;
       } else {
-        newData.canBank = (newData.currentTurnScore + rollScore >= 500) || newData.score[userId] > 0;
+        newData.canBank = (newData.currentTurnScore >= 500) || newData.score[userId] > 0;
       }
+    } else if (moveData.type === 'keep') {
+      if (newData.tempSavedIndices.length === 0) return game;
+      
+      const tempDice = newData.tempSavedIndices.map((idx: number) => newData.dice[idx]);
+      const { score, usedCount } = calculateDiceScore(tempDice);
+      
+      // Must only select scoring dice
+      if (usedCount !== tempDice.length) return game;
+      
+      newData.currentTurnScore += score;
+      newData.savedDice = [...newData.savedDice, ...newData.tempSavedIndices];
+      newData.tempSavedIndices = [];
+      newData.lastRollIndices = []; // Cannot toggle these anymore this turn
+      
+      newData.canBank = (newData.currentTurnScore >= 500) || newData.score[userId] > 0;
     } else if (moveData.type === 'bank') {
-      // Add current temp selection to score before banking
-      let finalTurnScore = newData.currentTurnScore;
-      if (newData.tempSavedIndices.length > 0) {
-        const tempDice = newData.tempSavedIndices.map((idx: number) => newData.dice[idx]);
-        const { score } = calculateDiceScore(tempDice);
-        finalTurnScore += score;
-      }
+      const finalTurnScore = newData.currentTurnScore;
 
       if (finalTurnScore >= 500 || newData.score[userId] > 0) {
         newData.score[userId] = (newData.score[userId] || 0) + finalTurnScore;
@@ -366,6 +397,30 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       if (getBlackjackValue(newData.playerHand) > 21) {
         status = 'finished';
         winner = opponentId;
+      }
+    } else if (moveData.type === 'double' && newData.playerHand.length === 2) {
+      newData.bet *= 2;
+      newData.playerHand.push(drawCard(newData.deck));
+      if (getBlackjackValue(newData.playerHand) > 21) {
+        status = 'finished';
+        winner = opponentId;
+      } else {
+        // Dealer AI (must stand after double)
+        let dealerVal = getBlackjackValue(newData.dealerHand);
+        while (dealerVal < 17) {
+          newData.dealerHand.push(drawCard(newData.deck));
+          dealerVal = getBlackjackValue(newData.dealerHand);
+        }
+        
+        const playerVal = getBlackjackValue(newData.playerHand);
+        status = 'finished';
+        if (dealerVal > 21 || playerVal > dealerVal) {
+          winner = userId;
+        } else if (dealerVal > playerVal) {
+          winner = opponentId;
+        } else {
+          winner = 'draw';
+        }
       }
     } else if (moveData.type === 'stand') {
       // Dealer AI
@@ -405,36 +460,94 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       }
     } else if (moveData.type === 'meld') {
       const meldCards = moveData.indices.map((i: number) => newData.hand[i]);
-      // Simplified meld validation (always allow for now, or add logic)
-      newData.melds.push(meldCards);
-      // Remove from hand (sort indices descending to avoid shift issues)
-      moveData.indices.sort((a: number, b: number) => b - a).forEach((i: number) => newData.hand.splice(i, 1));
-      if (newData.hand.length === 0) {
-        status = 'finished';
-        winner = userId;
+      if (isValidMeld(meldCards)) {
+        newData.melds.push(meldCards);
+        // Remove from hand (sort indices descending to avoid shift issues)
+        moveData.indices.sort((a: number, b: number) => b - a).forEach((i: number) => newData.hand.splice(i, 1));
+        if (newData.hand.length === 0) {
+          status = 'finished';
+          winner = userId;
+        }
       }
     }
   } else if (game.type === 'billiards') {
     if (moveData.type === 'aim') newData.angle = moveData.angle;
     else if (moveData.type === 'power') newData.power = moveData.power;
+    else if (moveData.type === 'call_ball') newData.calledShot = moveData.ball;
+    else if (moveData.type === 'call_pocket') newData.targetPocket = moveData.pocket;
+    else if (moveData.type === 'change_mode') newData.mode = moveData.mode;
     else if (moveData.type === 'shoot') {
-      // Simulate pocketing
-      const shot = Math.random();
-      if (shot > 0.6) {
-        const pocketedIdx = Math.floor(Math.random() * newData.balls.length);
-        const ball = newData.balls.splice(pocketedIdx, 1)[0];
-        newData.pocketed.push(ball);
-        // Assign types
-        if (!newData.playerType[userId]) {
-          newData.playerType[userId] = ball.type;
-          newData.playerType[opponentId] = ball.type === 'solid' ? 'striped' : 'solid';
+      const cueX = newData.cueBall.x;
+      const cueY = newData.cueBall.y;
+      const angleRad = (newData.angle * Math.PI) / 180;
+      
+      // Find the first ball hit by the cue ball along the shot line
+      let hitBallIdx = -1;
+      let minDistance = Infinity;
+
+      newData.balls.forEach((ball: any, idx: number) => {
+        // Vector from cue to ball
+        const dx = ball.x - cueX;
+        const dy = ball.y - cueY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Angle to ball
+        const ballAngle = Math.atan2(dy, dx);
+        const angleDiff = Math.abs(ballAngle - angleRad);
+        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+
+        // If the angle is close enough (within ~5 degrees)
+        if (Math.abs(normalizedDiff) < 0.1) {
+          if (dist < minDistance) {
+            minDistance = dist;
+            hitBallIdx = idx;
+          }
         }
-        // If pocketed own type or 8-ball logic
-        if (ball.type === 'black') {
-          status = 'finished';
-          winner = newData.balls.length === 0 ? userId : opponentId;
+      });
+
+      if (hitBallIdx !== -1) {
+        const ball = newData.balls[hitBallIdx];
+        // Simulate where the ball goes after being hit
+        // For simplicity, we'll say it goes in the direction of the hit
+        // and has a chance to be pocketed based on power
+        const successChance = (newData.power / 100) * 0.8;
+        if (Math.random() < successChance) {
+          newData.balls.splice(hitBallIdx, 1);
+          newData.pocketed.push(ball);
+          
+          // Assign types if not already assigned
+          if (!newData.playerType[userId] && ball.type !== 'black') {
+            newData.playerType[userId] = ball.type;
+            newData.playerType[opponentId] = ball.type === 'solid' ? 'striped' : 'solid';
+          }
+
+          // Move cue ball to a new position after a shot
+          newData.cueBall = {
+            x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 40)),
+            y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 40))
+          };
+          
+          // Win/Loss logic for 8-ball
+          if (ball.type === 'black') {
+            const myType = newData.playerType[userId];
+            const myBallsRemaining = newData.balls.filter((b: any) => b.type === myType).length;
+            status = 'finished';
+            winner = myBallsRemaining === 0 ? userId : opponentId;
+          }
+        } else {
+          // Missed shot: move cue ball slightly
+          newData.cueBall = {
+            x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 20)),
+            y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 20))
+          };
+          nextTurn = opponentId;
         }
       } else {
+        // Scratched or missed: move cue ball slightly
+        newData.cueBall = {
+          x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 30)),
+          y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 30))
+        };
         nextTurn = opponentId;
       }
     }

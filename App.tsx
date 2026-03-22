@@ -51,9 +51,10 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
           <p className="text-[#967bb6] text-lg md:text-2xl font-black uppercase tracking-[0.2em] leading-relaxed italic px-4">
             "Post like nobody’s watching, get paid like everyone is."
           </p>
-          <div className="flex items-center justify-center space-x-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
+          <div className="flex flex-col items-center justify-center space-y-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
             <span>Powered by</span>
             <span className="text-[#967bb6]">barebear</span>
+            <span className="mt-2 text-slate-700">www.sharebares.com</span>
           </div>
         </div>
       </div>
@@ -264,7 +265,10 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
 
       <form onSubmit={handleSubmit} className="glass-panel rounded-3xl p-8 border-[#c0c0c0]/10 shadow-2xl space-y-8 relative overflow-hidden chrome-border">
         <div className="relative mb-28">
-          <div className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5">
+          <div 
+            className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
+            onClick={() => coverInputRef.current?.click()}
+          >
             <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
             <input 
               type="file" 
@@ -274,18 +278,17 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
               onChange={handleCoverUpload} 
             />
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-              <button 
-                type="button" 
-                onClick={() => coverInputRef.current?.click()} 
-                className="bg-[#967bb6] p-3 rounded-full text-white shadow-xl hover:scale-110 transition-all chrome-border"
-              >
+              <div className="bg-[#967bb6] p-3 rounded-full text-white shadow-xl hover:scale-110 transition-all chrome-border">
                 <Camera size={24} />
-              </button>
+              </div>
             </div>
           </div>
 
           <div className="absolute -bottom-16 left-8 group">
-            <div className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border">
+            <div 
+              className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border cursor-pointer"
+              onClick={() => avatarInputRef.current?.click()}
+            >
               <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
               <input 
                 type="file" 
@@ -295,13 +298,9 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
                 onChange={handleAvatarUpload} 
               />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60">
-                 <button 
-                  type="button" 
-                  onClick={() => avatarInputRef.current?.click()} 
-                  className="bg-[#967bb6] p-2 rounded-lg text-white"
-                 >
+                 <div className="bg-[#967bb6] p-2 rounded-lg text-white">
                    <Camera size={18} />
-                 </button>
+                 </div>
               </div>
             </div>
           </div>
@@ -797,6 +796,23 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
   const [website, setWebsite] = useState('');
   const [stripeConnectId, setStripeConnectId] = useState('');
 
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCover(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatar(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName || !username) return;
@@ -835,30 +851,42 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#967bb6]/10 blur-[100px] pointer-events-none"></div>
 
           <div className="relative mb-28">
-            <div className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5">
+            <div 
+              className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
+              onClick={() => coverInputRef.current?.click()}
+            >
               <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+              <input 
+                type="file" 
+                ref={coverInputRef} 
+                className="hidden" 
+                accept="image/*" 
+                onChange={handleCoverUpload} 
+              />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                <button 
-                  type="button" 
-                  onClick={() => setCover(`https://picsum.photos/seed/${Math.random()}/800/300`)} 
-                  className="bg-[#967bb6] p-3 rounded-full text-white shadow-xl hover:scale-110 transition-all chrome-border"
-                >
+                <div className="bg-[#967bb6] p-3 rounded-full text-white shadow-xl hover:scale-110 transition-all chrome-border">
                   <Camera size={24} />
-                </button>
+                </div>
               </div>
             </div>
 
             <div className="absolute -bottom-16 left-8 group">
-              <div className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border">
+              <div 
+                className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+              >
                 <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
+                <input 
+                  type="file" 
+                  ref={avatarInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handleAvatarUpload} 
+                />
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60">
-                   <button 
-                    type="button" 
-                    onClick={() => setAvatar(`https://picsum.photos/seed/${Math.random()}/200`)} 
-                    className="bg-[#967bb6] p-2 rounded-lg text-white"
-                   >
+                   <div className="bg-[#967bb6] p-2 rounded-lg text-white">
                      <Camera size={18} />
-                   </button>
+                   </div>
                 </div>
               </div>
             </div>
@@ -1616,6 +1644,14 @@ const AppContent: React.FC = () => {
       console.log('Notification:', title, message);
     }
   }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setAppNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const markNotificationAsRead = useCallback((id: string) => {
+    setAppNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  }, []);
   
   const meRaw = users.find(u => u.id === currentUserId)!;
   const isAdminUser = meRaw.isAdmin || meRaw.email === 'jtothek319@gmail.com';
@@ -1650,10 +1686,13 @@ const AppContent: React.FC = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>({
     'creator-1': [
-      { id: '1', senderId: 'creator-1', receiverId: 'me-123', text: 'Hey Alex! Thanks for the sub.', timestamp: new Date(Date.now() - 3600000).toISOString() }
+      { id: '1', senderId: 'creator-1', receiverId: CURRENT_USER_ID, text: 'Hey Alex! Thanks for the sub.', timestamp: new Date(Date.now() - 3600000).toISOString() }
     ],
     'creator-2': [
-      { id: '1', senderId: 'creator-2', receiverId: 'me-123', text: 'Did you check out my latest unboxing?', timestamp: new Date(Date.now() - 7200000).toISOString() }
+      { id: '1', senderId: 'creator-2', receiverId: CURRENT_USER_ID, text: 'Did you check out my latest unboxing?', timestamp: new Date(Date.now() - 7200000).toISOString() }
+    ],
+    'ai-jade': [
+      { id: 'jade-1', senderId: 'ai-jade', receiverId: CURRENT_USER_ID, text: 'Welcome to my world. Ready to see what is behind the ink?', timestamp: new Date(Date.now() - 1800000).toISOString() }
     ]
   });
   const [currentMessageInput, setCurrentMessageInput] = useState('');
@@ -1875,7 +1914,23 @@ const AppContent: React.FC = () => {
           message.text,
           { senderId: message.senderId }
         );
+      } else if (selectedUserIdRef.current === message.senderId) {
+        // If chat is open, mark as read immediately
+        newSocket.emit('mark_messages_read', { senderId: message.senderId, receiverId: currentUserId });
       }
+    });
+
+    newSocket.on('messages_marked_read', (data: { senderId: string, receiverId: string }) => {
+      setChatMessages(prev => {
+        const otherId = data.senderId === currentUserId ? data.receiverId : data.senderId;
+        if (!prev[otherId]) return prev;
+        return {
+          ...prev,
+          [otherId]: prev[otherId].map(m => 
+            (m.senderId === data.senderId && m.receiverId === data.receiverId) ? { ...m, isRead: true } : m
+          )
+        };
+      });
     });
 
     newSocket.on('message_sent', (message: Message) => {
@@ -1885,6 +1940,14 @@ const AppContent: React.FC = () => {
           ...prev,
           [otherId]: [...(prev[otherId] || []), message]
         };
+      });
+    });
+
+    newSocket.on('post:created', (post: Post) => {
+      setPosts(prev => {
+        // Avoid duplicates
+        if (prev.find(p => p.id === post.id)) return prev;
+        return [post, ...prev];
       });
     });
 
@@ -1941,15 +2004,29 @@ const AppContent: React.FC = () => {
   }, [currentUserId, users]);
 
   useEffect(() => {
-    if (selectedUserId) {
-      // Mark messages as read by clearing notifications from this sender
+    if (selectedUserId && socket) {
+      // Mark messages as read on the server
+      socket.emit('mark_messages_read', { senderId: selectedUserId, receiverId: currentUserId });
+
+      // Mark local messages as read
+      setChatMessages(prev => {
+        if (!prev[selectedUserId]) return prev;
+        return {
+          ...prev,
+          [selectedUserId]: prev[selectedUserId].map(m => 
+            (m.senderId === selectedUserId && m.receiverId === currentUserId) ? { ...m, isRead: true } : m
+          )
+        };
+      });
+
+      // Mark notifications as read by clearing notifications from this sender
       setAppNotifications(prev => prev.map(n => 
         (n.type === NotificationType.MESSAGE && n.senderId === selectedUserId) 
         ? { ...n, isRead: true } 
         : n
       ));
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, socket, currentUserId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -2082,21 +2159,48 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!newPostContent.trim() && !newPostMedia) return;
+    
+    let mediaUrl = undefined;
+    
+    // If we have a real file, upload it to the server
+    if (newPostMedia) {
+      const formData = new FormData();
+      formData.append('file', newPostMedia);
+      try {
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          mediaUrl = data.url;
+        }
+      } catch (err) {
+        console.error('Failed to upload media:', err);
+      }
+    }
     
     const newPost: Post = {
       id: `post-${Date.now()}`,
       userId: currentUserId,
-      content: newPostContent,
+      content: newPostContent.trim(),
       createdAt: new Date().toISOString(),
       likes: 0,
       commentsCount: 0,
       visibility: newPostVisibility,
-      mediaUrl: newPostMediaPreview || 'https://picsum.photos/seed/' + Math.random() + '/800/600',
-      mediaType: newPostMedia?.type.startsWith('video') ? 'video' : 'image',
+      mediaUrl: mediaUrl,
+      mediaType: mediaUrl ? (newPostMedia?.type.startsWith('video') ? 'video' : 'image') : undefined,
     };
+    
     setPosts([newPost, ...posts]);
+    
+    // Emit to server for real-time updates
+    if (socket) {
+      socket.emit('post:create', newPost);
+    }
+    
     setNewPostContent('');
     setIsCreating(false);
     setNewPostVisibility(PostVisibility.PUBLIC);
@@ -2461,13 +2565,14 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleAddItemToStore = (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, file: File) => {
+  const handleAddItemToStore = (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
+    const mediaUrls = files.map(file => URL.createObjectURL(file));
     const newItem: StoreItem = {
       id: `si-${Date.now()}`,
       userId: currentUserId,
       ...itemData,
-      thumbnailUrl: URL.createObjectURL(file),
-      mediaUrl: URL.createObjectURL(file),
+      thumbnailUrl: mediaUrls[0], // Use first file as thumbnail
+      mediaUrls: mediaUrls,
       createdAt: new Date().toISOString()
     };
     setStoreItems(prev => [newItem, ...prev]);
@@ -2503,8 +2608,8 @@ const AppContent: React.FC = () => {
         description: listingData.services,
         price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
         thumbnailUrl: listingData.avatarUrl || listingData.photos?.[0] || '',
-        mediaUrl: listingData.photos?.[0] || listingData.avatarUrl || '',
-        type: 'image',
+        mediaUrls: listingData.photos || [listingData.avatarUrl || ''],
+        type: 'other',
         createdAt: new Date().toISOString()
       };
       setStoreItems(prev => [newStoreItem, ...prev]);
@@ -2552,8 +2657,8 @@ const AppContent: React.FC = () => {
             description: pendingStableListing.services,
             price: parseFloat(pendingStableListing.pricing.replace(/[^0-9.]/g, '')) || 0,
             thumbnailUrl: pendingStableListing.avatarUrl || pendingStableListing.photos?.[0] || '',
-            mediaUrl: pendingStableListing.photos?.[0] || pendingStableListing.avatarUrl || '',
-            type: 'image',
+            mediaUrls: pendingStableListing.photos || [pendingStableListing.avatarUrl || ''],
+            type: 'other',
             createdAt: new Date().toISOString()
           };
           setStoreItems(prev => [newStoreItem, ...prev]);
@@ -2719,15 +2824,23 @@ const AppContent: React.FC = () => {
       color: '#967bb6'
     };
 
+    const backgroundStyle = custom?.backgroundWallpaper && custom.backgroundWallpaper !== ''
+      ? {
+          backgroundColor: custom.backgroundWallpaperColor || '#050505',
+          backgroundImage: `url(${custom.backgroundWallpaper})`,
+          backgroundRepeat: 'repeat',
+          color: fontColor
+        }
+      : {
+          backgroundColor: custom?.backgroundColor || '#050505',
+          backgroundImage: 'none',
+          color: fontColor
+        };
+
     return (
       <div 
         className={`min-h-screen transition-all duration-500 ${custom?.fontType ? fontStyles[custom.fontType] : ''}`}
-        style={{ 
-          backgroundColor: custom?.backgroundColor || '#050505',
-          backgroundImage: custom?.backgroundWallpaper ? `url(${custom.backgroundWallpaper})` : 'none',
-          backgroundRepeat: 'repeat',
-          color: fontColor
-        }}
+        style={backgroundStyle}
       >
         {custom?.themeSongUrl && (
           <audio src={custom.themeSongUrl} autoPlay loop />
@@ -3362,21 +3475,50 @@ const AppContent: React.FC = () => {
                   return (
                     <div 
                       key={notif.id}
-                      onClick={() => notif.senderId && navigateToProfile(notif.senderId)}
-                      className={`p-6 rounded-3xl border transition-all flex items-start space-x-4 cursor-pointer ${notif.isRead ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#967bb6]/5 border-[#967bb6]/20 shadow-lg shadow-[#967bb6]/5'}`}
+                      className={`group p-6 rounded-3xl border transition-all flex items-start space-x-4 ${notif.isRead ? 'bg-white/5 border-white/5 opacity-60' : 'bg-[#967bb6]/5 border-[#967bb6]/20 shadow-lg shadow-[#967bb6]/5'}`}
                     >
-                      <div className={`p-3 rounded-2xl shrink-0 ${notif.isRead ? 'bg-white/5 text-slate-500' : 'bg-[#967bb6]/20 text-[#967bb6]'}`}>
+                      <div 
+                        onClick={() => notif.senderId && navigateToProfile(notif.senderId)}
+                        className={`p-3 rounded-2xl shrink-0 cursor-pointer ${notif.isRead ? 'bg-white/5 text-slate-500' : 'bg-[#967bb6]/20 text-[#967bb6]'}`}
+                      >
                         <Icon size={20} />
                       </div>
-                      <div className="flex-grow">
+                      <div 
+                        onClick={() => notif.senderId && navigateToProfile(notif.senderId)}
+                        className="flex-grow cursor-pointer"
+                      >
                         <div className="flex items-center justify-between mb-1">
                           <h3 className={`text-sm font-black uppercase tracking-tight ${notif.isRead ? 'text-slate-400' : 'text-white'}`}>{notif.title}</h3>
                           <span className="text-[10px] text-slate-600 font-bold">{new Date(notif.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                         <p className={`text-xs leading-relaxed ${notif.isRead ? 'text-slate-500' : 'text-slate-300'}`}>{notif.message}</p>
                       </div>
+                      <div className="flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {!notif.isRead && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationAsRead(notif.id);
+                            }}
+                            className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500/20 transition-all"
+                            title="Mark as read"
+                          >
+                            <Check size={14} />
+                          </button>
+                        )}
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            dismissNotification(notif.id);
+                          }}
+                          className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-all"
+                          title="Dismiss"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                       {!notif.isRead && (
-                        <div className="w-2 h-2 bg-[#967bb6] rounded-full mt-2 shadow-[0_0_8px_#967bb6]"></div>
+                        <div className="w-2 h-2 bg-[#967bb6] rounded-full mt-2 shadow-[0_0_8px_#967bb6] shrink-0"></div>
                       )}
                     </div>
                   );

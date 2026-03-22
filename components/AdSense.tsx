@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface AdSenseProps {
   adClient?: string;
@@ -18,10 +18,20 @@ const AdSense: React.FC<AdSenseProps> = ({
   className = '',
   style = { display: 'block' }
 }) => {
+  const adPushed = useRef(false);
+
   useEffect(() => {
+    if (adPushed.current) return;
+
     try {
-      // @ts-ignore
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      // Check if there are any unfilled ads in the DOM
+      const unfilledAds = document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])');
+      
+      if (unfilledAds.length > 0) {
+        // @ts-ignore
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        adPushed.current = true;
+      }
     } catch (e) {
       console.error('AdSense error:', e);
     }

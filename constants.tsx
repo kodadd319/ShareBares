@@ -3,6 +3,8 @@ import { User, Post, PostVisibility, StoreItem, StableListing } from './types';
 
 export const CURRENT_USER_ID = 'admin-1';
 
+export const APP_URL = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.sharebares.com');
+
 export const APP_LOGO_URL = '/logo.png';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
@@ -568,7 +570,7 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Digital Painting Masterclass',
     price: 49.99,
     thumbnailUrl: 'https://picsum.photos/seed/store1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/store1/1920/1080',
+    mediaUrls: ['https://picsum.photos/seed/store1/1920/1080'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -578,8 +580,14 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Exclusive Art Pack - Vol 1',
     price: 19.99,
     thumbnailUrl: 'https://picsum.photos/seed/store2/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/store2/1920/1080',
-    type: 'image',
+    mediaUrls: [
+      'https://picsum.photos/seed/store2a/1920/1080',
+      'https://picsum.photos/seed/store2b/1920/1080',
+      'https://picsum.photos/seed/store2c/1920/1080',
+      'https://picsum.photos/seed/store2d/1920/1080',
+      'https://picsum.photos/seed/store2e/1920/1080'
+    ],
+    type: 'picture_pack',
     createdAt: new Date().toISOString(),
   },
   {
@@ -588,7 +596,7 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Future Tech Predictions 2026',
     price: 29.99,
     thumbnailUrl: 'https://picsum.photos/seed/store3/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/store3/1920/1080',
+    mediaUrls: ['https://picsum.photos/seed/store3/1920/1080'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -598,8 +606,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'My Private Collection',
     price: 99.99,
     thumbnailUrl: 'https://picsum.photos/seed/store4/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/store4/1920/1080',
-    type: 'image',
+    mediaUrls: ['https://picsum.photos/seed/store4/1920/1080'],
+    type: 'other',
     createdAt: new Date().toISOString(),
   },
   {
@@ -608,8 +616,14 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Inked & Unfiltered Collection',
     price: 34.99,
     thumbnailUrl: 'https://picsum.photos/seed/jade_ink_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/jade_ink_s1_full/1920/1080',
-    type: 'image',
+    mediaUrls: [
+      'https://picsum.photos/seed/jade_ink_s1a/1920/1080',
+      'https://picsum.photos/seed/jade_ink_s1b/1920/1080',
+      'https://picsum.photos/seed/jade_ink_s1c/1920/1080',
+      'https://picsum.photos/seed/jade_ink_s1d/1920/1080',
+      'https://picsum.photos/seed/jade_ink_s1e/1920/1080'
+    ],
+    type: 'picture_pack',
     createdAt: new Date().toISOString(),
   },
   {
@@ -618,7 +632,7 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Behind the Ink: The Chest Piece Story',
     price: 14.99,
     thumbnailUrl: 'https://picsum.photos/seed/jade_ink_s2/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/jade_ink_s2_full/1920/1080',
+    mediaUrls: ['https://picsum.photos/seed/jade_ink_s2_full/1920/1080'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -628,8 +642,14 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'ShareBares Rituals - Full Set',
     price: 24.99,
     thumbnailUrl: 'https://picsum.photos/seed/luna_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/luna_s1_full/1920/1080',
-    type: 'image',
+    mediaUrls: [
+      'https://picsum.photos/seed/luna_s1a/1920/1080',
+      'https://picsum.photos/seed/luna_s1b/1920/1080',
+      'https://picsum.photos/seed/luna_s1c/1920/1080',
+      'https://picsum.photos/seed/luna_s1d/1920/1080',
+      'https://picsum.photos/seed/luna_s1e/1920/1080'
+    ],
+    type: 'picture_pack',
     createdAt: new Date().toISOString(),
   },
   {
@@ -638,8 +658,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Summer Heat - Bikini Collection',
     price: 19.99,
     thumbnailUrl: 'https://picsum.photos/seed/sienna_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/sienna_s1_full/1920/1080',
-    type: 'image',
+    mediaUrls: ['https://picsum.photos/seed/sienna_s1_full/1920/1080'],
+    type: 'video',
     createdAt: new Date().toISOString(),
   },
   {
@@ -648,7 +668,7 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'The Red Room - Luxury Fetish',
     price: 49.99,
     thumbnailUrl: 'https://picsum.photos/seed/raven_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/raven_s1_full/1920/1080',
+    mediaUrls: ['https://picsum.photos/seed/raven_s1_full/1920/1080'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -658,7 +678,7 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Lace & Leather - Private Session',
     price: 29.99,
     thumbnailUrl: 'https://picsum.photos/seed/lexi_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/lexi_s1_full/1920/1080',
+    mediaUrls: ['https://picsum.photos/seed/lexi_s1_full/1920/1080'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -668,8 +688,14 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     title: 'Fantasy Quest - Cosplay Gallery',
     price: 14.99,
     thumbnailUrl: 'https://picsum.photos/seed/misty_s1/800/1000',
-    mediaUrl: 'https://picsum.photos/seed/misty_s1_full/1920/1080',
-    type: 'image',
+    mediaUrls: [
+      'https://picsum.photos/seed/misty_s1a/1920/1080',
+      'https://picsum.photos/seed/misty_s1b/1920/1080',
+      'https://picsum.photos/seed/misty_s1c/1920/1080',
+      'https://picsum.photos/seed/misty_s1d/1920/1080',
+      'https://picsum.photos/seed/misty_s1e/1920/1080'
+    ],
+    type: 'picture_pack',
     createdAt: new Date().toISOString(),
   }
 ];

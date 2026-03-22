@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Dices, Users, User as UserIcon, Bot, Play, CheckCircle2, 
   X, ChevronLeft, Trophy, MessageSquare, Send,
@@ -27,8 +27,13 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
   useEffect(() => {
     if (!socket) return;
 
-    socket.on('game:invite', (invite: GameInvite) => {
+    socket.on('game:invite_received', (invite: GameInvite) => {
       setInvites(prev => [...prev, invite]);
+    });
+
+    socket.on('game:invite_declined', (data: { inviteId: string }) => {
+      // Handle declined invite if needed (e.g., show a toast)
+      console.log(`Invite ${data.inviteId} was declined`);
     });
 
     socket.on('game:started', (game: GameState) => {
@@ -47,7 +52,8 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
     });
 
     return () => {
-      socket.off('game:invite');
+      socket.off('game:invite_received');
+      socket.off('game:invite_declined');
       socket.off('game:started');
       socket.off('game:updated');
       socket.off('game:ended');
@@ -56,19 +62,29 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
   const sendInvite = (receiverId: string, gameType: GameType) => {
     if (!socket) return;
-    socket.emit('game:invite_send', { receiverId, gameType });
+    socket.emit('game:invite_send', { 
+      from: { id: user.id, displayName: user.displayName, avatar: user.avatar }, 
+      toId: receiverId, 
+      gameType 
+    });
     setShowInviteModal(false);
   };
 
   const acceptInvite = (invite: GameInvite) => {
     if (!socket) return;
-    socket.emit('game:invite_accept', { inviteId: invite.id });
+    socket.emit('game:invite_accept', { inviteId: invite.id, user: { id: user.id, displayName: user.displayName, avatar: user.avatar } });
+    setInvites(prev => prev.filter(i => i.id !== invite.id));
+  };
+
+  const declineInvite = (invite: GameInvite) => {
+    if (!socket) return;
+    socket.emit('game:invite_decline', { inviteId: invite.id });
     setInvites(prev => prev.filter(i => i.id !== invite.id));
   };
 
   const playWithBot = (gameType: GameType) => {
     if (!socket) return;
-    socket.emit('game:bot_start', { gameType });
+    socket.emit('game:bot_start', { gameType, user: { id: user.id, displayName: user.displayName, avatar: user.avatar } });
     setShowInviteModal(false);
   };
 
@@ -177,7 +193,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                     Accept
                   </button>
                   <button 
-                    onClick={() => setInvites(prev => prev.filter(i => i.id !== invite.id))}
+                    onClick={() => declineInvite(invite)}
                     className="px-3 py-1.5 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500/30 transition-all text-[10px] font-black uppercase tracking-widest"
                   >
                     Don't Accept
@@ -614,7 +630,51 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
   );
 };
 
-const Die: React.FC<{ value: number; isSelected: boolean; onClick: () => void; disabled: boolean }> = ({ value, isSelected, onClick, disabled }) => {
+const calculateDiceScore = (dice: number[]) => {
+  const counts: Record<number, number> = {};
+  dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
+  
+  let score = 0;
+  let usedCount = 0;
+
+  // Special cases: Straight
+  if (Object.keys(counts).length === 6) return { score: 1500, usedCount: 6 };
+  
+  // Three pairs
+  let pairs = 0;
+  Object.values(counts).forEach(c => { if (c === 2) pairs++; });
+  if (pairs === 3) return { score: 1500, usedCount: 6 };
+
+  // 1s
+  if (counts[1] >= 3) {
+    score += 1000 * Math.pow(2, counts[1] - 3);
+    usedCount += counts[1];
+  } else {
+    score += (counts[1] || 0) * 100;
+    usedCount += (counts[1] || 0);
+  }
+
+  // 5s
+  if (counts[5] >= 3) {
+    score += 500 * Math.pow(2, counts[5] - 3);
+    usedCount += counts[5];
+  } else {
+    score += (counts[5] || 0) * 50;
+    usedCount += (counts[5] || 0);
+  }
+
+  // Others (2, 3, 4, 6)
+  [2, 3, 4, 6].forEach(num => {
+    if (counts[num] >= 3) {
+      score += num * 100 * Math.pow(2, counts[num] - 3);
+      usedCount += counts[num];
+    }
+  });
+
+  return { score, usedCount };
+};
+
+const Die: React.FC<{ value: number; isSelected: boolean; isSaved: boolean; onClick: () => void; disabled: boolean }> = ({ value, isSelected, isSaved, onClick, disabled }) => {
   const dotPositions = [
     [], // 0
     [4], // 1: center
@@ -627,30 +687,52 @@ const Die: React.FC<{ value: number; isSelected: boolean; onClick: () => void; d
 
   return (
     <motion.div
-      whileHover={!disabled ? { scale: 1.1, rotate: 5 } : {}}
-      whileTap={!disabled ? { scale: 0.9 } : {}}
-      onClick={!disabled ? onClick : undefined}
-      className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center shadow-2xl cursor-pointer transition-all relative ${
-        isSelected 
-        ? 'bg-[#967bb6] border-4 border-white/40 -translate-y-4' 
-        : 'bg-white border-2 border-slate-200'
+      whileHover={!disabled && !isSaved ? { scale: 1.1, rotate: 5 } : {}}
+      whileTap={!disabled && !isSaved ? { scale: 0.9 } : {}}
+      onClick={!disabled && !isSaved ? onClick : undefined}
+      className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center shadow-2xl transition-all relative ${
+        isSaved
+        ? 'bg-slate-800 border-2 border-slate-700 opacity-60 cursor-default'
+        : isSelected 
+        ? 'bg-[#967bb6] border-4 border-white/40 -translate-y-4 cursor-pointer' 
+        : 'bg-white border-2 border-slate-200 cursor-pointer'
       }`}
     >
       <div className="grid grid-cols-3 grid-rows-3 gap-1 w-3/4 h-3/4">
         {[...Array(9)].map((_, i) => (
           <div key={i} className="flex items-center justify-center">
             {dotPositions[value].includes(i) && (
-              <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isSelected ? 'bg-white' : 'bg-black'}`} />
+              <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isSelected || isSaved ? 'bg-white' : 'bg-black'}`} />
             )}
           </div>
         ))}
       </div>
+      {isSaved && (
+        <div className="absolute -top-2 -right-2 bg-emerald-500 rounded-full p-1 shadow-lg">
+          <CheckCircle2 size={12} className="text-white" />
+        </div>
+      )}
     </motion.div>
   );
 };
 
 const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTurn: boolean, myId: string }> = ({ game, onMove, isMyTurn, myId }) => {
-  const { dice = [1, 2, 3, 4, 5, 6], score = {}, currentTurnScore = 0, savedDice = [], canBank = false } = game.data;
+  const { 
+    dice = [1, 2, 3, 4, 5, 6], 
+    score = {}, 
+    currentTurnScore = 0, 
+    savedDice = [], 
+    tempSavedIndices = [],
+    canBank = false,
+    rollCount = 0
+  } = game.data;
+
+  const tempDiceValues = tempSavedIndices.map((idx: number) => dice[idx]);
+  const { score: potentialScore, usedCount } = calculateDiceScore(tempDiceValues);
+  const isValidSelection = usedCount === tempDiceValues.length && tempDiceValues.length > 0;
+
+  const opponent = game.players.find(p => p.id !== myId);
+  const opponentScore = score[opponent?.id || ''] || 0;
   
   return (
     <div className="h-full w-full flex flex-col items-center justify-between py-8 relative">
@@ -658,10 +740,14 @@ const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTur
       <div className="absolute inset-0 bg-[#1a472a] opacity-40 mix-blend-overlay pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)] pointer-events-none"></div>
       
-      <div className="relative z-10 w-full flex flex-col items-center space-y-12">
+      <div className="relative z-10 w-full flex flex-col items-center space-y-8">
         <div className="text-center">
           <h2 className="text-4xl font-black text-white tracking-tighter uppercase chrome-text mb-2">10,000</h2>
-          <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em]">The High Stakes Dice Game</p>
+          <div className="flex items-center justify-center space-x-2">
+            <span className="h-px w-8 bg-emerald-500/50"></span>
+            <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em]">Dice Game</p>
+            <span className="h-px w-8 bg-emerald-500/50"></span>
+          </div>
         </div>
 
         <div className="flex flex-wrap justify-center gap-4 md:gap-6 px-4">
@@ -669,48 +755,98 @@ const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTur
             <Die 
               key={i} 
               value={d} 
-              isSelected={savedDice.includes(i)} 
+              isSelected={tempSavedIndices.includes(i)} 
+              isSaved={savedDice.includes(i)}
               onClick={() => onMove({ type: 'toggle_dice', index: i })}
               disabled={!isMyTurn}
             />
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-8 w-full max-w-md px-4">
-          <div className="glass-panel p-6 rounded-3xl border-white/10 text-center bg-black/40 backdrop-blur-md">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Score</p>
-            <p className="text-4xl font-black text-white tracking-tighter">{score[myId] || 0}</p>
+        <div className="grid grid-cols-3 gap-4 w-full max-w-2xl px-4">
+          <div className="glass-panel p-4 rounded-3xl border-white/10 text-center bg-black/40 backdrop-blur-md">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Your Total</p>
+            <p className="text-2xl font-black text-white tracking-tighter">{score[myId] || 0}</p>
           </div>
-          <div className="glass-panel p-6 rounded-3xl border-[#967bb6]/20 text-center bg-black/40 backdrop-blur-md">
-            <p className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest mb-1">Current Turn</p>
-            <p className="text-4xl font-black text-[#967bb6] tracking-tighter">{currentTurnScore || 0}</p>
+          <div className="glass-panel p-4 rounded-3xl border-[#967bb6]/20 text-center bg-black/40 backdrop-blur-md border-2">
+            <p className="text-[8px] font-black text-[#967bb6] uppercase tracking-widest mb-1">Turn Score</p>
+            <p className="text-2xl font-black text-[#967bb6] tracking-tighter">
+              {currentTurnScore}
+              {potentialScore > 0 && (
+                <span className="text-emerald-400 ml-1 text-sm">+{potentialScore}</span>
+              )}
+            </p>
+          </div>
+          <div className="glass-panel p-4 rounded-3xl border-white/10 text-center bg-black/40 backdrop-blur-md">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">{opponent?.displayName || 'Opponent'}</p>
+            <p className="text-2xl font-black text-white tracking-tighter">{opponentScore}</p>
           </div>
         </div>
       </div>
 
       {isMyTurn && (
-        <div className="relative z-10 flex space-x-6">
-          <button 
-            onClick={() => onMove({ type: 'roll' })}
-            className="group relative px-10 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#967bb6]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative flex items-center space-x-2">
-              <Dices size={20} />
-              <span>Roll Dice</span>
-            </span>
-          </button>
-          <button 
-            disabled={!canBank || currentTurnScore === 0}
-            onClick={() => onMove({ type: 'bank' })}
-            className={`px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all ${
-              canBank && currentTurnScore > 0
-              ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:scale-105 active:scale-95' 
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-            }`}
-          >
-            Bank Points
-          </button>
+        <div className="relative z-10 flex flex-col items-center space-y-6">
+          {potentialScore > 0 && !isValidSelection && (
+            <p className="text-red-400 text-[10px] font-black uppercase tracking-widest bg-red-400/10 px-4 py-2 rounded-full border border-red-400/20">
+              Invalid Selection: All selected dice must score
+            </p>
+          )}
+
+          <div className="flex flex-wrap justify-center gap-4">
+            {rollCount === 0 ? (
+              <button 
+                onClick={() => onMove({ type: 'roll' })}
+                className="group relative px-12 py-5 bg-white text-black rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#967bb6]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <span className="relative flex items-center space-x-3">
+                  <Dices size={24} />
+                  <span>Start Turn</span>
+                </span>
+              </button>
+            ) : (
+              <>
+                <button 
+                  disabled={!isValidSelection}
+                  onClick={() => onMove({ type: 'keep' })}
+                  className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all flex items-center space-x-2 ${
+                    isValidSelection
+                    ? 'bg-[#967bb6] text-white hover:scale-105 active:scale-95' 
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <CheckCircle2 size={20} />
+                  <span>Keep Selection</span>
+                </button>
+
+                <button 
+                  disabled={tempSavedIndices.length > 0}
+                  onClick={() => onMove({ type: 'roll' })}
+                  className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all flex items-center space-x-2 ${
+                    tempSavedIndices.length === 0
+                    ? 'bg-white text-black hover:scale-105 active:scale-95' 
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <Dices size={20} />
+                  <span>Roll Again</span>
+                </button>
+
+                <button 
+                  disabled={!canBank || tempSavedIndices.length > 0}
+                  onClick={() => onMove({ type: 'bank' })}
+                  className={`px-8 py-4 rounded-2xl font-black uppercase tracking-widest shadow-2xl transition-all flex items-center space-x-2 ${
+                    canBank && tempSavedIndices.length === 0
+                    ? 'bg-emerald-500 text-white shadow-emerald-500/20 hover:scale-105 active:scale-95' 
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                  }`}
+                >
+                  <Trophy size={20} />
+                  <span>Bank Points</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -1139,17 +1275,23 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const { 
     balls = [], 
     cueBall = { x: 50, y: 50 }, 
-    power = 50, 
-    angle = 0, 
     pocketed = [], 
     mode = '8-ball',
     calledShot = null,
-    targetPocket = null
+    targetPocket = null,
+    playerType = {}
   } = game.data;
   
   const [showInstructions, setShowInstructions] = useState(false);
   const [showCallShot, setShowCallShot] = useState(false);
   const [showBanking, setShowBanking] = useState(false);
+  
+  // Local state for smooth mouse interaction
+  const [localAngle, setLocalAngle] = useState(0);
+  const [localPower, setLocalPower] = useState(0);
+  const [isAiming, setIsAiming] = useState(false);
+  const [isCharging, setIsCharging] = useState(false);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const pockets = [
     { id: 'top-left', top: '-2%', left: '-2%', label: 'Top Left' },
@@ -1160,8 +1302,56 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     { id: 'bottom-right', bottom: '-2%', right: '-2%', label: 'Bottom Right' }
   ];
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isMyTurn || !tableRef.current) return;
+    const rect = tableRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Check if clicking near cue ball to start aiming/charging
+    const dist = Math.sqrt(Math.pow(x - cueBall.x, 2) + Math.pow(y - cueBall.y, 2));
+    if (dist < 10) {
+      setIsAiming(true);
+      setIsCharging(true);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isAiming || !tableRef.current) return;
+    const rect = tableRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Calculate angle from cue ball to mouse
+    const dx = x - cueBall.x;
+    const dy = y - cueBall.y;
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = (angleRad * 180 / Math.PI + 180) % 360; // Aiming away from mouse
+    setLocalAngle(angleDeg);
+    
+    // Calculate power based on distance
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const power = Math.min(100, dist * 2);
+    setLocalPower(power);
+  };
+
+  const handleMouseUp = () => {
+    if (isCharging && localPower > 5) {
+      onMove({ type: 'shoot', angle: localAngle, power: localPower });
+    }
+    setIsAiming(false);
+    setIsCharging(false);
+    setLocalPower(0);
+  };
+
+  const myType = playerType[myId];
+
   return (
-    <div className="h-full flex flex-col items-center justify-center py-4 relative overflow-hidden">
+    <div 
+      className="h-full flex flex-col items-center justify-center py-4 relative overflow-hidden select-none"
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
       {/* Elegant Room Background */}
       <div className="absolute inset-0 bg-[#050505] pointer-events-none">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(15,15,15,0.8)_0%,_rgba(0,0,0,1)_100%)]"></div>
@@ -1174,11 +1364,19 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
             <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.4em] mb-1">Game Mode</p>
             <p className="text-lg font-black text-[#967bb6] uppercase tracking-tighter">{mode}</p>
           </div>
+          {myType && (
+            <div className="glass-panel px-6 py-2 rounded-2xl border-white/10 bg-black/40 backdrop-blur-md">
+              <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.4em] mb-1">Your Group</p>
+              <p className={`text-lg font-black uppercase tracking-tighter ${myType === 'solid' ? 'text-blue-400' : 'text-amber-400'}`}>
+                {myType}s
+              </p>
+            </div>
+          )}
           <div className="flex -space-x-2">
-            {pocketed.slice(-5).map((ball: any, i: number) => (
+            {pocketed.slice(-8).map((ball: any, i: number) => (
               <div 
                 key={i}
-                className={`w-6 h-6 rounded-full border border-white/20 shadow-lg flex items-center justify-center text-[8px] font-black ${
+                className={`w-7 h-7 rounded-full border border-white/20 shadow-lg flex items-center justify-center text-[9px] font-black ${
                   ball.type === 'solid' ? 'bg-blue-600' : ball.type === 'black' ? 'bg-black' : 'bg-amber-400'
                 }`}
               >
@@ -1192,7 +1390,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           {calledShot && (
             <div className="glass-panel px-4 py-2 rounded-xl border-emerald-500/20 bg-emerald-500/5 flex items-center space-x-2 animate-pulse">
               <Target size={14} className="text-emerald-400" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">Called: #{calledShot} in {targetPocket}</span>
+              <span className="text-[10px] font-black text-white uppercase tracking-widest">Called: #{calledShot} in {targetPocket || 'Any'}</span>
             </div>
           )}
           <button 
@@ -1219,16 +1417,12 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
             </h4>
             <div className="space-y-4 text-[11px] text-slate-300 font-medium leading-relaxed">
               <section>
-                <p className="text-[#967bb6] font-black uppercase mb-1">Aiming & Power</p>
-                <p>Use the sliders below to adjust your angle and shot intensity. The dashed line shows your primary trajectory.</p>
+                <p className="text-[#967bb6] font-black uppercase mb-1">Aiming & Shooting</p>
+                <p>Click and drag away from the cue ball to aim. The distance you drag determines the power. Release to shoot.</p>
               </section>
               <section>
                 <p className="text-[#967bb6] font-black uppercase mb-1">Call Your Shot</p>
-                <p>In professional play, you must call the ball and pocket. Use the "Call Shot" button before shooting.</p>
-              </section>
-              <section>
-                <p className="text-[#967bb6] font-black uppercase mb-1">8-Ball vs 9-Ball</p>
-                <p>8-Ball: Pocket all your group (solids/stripes) then the 8. 9-Ball: Pocket balls in numerical order 1-9.</p>
+                <p>Use the "Call Shot" button to select a ball and pocket before taking your shot.</p>
               </section>
             </div>
           </motion.div>
@@ -1236,7 +1430,11 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       </AnimatePresence>
 
       {/* Large Realistic Table */}
-      <div className="relative w-full max-w-7xl aspect-[2.2/1] bg-[#0a5c2a] rounded-[4rem] border-[28px] border-[#2a1d15] shadow-[0_80px_200px_rgba(0,0,0,1)] overflow-visible group/table">
+      <div 
+        ref={tableRef}
+        onMouseDown={handleMouseDown}
+        className="relative w-full max-w-7xl aspect-[2.2/1] bg-[#0a5c2a] rounded-[4rem] border-[28px] border-[#2a1d15] shadow-[0_80px_200px_rgba(0,0,0,1)] overflow-visible group/table cursor-crosshair"
+      >
         {/* Table Rail Detail with Wood Grain */}
         <div className="absolute -inset-8 border-4 border-[#3d2b1f] rounded-[4.5rem] pointer-events-none opacity-60 bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]"></div>
         <div className="absolute inset-0 shadow-[inset_0_0_80px_rgba(0,0,0,0.8)] rounded-[2.5rem] pointer-events-none"></div>
@@ -1267,7 +1465,10 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           <button 
             key={p.id} 
             style={p}
-            onClick={() => showCallShot && onMove({ type: 'select_pocket', pocketId: p.id })}
+            onClick={(e) => {
+              e.stopPropagation();
+              showCallShot && onMove({ type: 'select_pocket', pocketId: p.id });
+            }}
             className={`absolute w-20 h-20 bg-[#050505] rounded-full shadow-[inset_0_8px_20px_rgba(255,255,255,0.05)] z-20 flex items-center justify-center transition-all ${
               targetPocket === p.id ? 'ring-4 ring-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.5)]' : ''
             }`}
@@ -1276,7 +1477,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           </button>
         ))}
 
-        {/* Aiming Line (Enhanced with Banking) */}
+        {/* Aiming Line */}
         {isMyTurn && (
           <>
             <div 
@@ -1285,10 +1486,9 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
                 left: `${cueBall.x}%`, 
                 top: `${cueBall.y}%`,
                 width: '1200px',
-                transform: `rotate(${angle}deg)`
+                transform: `rotate(${localAngle}deg)`
               }}
             />
-            {/* Banking Visual Aid (Simplified) */}
             {showBanking && (
               <div 
                 className="absolute h-px bg-emerald-500/30 border-t border-dotted border-emerald-500/50 origin-left z-10 pointer-events-none"
@@ -1296,7 +1496,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
                   left: `${cueBall.x}%`, 
                   top: `${cueBall.y}%`,
                   width: '2000px',
-                  transform: `rotate(${angle + 180}deg)`
+                  transform: `rotate(${localAngle + 180}deg)`
                 }}
               />
             )}
@@ -1308,182 +1508,137 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           <motion.div 
             key={i}
             animate={{ left: `${ball.x}%`, top: `${ball.y}%` }}
-            className={`absolute w-9 h-9 rounded-full shadow-[4px_8px_12px_rgba(0,0,0,0.5)] flex items-center justify-center text-[11px] font-black z-30 ${
+            className={`absolute w-7 h-7 rounded-full shadow-[4px_8px_12px_rgba(0,0,0,0.5)] flex items-center justify-center text-[9px] font-black z-30 ${
               ball.type === 'solid' ? 'bg-gradient-to-br from-blue-400 via-blue-600 to-blue-900' : 
               ball.type === 'black' ? 'bg-gradient-to-br from-slate-700 via-black to-black' : 
               'bg-gradient-to-br from-amber-300 via-amber-500 to-amber-800'
             } border border-white/10 overflow-hidden cursor-pointer hover:scale-110 transition-transform`}
-            onClick={() => showCallShot && onMove({ type: 'select_ball', ballNum: ball.number })}
+            onClick={(e) => {
+              e.stopPropagation();
+              showCallShot && onMove({ type: 'select_ball', ballNum: ball.number });
+            }}
           >
-            {/* Specular Highlight */}
-            <div className="absolute top-1 left-1.5 w-3 h-2 bg-white/40 rounded-full blur-[1px] rotate-[-20deg]"></div>
-            
-            <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-black shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] z-10">
+            <div className="absolute top-1 left-1.5 w-2 h-1 bg-white/40 rounded-full blur-[1px] rotate-[-20deg]"></div>
+            <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center text-black shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] z-10">
               {ball.number}
             </div>
-            
-            {/* Stripe for non-solids */}
-            {ball.type === 'stripe' && (
+            {ball.type === 'striped' && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-full h-4 bg-white/90 shadow-sm"></div>
+                <div className="w-full h-3 bg-white/90 shadow-sm"></div>
               </div>
             )}
           </motion.div>
         ))}
 
-        {/* Cue Ball (High Detail) */}
+        {/* Cue Ball */}
         <motion.div 
           animate={{ left: `${cueBall.x}%`, top: `${cueBall.y}%` }}
-          className="absolute w-9 h-9 rounded-full bg-white shadow-[4px_8px_12px_rgba(0,0,0,0.5)] border border-black/5 z-30 overflow-hidden"
+          className="absolute w-7 h-7 rounded-full bg-white shadow-[4px_8px_12px_rgba(0,0,0,0.5)] border border-black/5 z-30 overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-100 to-slate-300"></div>
-          <div className="absolute top-1 left-1.5 w-3 h-2 bg-white rounded-full blur-[1px] rotate-[-20deg] opacity-80"></div>
+          <div className="absolute top-1 left-1.5 w-2 h-1 bg-white rounded-full blur-[1px] rotate-[-20deg] opacity-80"></div>
         </motion.div>
 
-        {/* Cue Stick (Elegant Wood) */}
+        {/* Cue Stick */}
         {isMyTurn && (
           <motion.div 
-            className="absolute w-2.5 h-80 bg-gradient-to-b from-[#1a110a] via-[#5d4037] to-[#d4a373] origin-bottom z-40 rounded-full shadow-2xl"
+            className="absolute w-2 h-96 bg-gradient-to-b from-[#1a110a] via-[#5d4037] to-[#d4a373] origin-bottom z-40 rounded-full shadow-2xl"
             style={{ 
               left: `${cueBall.x}%`, 
               top: `${cueBall.y}%`,
-              transform: `translate(-50%, -100%) translateY(-30px) rotate(${angle}deg)`
+              transform: `translate(-50%, -100%) translateY(-20px) rotate(${localAngle}deg)`
             }}
-            animate={{ translateY: `-${30 + (power / 1.5)}px` }}
+            animate={{ translateY: `-${20 + (localPower / 1.2)}px` }}
           />
         )}
       </div>
 
-      {/* Controls: Aim, Power, Call Shot */}
-      {isMyTurn && (
-        <div className="mt-10 grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-5xl px-8 items-center">
-          <div className="space-y-4 glass-panel p-6 rounded-3xl border-white/5 bg-white/[0.02]">
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Precision Aim</p>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => onMove({ type: 'aim', angle: (angle - 1 + 360) % 360 })}
-                  className="p-1 hover:text-[#967bb6] transition-colors"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-xs font-black text-[#967bb6] font-mono w-8 text-center">{angle}°</span>
-                <button 
-                  onClick={() => onMove({ type: 'aim', angle: (angle + 1) % 360 })}
-                  className="p-1 hover:text-[#967bb6] transition-colors"
-                >
-                  <ChevronLeft size={14} className="rotate-180" />
-                </button>
+      {/* Bottom Controls */}
+      <div className="mt-8 flex items-center space-x-6 z-10">
+        <div className="flex space-x-3">
+          <button 
+            onClick={() => setShowCallShot(!showCallShot)}
+            className={`px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border ${
+              showCallShot ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+            }`}
+          >
+            {showCallShot ? 'Cancel Call' : 'Call Shot'}
+          </button>
+          <button 
+            onClick={() => setShowBanking(!showBanking)}
+            className={`px-4 py-3 rounded-2xl transition-all border ${
+              showBanking ? 'bg-[#967bb6] border-[#967bb6]/40 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+            }`}
+          >
+            <Target size={18} />
+          </button>
+          <button 
+            onClick={() => onMove({ type: 'change_mode', mode: mode === '8-ball' ? '9-ball' : '8-ball' })}
+            className="px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
+          >
+            <Layers size={18} />
+          </button>
+        </div>
+
+        {isCharging && (
+          <div className="flex flex-col items-center">
+            <div className="w-48 h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+              <motion.div 
+                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300"
+                style={{ width: `${localPower}%` }}
+              />
+            </div>
+            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mt-2">Power: {Math.round(localPower)}%</p>
+          </div>
+        )}
+      </div>
+
+      {/* Call Shot Selection UI */}
+      <AnimatePresence>
+        {showCallShot && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-32 z-50 w-full max-w-2xl glass-panel p-6 rounded-3xl border-white/10 bg-black/80 backdrop-blur-xl shadow-2xl"
+          >
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Select Ball</p>
+                <div className="flex flex-wrap gap-3">
+                  {balls.filter((b: any) => b.number !== 0).map((ball: any) => (
+                    <button 
+                      key={ball.number}
+                      onClick={() => onMove({ type: 'select_ball', ballNum: ball.number })}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-black transition-all border-2 ${
+                        calledShot === ball.number ? 'border-emerald-400 scale-110 shadow-lg shadow-emerald-500/20' : 'border-transparent opacity-60 hover:opacity-100'
+                      } ${ball.type === 'solid' ? 'bg-blue-600' : ball.type === 'black' ? 'bg-black' : 'bg-amber-400'}`}
+                    >
+                      {ball.number}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Select Pocket</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {pockets.map((pocket) => (
+                    <button 
+                      key={pocket.id}
+                      onClick={() => onMove({ type: 'select_pocket', pocketId: pocket.id })}
+                      className={`py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
+                        targetPocket === pocket.id ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
+                      }`}
+                    >
+                      {pocket.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <input 
-              type="range" 
-              min="0" 
-              max="360" 
-              value={angle} 
-              onChange={(e) => onMove({ type: 'aim', angle: parseInt(e.target.value) })}
-              className="w-full h-1.5 bg-black/60 rounded-full appearance-none cursor-pointer accent-[#967bb6]"
-            />
-          </div>
-
-          <div className="flex flex-col space-y-4">
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setShowCallShot(!showCallShot)}
-                className={`flex-1 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all border ${
-                  showCallShot ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/20' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                }`}
-              >
-                {showCallShot ? 'Cancel Call' : 'Call Shot'}
-              </button>
-              <button 
-                onClick={() => setShowBanking(!showBanking)}
-                className={`px-4 py-4 rounded-2xl transition-all border ${
-                  showBanking ? 'bg-[#967bb6] border-[#967bb6]/40 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-                }`}
-                title="Toggle Banking Lines"
-              >
-                <Target size={18} />
-              </button>
-              <button 
-                onClick={() => onMove({ type: 'change_mode', mode: mode === '8-ball' ? '9-ball' : '8-ball' })}
-                className="px-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
-                title="Switch Game Mode"
-              >
-                <Layers size={18} />
-              </button>
-            </div>
-            
-            {/* Call Shot Selection UI */}
-            <AnimatePresence>
-              {showCallShot && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden space-y-4"
-                >
-                  <div className="glass-panel p-4 rounded-2xl border-white/5 bg-white/[0.02] space-y-4">
-                    <div>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-2">Select Ball</p>
-                      <div className="flex flex-wrap gap-2">
-                        {balls.filter((b: any) => b.number !== 0).map((ball: any) => (
-                          <button 
-                            key={ball.number}
-                            onClick={() => onMove({ type: 'call_ball', ball: ball.number })}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all border-2 ${
-                              calledShot === ball.number ? 'border-emerald-400 scale-110 shadow-lg shadow-emerald-500/20' : 'border-transparent opacity-60 hover:opacity-100'
-                            } ${ball.type === 'solid' ? 'bg-blue-600' : ball.type === 'black' ? 'bg-black' : 'bg-amber-400'}`}
-                          >
-                            {ball.number}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-2">Select Pocket</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {pockets.map((pocket) => (
-                          <button 
-                            key={pocket.id}
-                            onClick={() => onMove({ type: 'call_pocket', pocket: pocket.id })}
-                            className={`py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${
-                              targetPocket === pocket.id ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
-                            }`}
-                          >
-                            {pocket.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <button 
-              onClick={() => onMove({ type: 'shoot' })}
-              className="w-full py-5 bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white rounded-2xl font-black uppercase tracking-[0.3em] shadow-2xl shadow-[#967bb6]/40 hover:scale-[1.02] active:scale-[0.98] transition-all chrome-border text-xs"
-            >
-              Take Shot
-            </button>
-          </div>
-
-          <div className="space-y-4 glass-panel p-6 rounded-3xl border-white/5 bg-white/[0.02]">
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Shot Intensity</p>
-              <span className="text-xs font-black text-emerald-400 font-mono">{power}%</span>
-            </div>
-            <input 
-              type="range" 
-              min="1" 
-              max="100" 
-              value={power} 
-              onChange={(e) => onMove({ type: 'power', power: parseInt(e.target.value) })}
-              className="w-full h-1.5 bg-black/60 rounded-full appearance-none cursor-pointer accent-emerald-400"
-            />
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

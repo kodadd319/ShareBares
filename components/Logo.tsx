@@ -14,7 +14,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
       try {
         setLoading(true);
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-        const prompt = "A high-quality 3D animated logo for an app named 'ShareBares'. The logo features a cute but edgy blue bear mascot with a mischievous wink, wearing a black leather harness. The bear has a white heart with a blue flame on its belly. It is sitting in front of a large, glowing full moon with a silver ring around it, surrounded by dark purple and blue clouds under a starry night sky. The text 'ShareBares' is written at the bottom in a bold, silver-metallic 3D font with a blue glow. The style is vibrant, detailed, and professional.";
+        const prompt = "A high-quality 3D animated logo for an app named 'ShareBares'. The logo features a sexy, naughty female Care Bear-style mascot with a vibrant blue fur, a mischievous wink, and long eyelashes. She is wearing a black leather harness and has a white heart with a blue flame on her belly. She is sitting in front of a large, glowing full moon with a silver ring around it, surrounded by dark purple and blue clouds under a starry night sky. The text 'ShareBares' is written at the bottom in a bold, silver-metallic 3D font with a blue glow. The style is vibrant, detailed, and professional.";
         
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash-image',
@@ -30,10 +30,10 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
               const url = `data:image/png;base64,${part.inlineData.data}`;
               setLogoUrl(url);
               try {
-                localStorage.setItem('app_logo_v2', url);
+                localStorage.setItem('app_logo_v3', url);
                 // Clear old versions to save space
                 Object.keys(localStorage).forEach(key => {
-                  if (key.startsWith('app_logo_') && key !== 'app_logo_v2') {
+                  if (key.startsWith('app_logo_') && key !== 'app_logo_v3') {
                     localStorage.removeItem(key);
                   }
                 });

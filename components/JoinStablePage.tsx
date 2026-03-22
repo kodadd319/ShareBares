@@ -277,7 +277,20 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
             </div>
           </div>
 
-          <div className="pt-6">
+          <div className="pt-6 space-y-6">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-4">
+              <Shield size={18} className="text-[#967bb6] shrink-0 mt-1" />
+              <div>
+                <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-white mb-1">Official Service Disclosure</h3>
+                <p className="text-[8px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest">
+                  All "In-Person Service" transactions are handled directly between the service provider and the client. 
+                  ShareBares is a separate entity and serves strictly as a listing platform. ShareBares does not participate in, 
+                  nor is it responsible for, any service agreements or transactions. All questions, comments, or complaints 
+                  must be directed to the service provider.
+                </p>
+              </div>
+            </div>
+
             <button 
               type="submit"
               disabled={!hasPaidStableFee}

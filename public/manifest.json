@@ -11,19 +11,19 @@
   "categories": ["social", "entertainment"],
   "icons": [
     {
-      "src": "https://picsum.photos/seed/naughty_bear_moon/192/192",
+      "src": "https://picsum.photos/seed/sexy_naughty_female_bear/192/192",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://picsum.photos/seed/naughty_bear_moon/512/512",
+      "src": "https://picsum.photos/seed/sexy_naughty_female_bear/512/512",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://picsum.photos/seed/naughty_bear_moon/192/192",
+      "src": "https://picsum.photos/seed/sexy_naughty_female_bear/192/192",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
@@ -33,12 +33,12 @@
     {
       "name": "Feed",
       "url": "/?tab=feed",
-      "icons": [{ "src": "https://picsum.photos/seed/naughty_bear_moon/96/96", "sizes": "96x96" }]
+      "icons": [{ "src": "https://picsum.photos/seed/sexy_naughty_female_bear/96/96", "sizes": "96x96" }]
     },
     {
       "name": "Messages",
       "url": "/?tab=messages",
-      "icons": [{ "src": "https://picsum.photos/seed/naughty_bear_moon/96/96", "sizes": "96x96" }]
+      "icons": [{ "src": "https://picsum.photos/seed/sexy_naughty_female_bear/96/96", "sizes": "96x96" }]
     }
   ]
 }

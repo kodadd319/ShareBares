@@ -23,6 +23,7 @@ export interface StoreCustomization {
 export interface ProfileCustomization {
   backgroundColor?: string;
   backgroundWallpaper?: string;
+  backgroundWallpaperColor?: string;
   menuBarColor?: string;
   fontColor?: string;
   fontType?: string;
@@ -101,7 +102,10 @@ export interface Message {
   receiverId: string;
   text: string;
   timestamp: string;
+  isRead: boolean;
 }
+
+export type StoreItemType = 'video' | 'picture_pack' | 'other';
 
 export interface StoreItem {
   id: string;
@@ -110,9 +114,10 @@ export interface StoreItem {
   description?: string;
   price: number;
   thumbnailUrl: string;
-  mediaUrl: string;
-  type: 'image' | 'video';
+  mediaUrls: string[]; // Support for multiple files (e.g., picture packs)
+  type: StoreItemType;
   createdAt: string;
+  videoDuration?: number; // in seconds
 }
 
 export interface ChatThread {

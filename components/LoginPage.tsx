@@ -44,6 +44,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
           <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px]">
             {isLogin ? 'Login to your account' : 'Meet barebear & create your unique presence'}
           </p>
+          <p className="text-[#967bb6]/40 font-black uppercase tracking-[0.3em] text-[8px] mt-2">
+            www.sharebares.com
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

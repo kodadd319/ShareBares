@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download } from 'lucide-react';
+import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
 import AdPlaceholder from './AdPlaceholder';
 
@@ -13,7 +13,7 @@ interface MediaStoreProps {
   onBack: () => void;
   onPurchase?: (item: StoreItem) => void;
   onDeleteItem?: (item: StoreItem) => void;
-  onAddItem?: (item: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, file: File) => void;
+  onAddItem?: (item: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onProfileClick?: (userId: string) => void;
 }
 
@@ -25,49 +25,91 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
     fontColor: '#ffffff',
     layout: 'grid'
   };
-  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'pictures' | 'services'>('all');
+  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'packs' | 'other' | 'services'>('all');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('10.00');
-  const [newItemFile, setNewItemFile] = useState<File | null>(null);
+  const [newItemFiles, setNewItemFiles] = useState<File[]>([]);
+  const [newItemType, setNewItemType] = useState<'video' | 'picture_pack' | 'other'>('video');
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewItemFile(e.target.files[0]);
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files) as File[];
+      setUploadError(null);
+
+      if (newItemType === 'video') {
+        const videoFile = selectedFiles[0];
+        if (videoFile && videoFile.type.startsWith('video')) {
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(video.src);
+            if (video.duration > 480) {
+              setUploadError('Video must be 8 minutes or less.');
+              setNewItemFiles([]);
+            } else {
+              setNewItemFiles([videoFile]);
+            }
+          };
+          video.src = URL.createObjectURL(videoFile);
+        } else {
+          setUploadError('Please select a valid video file.');
+        }
+      } else if (newItemType === 'picture_pack') {
+        if (selectedFiles.length !== 5) {
+          setUploadError('A picture pack must contain exactly 5 photos.');
+          setNewItemFiles([]);
+        } else {
+          const allImages = selectedFiles.every(f => f.type.startsWith('image'));
+          if (!allImages) {
+            setUploadError('All files in a picture pack must be images.');
+            setNewItemFiles([]);
+          } else {
+            setNewItemFiles(selectedFiles);
+          }
+        }
+      } else {
+        setNewItemFiles(selectedFiles);
+      }
     }
   };
 
   const handleAddItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemFile || !newItemTitle || !newItemPrice) return;
+    if (newItemFiles.length === 0 || !newItemTitle || !newItemPrice || uploadError) return;
     
     onAddItem?.({
       title: newItemTitle,
       description: newItemDescription,
       price: parseFloat(newItemPrice),
       thumbnailUrl: '', // Will be handled by parent
-      mediaUrl: '', // Will be handled by parent
-      type: newItemFile.type.startsWith('video') ? 'video' : 'image'
-    }, newItemFile);
+      mediaUrls: [], // Will be handled by parent
+      type: newItemType
+    }, newItemFiles);
 
     setIsAddingItem(false);
     setNewItemTitle('');
     setNewItemDescription('');
     setNewItemPrice('10.00');
-    setNewItemFile(null);
+    setNewItemFiles([]);
+    setUploadError(null);
   };
 
   const filteredItems = items.filter(item => {
     if (activeSection === 'all') return true;
     if (activeSection === 'videos') return item.type === 'video';
-    if (activeSection === 'pictures') return item.type === 'image';
+    if (activeSection === 'packs') return item.type === 'picture_pack';
+    if (activeSection === 'other') return item.type === 'other';
     return true;
   });
 
   const videos = filteredItems.filter(i => i.type === 'video');
-  const pictures = filteredItems.filter(i => i.type === 'image');
+  const packs = filteredItems.filter(i => i.type === 'picture_pack');
+  const other = filteredItems.filter(i => i.type === 'other');
+  const pictures = filteredItems.filter(i => i.type === 'image' as any); // Legacy support if any
 
   return (
     <div className="min-h-screen pb-20 transition-all duration-500" style={{ backgroundColor: customization.backgroundColor, color: customization.fontColor, fontFamily: customization.fontFamily }}>
@@ -122,11 +164,18 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
               Videos
             </button>
             <button 
-              onClick={() => setActiveSection('pictures')}
+              onClick={() => setActiveSection('packs')}
               className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
-              style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'pictures' ? 1 : 0.5 }}
+              style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'packs' ? 1 : 0.5 }}
             >
-              Pictures
+              Packs
+            </button>
+            <button 
+              onClick={() => setActiveSection('other')}
+              className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
+              style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'other' ? 1 : 0.5 }}
+            >
+              Other
             </button>
             {stableListings.length > 0 && (
               <button 
@@ -190,24 +239,24 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
           </div>
         )}
 
-        {/* Pictures Section */}
-        {(activeSection === 'all' || activeSection === 'pictures') && (
+        {/* Picture Packs Section */}
+        {(activeSection === 'all' || activeSection === 'packs') && (
           <div className="mb-16">
             <div className="flex items-center space-x-4 mb-8">
               <div className="p-3 rounded-2xl" style={{ backgroundColor: `${customization.accentColor}20`, color: customization.accentColor }}>
                 <ImageIcon size={24} />
               </div>
-              <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Pictures</h3>
+              <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Picture Packs</h3>
               <div className="flex-grow h-px bg-white/5"></div>
             </div>
             
-            {pictures.length > 0 ? (
+            {packs.length > 0 ? (
               <div className={`grid gap-8 ${
                 customization.layout === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
                 customization.layout === 'list' ? 'grid-cols-1' :
                 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
               }`}>
-                {pictures.map(item => (
+                {packs.map(item => (
                   <StoreCard 
                     key={item.id} 
                     item={item} 
@@ -221,7 +270,44 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
               </div>
             ) : (
               <div className="glass-panel rounded-[2rem] p-12 text-center border-dashed border-white/10">
-                <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No pictures available</p>
+                <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No picture packs available</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Other Media Section */}
+        {(activeSection === 'all' || activeSection === 'other') && (
+          <div className="mb-16">
+            <div className="flex items-center space-x-4 mb-8">
+              <div className="p-3 rounded-2xl" style={{ backgroundColor: `${customization.accentColor}20`, color: customization.accentColor }}>
+                <ShoppingBag size={24} />
+              </div>
+              <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Other Media</h3>
+              <div className="flex-grow h-px bg-white/5"></div>
+            </div>
+            
+            {other.length > 0 ? (
+              <div className={`grid gap-8 ${
+                customization.layout === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
+                customization.layout === 'list' ? 'grid-cols-1' :
+                'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              }`}>
+                {other.map(item => (
+                  <StoreCard 
+                    key={item.id} 
+                    item={item} 
+                    isAdmin={isAdmin} 
+                    isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
+                    customization={customization} 
+                    onPurchase={() => onPurchase?.(item)} 
+                    onDelete={() => onDeleteItem?.(item)} 
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="glass-panel rounded-[2rem] p-12 text-center border-dashed border-white/10">
+                <p className="text-slate-600 font-black uppercase tracking-widest text-xs">No other media available</p>
               </div>
             )}
           </div>
@@ -295,6 +381,31 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
             
             <form onSubmit={handleAddItemSubmit} className="p-8 space-y-6">
               <div className="space-y-4">
+                {/* Type Selection */}
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Content Type</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['video', 'picture_pack', 'other'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setNewItemType(t);
+                          setNewItemFiles([]);
+                          setUploadError(null);
+                        }}
+                        className={`py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${
+                          newItemType === t 
+                            ? 'bg-[#967bb6] text-white border-[#967bb6]' 
+                            : 'bg-white/5 text-slate-500 border-white/10'
+                        }`}
+                      >
+                        {t.replace('_', ' ')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Item Title</label>
                   <input 
@@ -324,12 +435,14 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className={`w-full h-[50px] rounded-2xl border-2 border-dashed flex items-center justify-center transition-all ${newItemFile ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-400' : 'border-white/10 bg-white/5 text-slate-500 hover:border-[#967bb6]/30'}`}
+                      className={`w-full h-[50px] rounded-2xl border-2 border-dashed flex items-center justify-center transition-all ${newItemFiles.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-400' : 'border-white/10 bg-white/5 text-slate-500 hover:border-[#967bb6]/30'} ${uploadError ? 'border-red-500/50 bg-red-500/5' : ''}`}
                     >
-                      {newItemFile ? (
+                      {newItemFiles.length > 0 ? (
                         <div className="flex items-center space-x-2">
                           <Check size={16} />
-                          <span className="text-[10px] font-black uppercase truncate max-w-[100px]">{newItemFile.name}</span>
+                          <span className="text-[10px] font-black uppercase truncate max-w-[100px]">
+                            {newItemType === 'picture_pack' ? `${newItemFiles.length} Photos` : newItemFiles[0].name}
+                          </span>
                         </div>
                       ) : (
                         <div className="flex items-center space-x-2">
@@ -342,11 +455,19 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       type="file" 
                       ref={fileInputRef}
                       onChange={handleFileChange}
-                      accept="image/*,video/*"
+                      accept={newItemType === 'video' ? 'video/*' : newItemType === 'picture_pack' ? 'image/*' : '*/*'}
+                      multiple={newItemType === 'picture_pack'}
                       className="hidden"
                     />
                   </div>
                 </div>
+
+                {uploadError && (
+                  <div className="flex items-center space-x-2 text-red-500 animate-in fade-in slide-in-from-top-2">
+                    <AlertCircle size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Description (Optional)</label>
@@ -362,7 +483,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
 
               <button 
                 type="submit"
-                disabled={!newItemFile || !newItemTitle}
+                disabled={newItemFiles.length === 0 || !newItemTitle || !!uploadError}
                 className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] chrome-border disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
                 style={{ backgroundColor: '#000000', color: '#967bb6' }}
               >
@@ -409,12 +530,14 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const link = document.createElement('a');
-    link.href = item.mediaUrl;
-    link.download = item.title;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    item.mediaUrls.forEach((url, index) => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${item.title}_${index + 1}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   };
 
   return (
@@ -426,7 +549,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
         } ${canView ? 'cursor-pointer' : ''}`}
       >
         <img 
-          src={canView ? item.mediaUrl : item.thumbnailUrl} 
+          src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
           className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
           alt={item.title} 
         />
@@ -504,7 +627,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           </p>
         )}
         <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: customization.accentColor }}>
-          {item.type === 'video' ? 'Video Content' : 'High-Res Picture'}
+          {item.type === 'video' ? 'Video Content' : item.type === 'picture_pack' ? '5 Picture Pack' : 'Media Content'}
         </p>
         {customization.layout === 'list' && !canView && (
           <button 
@@ -519,12 +642,16 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
 
       {showFull && canView && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
-          <div className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-[3rem] overflow-hidden chrome-border shadow-2xl flex items-center justify-center">
-            {item.type === 'video' ? (
-              <video src={item.mediaUrl} controls autoPlay className="w-full h-full object-contain" />
-            ) : (
-              <img src={item.mediaUrl} className="max-w-full max-h-full object-contain" alt={item.title} />
-            )}
+          <div className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-[3rem] overflow-hidden chrome-border shadow-2xl flex flex-col">
+            <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-4">
+              {item.type === 'video' ? (
+                <video src={item.mediaUrls[0]} controls autoPlay className="max-w-full max-h-full object-contain" />
+              ) : (
+                item.mediaUrls.map((url, idx) => (
+                  <img key={idx} src={url} className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" alt={`${item.title} ${idx + 1}`} />
+                ))
+              )}
+            </div>
             
             <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">
               <div className="bg-black/60 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10">

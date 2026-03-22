@@ -423,6 +423,9 @@ const TopNav: React.FC<TopNavProps> = ({
                 <LogOut size={18} />
                 <span className="text-xs font-bold uppercase tracking-widest">Logout</span>
               </button>
+              <div className="px-4 py-2 text-center">
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-700">www.sharebares.com</span>
+              </div>
             </div>
           )}
         </div>

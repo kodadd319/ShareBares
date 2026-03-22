@@ -10,18 +10,18 @@ interface CustomProfilePageProps {
 }
 
 const WALLPAPERS = [
-  { id: 'none', name: 'None', url: '' },
-  { id: 'camo', name: 'Camo', url: 'https://www.transparenttextures.com/patterns/camo.png' },
-  { id: 'carbon', name: 'Carbon Fiber', url: 'https://www.transparenttextures.com/patterns/carbon-fibre.png' },
-  { id: 'stars', name: 'ShareBares Stars', url: 'https://www.transparenttextures.com/patterns/stardust.png' },
-  { id: 'grid', name: 'Digital Grid', url: 'https://www.transparenttextures.com/patterns/grid-me.png' },
-  { id: 'circuit', name: 'Cyber Circuit', url: 'https://www.transparenttextures.com/patterns/circuit-board.png' },
-  { id: 'honeycomb', name: 'Neon Hex', url: 'https://www.transparenttextures.com/patterns/hexellence.png' },
-  { id: 'noise', name: 'Static Glitch', url: 'https://www.transparenttextures.com/patterns/broken-noise.png' },
-  { id: 'wood', name: 'Dark Wood', url: 'https://www.transparenttextures.com/patterns/dark-wood.png' },
-  { id: 'leather', name: 'Black Leather', url: 'https://www.transparenttextures.com/patterns/black-leather.png' },
-  { id: 'denim', name: 'Dark Denim', url: 'https://www.transparenttextures.com/patterns/dark-denim.png' },
-  { id: 'marble', name: 'White Marble', url: 'https://www.transparenttextures.com/patterns/white-diamond.png' },
+  { id: 'none', name: 'None', url: '', baseColor: 'transparent' },
+  { id: 'camo', name: 'Camo', url: 'https://www.transparenttextures.com/patterns/camo.png', baseColor: '#4b5320' },
+  { id: 'carbon', name: 'Carbon Fiber', url: 'https://www.transparenttextures.com/patterns/carbon-fibre.png', baseColor: '#1a1a1a' },
+  { id: 'stars', name: 'ShareBares Stars', url: 'https://www.transparenttextures.com/patterns/stardust.png', baseColor: '#050505' },
+  { id: 'grid', name: 'Digital Grid', url: 'https://www.transparenttextures.com/patterns/grid-me.png', baseColor: '#001122' },
+  { id: 'circuit', name: 'Cyber Circuit', url: 'https://www.transparenttextures.com/patterns/circuit-board.png', baseColor: '#0a0a0a' },
+  { id: 'honeycomb', name: 'Neon Hex', url: 'https://www.transparenttextures.com/patterns/hexellence.png', baseColor: '#0f0f0f' },
+  { id: 'noise', name: 'Static Glitch', url: 'https://www.transparenttextures.com/patterns/broken-noise.png', baseColor: '#111111' },
+  { id: 'wood', name: 'Dark Wood', url: 'https://www.transparenttextures.com/patterns/dark-wood.png', baseColor: '#2b1d0e' },
+  { id: 'leather', name: 'Black Leather', url: 'https://www.transparenttextures.com/patterns/black-leather.png', baseColor: '#0a0a0a' },
+  { id: 'denim', name: 'Dark Denim', url: 'https://www.transparenttextures.com/patterns/dark-denim.png', baseColor: '#151b26' },
+  { id: 'marble', name: 'White Marble', url: 'https://www.transparenttextures.com/patterns/white-diamond.png', baseColor: '#f0f0f0' },
 ];
 
 const FONTS = [
@@ -56,10 +56,24 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
     accentColor: '#967bb6',
     layout: 'default',
     backgroundWallpaper: '',
+    backgroundWallpaperColor: '',
     themeSongUrl: '',
   });
 
   const [musicFileName, setMusicFileName] = useState<string>('');
+
+  const activeWallpaper = WALLPAPERS.find(w => w.url === config.backgroundWallpaper);
+  
+  const backgroundStyle = activeWallpaper && activeWallpaper.id !== 'none'
+    ? {
+        backgroundColor: activeWallpaper.baseColor,
+        backgroundImage: `url(${activeWallpaper.url})`,
+        backgroundRepeat: 'repeat',
+      }
+    : {
+        backgroundColor: config.backgroundColor || '#050505',
+        backgroundImage: 'none',
+      };
 
   const handleReset = () => {
     const defaultConfig: ProfileCustomization = {
@@ -71,6 +85,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
       accentColor: '#967bb6',
       layout: 'default',
       backgroundWallpaper: '',
+      backgroundWallpaperColor: '',
       themeSongUrl: '',
     };
     setConfig(defaultConfig);
@@ -90,22 +105,26 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <button 
-        onClick={onBack}
-        className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group"
-      >
-        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-        <span className="text-xs font-black uppercase tracking-widest">Back to Profile</span>
-      </button>
+    <div 
+      className="min-h-screen transition-all duration-500 py-12 px-4"
+      style={backgroundStyle}
+    >
+      <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <button 
+          onClick={onBack}
+          className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group"
+        >
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-xs font-black uppercase tracking-widest">Back to Profile</span>
+        </button>
 
-      <div className="glass-panel rounded-[3rem] p-8 md:p-12 border-[#c0c0c0]/10 shadow-2xl chrome-border">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-white tracking-tighter uppercase chrome-text mb-2">Custom Profile</h1>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Design your unique presence on ShareBares</p>
-        </div>
+        <div className="glass-panel rounded-[3rem] p-8 md:p-12 border-[#c0c0c0]/10 shadow-2xl chrome-border">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase chrome-text mb-2">Custom Profile</h1>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Design your unique presence on ShareBares</p>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Colors & Visuals */}
           <div className="space-y-8">
             <section className="space-y-4">
@@ -163,14 +182,25 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                 {WALLPAPERS.map(wp => (
                   <button
                     key={wp.id}
-                    onClick={() => setConfig(prev => ({ ...prev, backgroundWallpaper: wp.url }))}
-                    className={`p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    onClick={() => setConfig(prev => ({ 
+                      ...prev, 
+                      backgroundWallpaper: wp.url,
+                      backgroundWallpaperColor: wp.baseColor
+                    }))}
+                    className={`p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all relative overflow-hidden h-16 flex items-center justify-center ${
                       config.backgroundWallpaper === wp.url 
-                      ? 'bg-black text-[#967bb6] border-[#967bb6]' 
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
+                      ? 'border-[#967bb6] ring-1 ring-[#967bb6]' 
+                      : 'border-white/10 hover:border-white/30'
                     }`}
+                    style={{
+                      backgroundColor: wp.baseColor !== 'transparent' ? wp.baseColor : (config.backgroundColor || '#050505'),
+                      backgroundImage: wp.url ? `url(${wp.url})` : 'none',
+                      backgroundRepeat: 'repeat',
+                      color: config.fontColor,
+                      textShadow: '0 1px 4px rgba(0,0,0,0.8)'
+                    }}
                   >
-                    {wp.name}
+                    <span className="relative z-10">{wp.name}</span>
                   </button>
                 ))}
               </div>
@@ -284,6 +314,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
               <p className="text-center text-[9px] text-slate-600 uppercase font-black tracking-[0.2em] mt-4">
                 Changes will be visible to all visitors immediately
               </p>
+            </div>
             </div>
           </div>
         </div>

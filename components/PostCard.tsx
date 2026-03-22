@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
 import { Post, PostVisibility, User } from '../types';
-import { Heart, MessageCircle, Eye, Star, Trash2, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Star, Trash2, Lock, Share2, Check } from 'lucide-react';
 import { useBareBear } from './BareBearContext';
+import { APP_URL } from '../constants';
 
 interface PostCardProps {
   post: Post;
@@ -18,11 +19,25 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan, onLike, onComment, onDelete, onProfileClick }) => {
   const [liked, setLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { showMascot } = useBareBear();
   
   const handleLike = () => {
     if (!liked && onLike) onLike();
     setLiked(!liked);
+  };
+
+  const handleShare = () => {
+    const postUrl = `${APP_URL}/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    
+    showMascot({
+      action: 'wink',
+      message: `Spread the love! Link copied to clipboard. 😉🔥`,
+      duration: 3000
+    });
   };
   
   const getVisibilityLabel = (visibility: PostVisibility) => {
@@ -77,29 +92,31 @@ const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan,
       </div>
 
       {/* Content */}
-      <div className={`px-4 pb-3 ${isLocked ? 'blur-md select-none pointer-events-none' : ''}`}>
-        <p className="text-slate-200 leading-relaxed">{post.content}</p>
-      </div>
+      {post.content && (
+        <div className={`px-4 pb-3 ${isLocked ? 'blur-md select-none pointer-events-none' : ''}`}>
+          <p className="text-slate-200 leading-relaxed">{post.content}</p>
+        </div>
+      )}
 
       {/* Media */}
-      <div 
-        className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
-        onClick={isLocked ? handleLockedClick : undefined}
-      >
-        {post.mediaUrl && (
+      {post.mediaUrl && (
+        <div 
+          className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
+          onClick={isLocked ? handleLockedClick : undefined}
+        >
           <img 
             src={post.mediaUrl} 
             alt="Post content" 
             className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
           />
-        )}
-        {isLocked && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Lock size={48} className="text-[#967bb6] mb-4 animate-pulse" fill="#967bb6" />
-            <p className="text-white font-black uppercase tracking-widest text-sm">Private Content</p>
-          </div>
-        )}
-      </div>
+          {isLocked && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
+              <Lock size={48} className="text-[#967bb6] mb-4 animate-pulse" fill="#967bb6" />
+              <p className="text-white font-black uppercase tracking-widest text-sm">Private Content</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Footer / Stats */}
       <div className="p-4 flex items-center space-x-4 border-t border-white/5">
@@ -118,6 +135,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, author, isMe, isAdmin, isFan,
         >
           <MessageCircle size={18} />
           <span className="text-xs font-black uppercase tracking-widest">{post.commentsCount}</span>
+        </button>
+        <button 
+          onClick={handleShare}
+          className="flex items-center space-x-2 px-4 py-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#000000', color: copied ? '#4ade80' : '#967bb6' }}
+        >
+          {copied ? <Check size={18} /> : <Share2 size={18} />}
+          <span className="text-xs font-black uppercase tracking-widest">{copied ? 'Copied' : 'Share'}</span>
         </button>
         <div className="flex-grow"></div>
         <button 

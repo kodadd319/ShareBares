@@ -13,15 +13,15 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated cartoon bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". The bear is a vibrant blue color with a white heart and blue flame on its belly, wearing a black leather harness. It has a mischievous, seductive expression with a wink, and is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). The bear is edgy, detailed, and vibrant.';
+const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated female bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". She has vibrant blue fur, long eyelashes, and a mischievous, seductive expression with a wink. She wears a black leather harness and has a white heart with a blue flame on her belly. She is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). She is edgy, detailed, and vibrant.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
-  dance: 'The bear is doing a silly, energetic dance with its arms up and a big mischievous grin.',
-  point: 'The bear is pointing its finger towards the left side of the screen with a knowing wink, as if highlighting something important.',
-  wave: 'The bear is waving its paw enthusiastically with a friendly and playful expression.',
-  wink: 'The bear is giving a playful and provocative wink while leaning slightly forward.',
-  sad: 'The bear has a cute, exaggerated sad face with slightly drooping ears, looking disappointed but still adorable.',
-  surprised: 'The bear has a wide-eyed, surprised expression with its paws on its cheeks.'
+  dance: 'She is doing a silly, energetic dance with her arms up and a big mischievous grin.',
+  point: 'She is pointing her finger towards the left side of the screen with a knowing wink, as if highlighting something important.',
+  wave: 'She is waving her paw enthusiastically with a friendly and playful expression.',
+  wink: 'She is giving a playful and provocative wink while leaning slightly forward.',
+  sad: 'She has a cute, exaggerated sad face with slightly drooping ears, looking disappointed but still adorable.',
+  surprised: 'She has a wide-eyed, surprised expression with her paws on her cheeks.'
 };
 
 const BareBear: React.FC<BareBearProps> = ({ 
@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v10_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v11_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -62,10 +62,10 @@ const BareBear: React.FC<BareBearProps> = ({
               setImageUrl(url);
               imageFound = true;
               try {
-                localStorage.setItem(`barebear_v10_${action}`, url);
+                localStorage.setItem(`barebear_v11_${action}`, url);
                 // Clear old mascot versions to save space
                 Object.keys(localStorage).forEach(key => {
-                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v10_')) {
+                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v11_')) {
                     localStorage.removeItem(key);
                   }
                 });

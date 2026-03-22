@@ -111,6 +111,19 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
             </p>
           )}
         </div>
+
+        <div className="mt-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex items-start gap-4">
+          <Shield size={20} className="text-[#967bb6] shrink-0 mt-1" />
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white mb-1">Official Service Disclosure</h3>
+            <p className="text-[9px] font-bold text-slate-400 uppercase leading-relaxed tracking-widest">
+              All "In-Person Service" transactions are handled directly between the service provider and the client. 
+              ShareBares is a separate entity and serves strictly as a listing platform. ShareBares does not participate in, 
+              nor is it responsible for, any service agreements or transactions. All questions, comments, or complaints 
+              must be directed to the service provider.
+            </p>
+          </div>
+        </div>
         
         <div className="flex flex-wrap items-center gap-4">
           {!isRadiusFilterActive && userLocation && (

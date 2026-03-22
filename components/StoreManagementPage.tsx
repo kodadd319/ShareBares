@@ -6,7 +6,7 @@ import { User, StoreItem } from '../types';
 interface StoreManagementPageProps {
   user: User;
   items: StoreItem[];
-  onAddItem: (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, file: File) => void;
+  onAddItem: (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onUpdateItem: (itemId: string, updates: Partial<StoreItem>) => void;
   onDeleteItem: (itemId: string) => void;
   onGoToMonetization: () => void;
@@ -23,16 +23,18 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   onGoToCustomization
 }) => {
   const [activeMode, setActiveMode] = useState<'upload' | 'edit'>('upload');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [type, setType] = useState<'video' | 'picture_pack' | 'other'>('video');
   const [details, setDetails] = useState({
     title: '',
     description: '',
     price: ''
   });
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Edit Mode States
+  // Edit mode state
   const [searchTitle, setSearchTitle] = useState('');
   const [editingItem, setEditingItem] = useState<StoreItem | null>(null);
   const [editDetails, setEditDetails] = useState({
@@ -42,14 +44,51 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    if (e.target.files) {
+      const selectedFiles = Array.from(e.target.files) as File[];
+      setUploadError(null);
+
+      if (type === 'video') {
+        const videoFile = selectedFiles[0];
+        if (videoFile && videoFile.type.startsWith('video')) {
+          // Check duration
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = () => {
+            window.URL.revokeObjectURL(video.src);
+            if (video.duration > 480) { // 8 minutes = 480 seconds
+              setUploadError('Video must be 8 minutes or less.');
+              setFiles([]);
+            } else {
+              setFiles([videoFile]);
+            }
+          };
+          video.src = URL.createObjectURL(videoFile);
+        } else {
+          setUploadError('Please select a valid video file.');
+        }
+      } else if (type === 'picture_pack') {
+        if (selectedFiles.length !== 5) {
+          setUploadError('A picture pack must contain exactly 5 photos.');
+          setFiles([]);
+        } else {
+          const allImages = selectedFiles.every(f => f.type.startsWith('image'));
+          if (!allImages) {
+            setUploadError('All files in a picture pack must be images.');
+            setFiles([]);
+          } else {
+            setFiles(selectedFiles);
+          }
+        }
+      } else {
+        setFiles(selectedFiles);
+      }
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !details.title || !details.price) return;
+    if (files.length === 0 || !details.title || !details.price || uploadError) return;
 
     setIsUploading(true);
     
@@ -60,11 +99,11 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
         description: details.description,
         price: parseFloat(details.price),
         thumbnailUrl: '', // Handled by App.tsx
-        mediaUrl: '', // Handled by App.tsx
-        type: file.type.startsWith('video') ? 'video' : 'image'
-      }, file);
+        mediaUrls: [], // Handled by App.tsx
+        type: type
+      }, files);
 
-      setFile(null);
+      setFiles([]);
       setDetails({ title: '', description: '', price: '' });
       setIsUploading(false);
     }, 1000);
@@ -167,37 +206,79 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Type Selection */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Content Type</label>
+                    <div className="grid grid-cols-3 gap-4">
+                      {(['video', 'picture_pack', 'other'] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => {
+                            setType(t);
+                            setFiles([]);
+                            setUploadError(null);
+                          }}
+                          className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                            type === t 
+                              ? 'bg-[#967bb6] text-white border-[#967bb6] shadow-lg shadow-[#967bb6]/20' 
+                              : 'bg-white/5 text-slate-500 border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          {t.replace('_', ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* File Upload Area */}
                   <div 
                     onClick={() => fileInputRef.current?.click()}
                     className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
-                      file ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
-                    }`}
+                      files.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
+                    } ${uploadError ? 'border-red-500/50 bg-red-500/5' : ''}`}
                   >
                     <input 
                       type="file" 
                       ref={fileInputRef}
                       onChange={handleFileChange}
-                      accept="image/*,video/*"
+                      accept={type === 'video' ? 'video/*' : type === 'picture_pack' ? 'image/*' : '*/*'}
+                      multiple={type === 'picture_pack'}
                       className="hidden"
                     />
                     
-                    {file ? (
+                    {files.length > 0 ? (
                       <div className="flex flex-col items-center animate-in zoom-in duration-300">
                         <div className="w-20 h-20 bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-                          {file.type.startsWith('video') ? <Video size={40} className="text-emerald-500" /> : <ImageIcon size={40} className="text-emerald-500" />}
+                          {type === 'video' ? <Video size={40} className="text-emerald-500" /> : <ImageIcon size={40} className="text-emerald-500" />}
                         </div>
-                        <p className="text-white font-black uppercase tracking-widest text-sm mb-1">{file.name}</p>
-                        <p className="text-slate-500 text-[10px] uppercase font-bold">{(file.size / (1024 * 1024)).toFixed(2)} MB • Click to change</p>
+                        <p className="text-white font-black uppercase tracking-widest text-sm mb-1">
+                          {type === 'picture_pack' ? `${files.length} Photos Selected` : files[0].name}
+                        </p>
+                        <p className="text-slate-500 text-[10px] uppercase font-bold">
+                          {type === 'picture_pack' 
+                            ? `${(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB Total`
+                            : `${(files[0].size / (1024 * 1024)).toFixed(2)} MB`
+                          } • Click to change
+                        </p>
                       </div>
                     ) : (
                       <>
                         <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                          <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />
+                          {type === 'video' ? <Video size={32} className="text-slate-600 group-hover:text-[#967bb6]" /> : <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />}
                         </div>
-                        <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">Select Media File</p>
+                        <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
+                          {type === 'video' ? 'Select Video File' : type === 'picture_pack' ? 'Select 5 Photos' : 'Select Media File'}
+                        </p>
                         <p className="text-slate-600 text-[10px] uppercase font-bold">Drag and drop or click to browse device</p>
                       </>
+                    )}
+
+                    {uploadError && (
+                      <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center space-x-2 text-red-500 animate-in fade-in slide-in-from-bottom-2">
+                        <AlertCircle size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
+                      </div>
                     )}
                   </div>
 
@@ -243,7 +324,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
                   <button 
                     type="submit"
-                    disabled={!file || !details.title || !details.price || isUploading}
+                    disabled={files.length === 0 || !details.title || !details.price || isUploading || !!uploadError}
                     className="w-full bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-5 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-[#967bb6]/20 transition-all hover:scale-[1.02] active:scale-95 chrome-border disabled:opacity-50 disabled:grayscale flex items-center justify-center space-x-3"
                   >
                     {isUploading ? (
@@ -381,7 +462,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
           <div>
             <h4 className="text-white font-bold text-sm uppercase tracking-tight mb-1">Upload Limits</h4>
             <p className="text-slate-500 text-[10px] uppercase font-bold leading-relaxed">
-              Videos are limited to eight minutes in length.
+              Videos are limited to eight minutes in length. Picture packs must contain exactly five photos.
             </p>
           </div>
         </div>

@@ -28,9 +28,8 @@ const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const otherUsers = users.filter(u => u.id !== me.id);
   
-  // Filter posts: only show posts from other users for the "Home" experience
+  // Filter posts: show all posts for the "Recent Activity" feed
   const feedPosts = posts
-    .filter(p => p.userId !== me.id)
     .filter(p => !searchQuery || p.content.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const featuredCreators = otherUsers.slice(0, 5);
