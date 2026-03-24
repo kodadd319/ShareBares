@@ -18,53 +18,55 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     }
     data.board = board;
   } else if (type === '10000') {
-    data.dice = [1, 2, 3, 4, 5, 6];
+    data.dice = [];
+    data.savedDice = [];
     data.score = {};
     players.forEach(p => data.score[p.id] = 0);
     data.currentTurnScore = 0;
-    data.savedDice = []; // Indices of dice permanently kept this turn
-    data.tempSavedIndices = []; // Indices of dice selected from current roll
-    data.rollCount = 0;
-    data.canBank = false;
-    data.lastRollIndices = [0, 1, 2, 3, 4, 5]; // All dice available for first roll
+    data.isFirstRoll = true;
+    data.farkled = false;
   } else if (type === 'blackjack') {
     data.deck = createDeck();
-    data.playerHand = [drawCard(data.deck), drawCard(data.deck)];
-    data.dealerHand = [drawCard(data.deck), drawCard(data.deck)];
-    data.status = 'playing';
-    data.bet = 100; // Default bet
+    data.players = players.map(p => ({ id: p.id, hand: [], score: 1000 }));
+    data.dealerHand = [];
+    data.pot = 0;
+    data.currentPlayerIndex = 0;
+    data.status = 'waiting';
   } else if (type === 'rummy') {
     data.deck = createDeck();
-    data.hand = [];
-    for (let i = 0; i < 7; i++) data.hand.push(drawCard(data.deck));
+    data.hands = {};
+    players.forEach(p => {
+      data.hands[p.id] = [];
+      for (let i = 0; i < 10; i++) data.hands[p.id].push(drawCard(data.deck));
+    });
     data.discardPile = [drawCard(data.deck)];
     data.melds = [];
     data.hasDrawn = false;
+    data.score = {};
+    players.forEach(p => data.score[p.id] = 0);
   } else if (type === 'billiards') {
-    data.balls = [
-      { id: 1, x: 70, y: 50, type: 'solid', number: 1 },
-      { id: 2, x: 73, y: 48.5, type: 'solid', number: 2 },
-      { id: 3, x: 73, y: 51.5, type: 'striped', number: 9 },
-      { id: 4, x: 76, y: 47, type: 'solid', number: 3 },
-      { id: 5, x: 76, y: 50, type: 'black', number: 8 },
-      { id: 6, x: 76, y: 53, type: 'striped', number: 10 },
-      { id: 7, x: 79, y: 45.5, type: 'solid', number: 4 },
-      { id: 8, x: 79, y: 48.5, type: 'striped', number: 11 },
-      { id: 9, x: 79, y: 51.5, type: 'solid', number: 5 },
-      { id: 10, x: 79, y: 54.5, type: 'striped', number: 12 },
-      { id: 11, x: 82, y: 44, type: 'striped', number: 13 },
-      { id: 12, x: 82, y: 47, type: 'solid', number: 6 },
-      { id: 13, x: 82, y: 50, type: 'striped', number: 14 },
-      { id: 14, x: 82, y: 53, type: 'solid', number: 7 },
-      { id: 15, x: 82, y: 56, type: 'striped', number: 15 },
-    ];
-    data.cueBall = { x: 25, y: 50 };
-    data.power = 0;
-    data.angle = 0;
-    data.pocketed = [];
-    data.playerType = {}; // userId -> 'solid' | 'striped'
-    data.lastPocketed = [];
-    data.foul = null;
+    const balls: any[] = [];
+    const colors = ["red", "yellow", "blue", "orange", "purple", "pink"];
+    const startX = 600;
+    const startY = 250;
+
+    for (let row = 0; row < 5; row++) {
+      for (let i = 0; i <= row; i++) {
+        balls.push({
+          x: startX + row * 22,
+          y: startY - row * 11 + i * 22,
+          vx: 0,
+          vy: 0,
+          color: colors[(row + i) % colors.length],
+          active: true
+        });
+      }
+    }
+
+    data.balls = balls;
+    data.cueBall = { x: 200, y: 250, vx: 0, vy: 0, color: "white", active: true };
+    data.width = 900;
+    data.height = 500;
   }
 
   return {
@@ -99,6 +101,45 @@ const drawCard = (deck: any[]) => {
   return deck.pop();
 };
 
+const dealerPlay = (data: any) => {
+  // Dealer hits on 16 and below, stands on 17 and above
+  while (getBlackjackValue(data.dealerHand) < 17) {
+    data.dealerHand.push(drawCard(data.deck));
+  }
+  
+  const dScore = getBlackjackValue(data.dealerHand);
+  data.players.forEach((p: any) => {
+    const pScore = getBlackjackValue(p.hand);
+    
+    // Check for Blackjack (21 with 2 cards)
+    const isPBlackjack = pScore === 21 && p.hand.length === 2;
+    const isDBlackjack = dScore === 21 && data.dealerHand.length === 2;
+
+    if (pScore > 21) {
+      // Player busted, they already lost their bet
+    } else if (dScore > 21 || pScore > dScore) {
+      // Player wins
+      if (isPBlackjack && !isDBlackjack) {
+        p.score += 250; // 3:2 payout (100 bet + 150 win)
+      } else {
+        p.score += 200; // 1:1 payout (100 bet + 100 win)
+      }
+    } else if (pScore === dScore) {
+      // Push
+      if (isPBlackjack && !isDBlackjack) {
+        p.score += 250;
+      } else if (!isPBlackjack && isDBlackjack) {
+        // Dealer wins with Blackjack vs 21
+      } else {
+        p.score += 100; // Return bet
+      }
+    }
+  });
+  
+  data.pot = 0;
+  data.status = 'finished';
+};
+
 export const getBlackjackValue = (hand: any[]) => {
   let value = 0;
   let aces = 0;
@@ -119,48 +160,71 @@ export const getBlackjackValue = (hand: any[]) => {
   return value;
 };
 
-const calculateDiceScore = (dice: number[]) => {
+export const calculateDiceScore = (dice: number[]) => {
+  if (dice.length === 0) return { score: 0, usedCount: 0 };
+  
   const counts: Record<number, number> = {};
   dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
   
   let score = 0;
   let usedCount = 0;
-
-  // Special cases: Straight
-  if (Object.keys(counts).length === 6) return { score: 1500, usedCount: 6 };
+  
+  const values = Object.keys(counts).map(Number).sort();
+  
+  // 1-6 Straight
+  if (values.length === 6) {
+    return { score: 1500, usedCount: 6 };
+  }
   
   // Three pairs
-  let pairs = 0;
-  Object.values(counts).forEach(c => { if (c === 2) pairs++; });
-  if (pairs === 3) return { score: 1500, usedCount: 6 };
-
-  // 1s
-  if (counts[1] >= 3) {
-    score += 1000 * Math.pow(2, counts[1] - 3);
-    usedCount += counts[1];
-  } else {
-    score += (counts[1] || 0) * 100;
-    usedCount += (counts[1] || 0);
+  const pairs = values.filter(v => counts[v] === 2);
+  if (pairs.length === 3) {
+    return { score: 1500, usedCount: 6 };
   }
 
-  // 5s
-  if (counts[5] >= 3) {
-    score += 500 * Math.pow(2, counts[5] - 3);
-    usedCount += counts[5];
-  } else {
-    score += (counts[5] || 0) * 50;
-    usedCount += (counts[5] || 0);
-  }
-
-  // Others (2, 3, 4, 6)
-  [2, 3, 4, 6].forEach(num => {
-    if (counts[num] >= 3) {
-      score += num * 100 * Math.pow(2, counts[num] - 3);
-      usedCount += counts[num];
+  // Standard scoring
+  for (const val of [1, 5, 2, 3, 4, 6]) {
+    let count = counts[val] || 0;
+    if (count >= 3) {
+      let base = (val === 1) ? 1000 : val * 100;
+      // Double for each die over 3
+      score += base * Math.pow(2, count - 3);
+      usedCount += count;
+      count = 0; // All used for the triplet/quad/etc
     }
-  });
-
+    
+    if (val === 1) {
+      score += count * 100;
+      usedCount += count;
+    } else if (val === 5) {
+      score += count * 50;
+      usedCount += count;
+    }
+  }
+  
   return { score, usedCount };
+};
+
+export const getScoringIndices = (dice: number[]) => {
+  const indices: number[] = [];
+  const counts: Record<number, number> = {};
+  dice.forEach(d => counts[d] = (counts[d] || 0) + 1);
+
+  const values = Object.keys(counts).map(Number).sort();
+  
+  // Straight or Three Pairs
+  if (values.length === 6) return [0, 1, 2, 3, 4, 5];
+  const pairs = values.filter(v => counts[v] === 2);
+  if (pairs.length === 3) return [0, 1, 2, 3, 4, 5];
+
+  // Triplets and singles
+  for (let i = 0; i < dice.length; i++) {
+    const val = dice[i];
+    if (val === 1 || val === 5 || counts[val] >= 3) {
+      indices.push(i);
+    }
+  }
+  return indices;
 };
 
 const isValidMeld = (cards: any[]) => {
@@ -313,242 +377,285 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
 
   } else if (game.type === '10000') {
     if (moveData.type === 'roll') {
-      // If we have hot dice (all 6 saved), reset for a full roll
-      if (newData.savedDice.length === 6) {
-        newData.savedDice = [];
-      }
-
-      const diceToRollCount = 6 - newData.savedDice.length;
-      const rolled = Array(diceToRollCount).fill(0).map(() => Math.floor(Math.random() * 6) + 1);
-      
-      // Update dice at non-saved positions
-      let rollIdx = 0;
-      const newDice = [...newData.dice];
-      for (let i = 0; i < 6; i++) {
-        if (!newData.savedDice.includes(i)) {
-          newDice[i] = rolled[rollIdx++];
-        }
-      }
-      newData.dice = newDice;
-      newData.rollCount++;
-      newData.lastRollIndices = Array.from({length: 6}, (_, i) => i).filter(i => !newData.savedDice.includes(i));
-      newData.tempSavedIndices = []; // Reset selection for new roll
-
-      // Check for Farkle
-      const { score: rollScore } = calculateDiceScore(rolled);
-      if (rollScore === 0) {
-        newData.currentTurnScore = 0;
-        newData.savedDice = [];
-        newData.tempSavedIndices = [];
-        newData.rollCount = 0;
-        nextTurn = opponentId;
-      } else {
-        newData.canBank = (newData.currentTurnScore >= 500) || newData.score[userId] > 0;
-      }
-    } else if (moveData.type === 'keep') {
-      if (newData.tempSavedIndices.length === 0) return game;
-      
-      const tempDice = newData.tempSavedIndices.map((idx: number) => newData.dice[idx]);
-      const { score, usedCount } = calculateDiceScore(tempDice);
-      
-      // Must only select scoring dice
-      if (usedCount !== tempDice.length) return game;
-      
-      newData.currentTurnScore += score;
-      newData.savedDice = [...newData.savedDice, ...newData.tempSavedIndices];
-      newData.tempSavedIndices = [];
-      newData.lastRollIndices = []; // Cannot toggle these anymore this turn
-      
-      newData.canBank = (newData.currentTurnScore >= 500) || newData.score[userId] > 0;
-    } else if (moveData.type === 'bank') {
-      const finalTurnScore = newData.currentTurnScore;
-
-      if (finalTurnScore >= 500 || newData.score[userId] > 0) {
-        newData.score[userId] = (newData.score[userId] || 0) + finalTurnScore;
-        newData.currentTurnScore = 0;
-        newData.savedDice = [];
-        newData.tempSavedIndices = [];
-        newData.rollCount = 0;
-        nextTurn = opponentId;
-        if (newData.score[userId] >= 10000) {
-          status = 'finished';
-          winner = userId;
-        }
-      }
-    } else if (moveData.type === 'toggle_dice') {
-      const idx = moveData.index;
-      // Can only toggle dice from the LAST roll
-      if (!newData.lastRollIndices?.includes(idx)) return game;
-      
-      if (newData.tempSavedIndices.includes(idx)) {
-        newData.tempSavedIndices = newData.tempSavedIndices.filter((i: number) => i !== idx);
-      } else {
-        newData.tempSavedIndices.push(idx);
-      }
-      
-      // Update canBank based on current selection
-      const tempDice = newData.tempSavedIndices.map((idx: number) => newData.dice[idx]);
-      const { score: tempScore } = calculateDiceScore(tempDice);
-      newData.canBank = (newData.currentTurnScore + tempScore >= 500) || newData.score[userId] > 0;
-    }
-  } else if (game.type === 'blackjack') {
-    if (moveData.type === 'hit') {
-      newData.playerHand.push(drawCard(newData.deck));
-      if (getBlackjackValue(newData.playerHand) > 21) {
-        status = 'finished';
-        winner = opponentId;
-      }
-    } else if (moveData.type === 'double' && newData.playerHand.length === 2) {
-      newData.bet *= 2;
-      newData.playerHand.push(drawCard(newData.deck));
-      if (getBlackjackValue(newData.playerHand) > 21) {
-        status = 'finished';
-        winner = opponentId;
-      } else {
-        // Dealer AI (must stand after double)
-        let dealerVal = getBlackjackValue(newData.dealerHand);
-        while (dealerVal < 17) {
-          newData.dealerHand.push(drawCard(newData.deck));
-          dealerVal = getBlackjackValue(newData.dealerHand);
+      // If not first roll, we must have selected scoring dice
+      if (!newData.isFirstRoll) {
+        const selectedDice = moveData.selectedIndices.map((i: number) => newData.dice[i]);
+        const { score: selectedScore, usedCount } = calculateDiceScore(selectedDice);
+        
+        // Validation: Must select at least one scoring die, and ALL selected must be part of a scoring combo
+        if (usedCount === 0 || usedCount !== selectedDice.length) {
+          return game; // Invalid selection
         }
         
-        const playerVal = getBlackjackValue(newData.playerHand);
+        newData.currentTurnScore += selectedScore;
+        newData.savedDice.push(...selectedDice);
+        
+        // Hot Dice: If all 6 dice are used, reset savedDice to allow rolling all 6 again
+        if (newData.savedDice.length === 6) {
+          newData.savedDice = [];
+        }
+      }
+
+      const numToRoll = 6 - newData.savedDice.length;
+      const rolled = Array(numToRoll).fill(0).map(() => Math.floor(Math.random() * 6) + 1);
+      newData.dice = rolled;
+      newData.isFirstRoll = false;
+      
+      // Check for Farkle in the new roll
+      const { score: potentialScore } = calculateDiceScore(rolled);
+      if (potentialScore === 0) {
+        newData.currentTurnScore = 0;
+        newData.farkled = true;
+        nextTurn = opponentId;
+        // Reset turn state but keep dice for visibility
+        newData.savedDice = [];
+        newData.isFirstRoll = true;
+      } else {
+        newData.farkled = false;
+      }
+    } else if (moveData.type === 'bank') {
+      const selectedDice = (moveData.selectedIndices || []).map((i: number) => newData.dice[i]);
+      const { score: selectedScore, usedCount } = calculateDiceScore(selectedDice);
+      
+      // If they have selected dice, they must be valid
+      if (selectedDice.length > 0 && (usedCount === 0 || usedCount !== selectedDice.length)) {
+        return game;
+      }
+
+      const totalTurnScore = newData.currentTurnScore + selectedScore;
+      
+      // In some rules, you need a minimum to "get on the board" (e.g. 500 or 1000)
+      // But let's keep it simple for now unless requested.
+      
+      newData.score[userId] = (newData.score[userId] || 0) + totalTurnScore;
+      newData.currentTurnScore = 0;
+      newData.dice = [];
+      newData.savedDice = [];
+      newData.isFirstRoll = true;
+      nextTurn = opponentId;
+      
+      if (newData.score[userId] >= 10000) {
         status = 'finished';
-        if (dealerVal > 21 || playerVal > dealerVal) {
-          winner = userId;
-        } else if (dealerVal > playerVal) {
-          winner = opponentId;
+        winner = userId;
+      }
+    }
+  } else if (game.type === 'blackjack') {
+    if (moveData.type === 'deal') {
+      if (newData.status !== 'playing') {
+        newData.deck = createDeck();
+        newData.players.forEach((p: any) => {
+          p.hand = [drawCard(newData.deck), drawCard(newData.deck)];
+          p.score -= 100; // Standard bet
+        });
+        newData.dealerHand = [drawCard(newData.deck), drawCard(newData.deck)];
+        newData.pot = newData.players.length * 100;
+        newData.currentPlayerIndex = 0;
+        newData.status = 'playing';
+        nextTurn = newData.players[0].id;
+
+        // Check if first player has immediate blackjack
+        const firstPlayer = newData.players[0];
+        if (getBlackjackValue(firstPlayer.hand) === 21) {
+          // Auto-stand for blackjack
+          if (newData.players.length > 1) {
+            newData.currentPlayerIndex = 1;
+            nextTurn = newData.players[1].id;
+          } else {
+            dealerPlay(newData);
+            status = 'finished';
+          }
+        }
+      }
+    } else if (moveData.type === 'hit') {
+      const p = newData.players[newData.currentPlayerIndex];
+      p.hand.push(drawCard(newData.deck));
+      const val = getBlackjackValue(p.hand);
+      
+      if (val >= 21) {
+        // Move to next player or dealer
+        if (newData.currentPlayerIndex < newData.players.length - 1) {
+          newData.currentPlayerIndex++;
+          nextTurn = newData.players[newData.currentPlayerIndex].id;
         } else {
-          winner = 'draw';
+          dealerPlay(newData);
+          status = 'finished';
         }
       }
     } else if (moveData.type === 'stand') {
-      // Dealer AI
-      let dealerVal = getBlackjackValue(newData.dealerHand);
-      while (dealerVal < 17) {
-        newData.dealerHand.push(drawCard(newData.deck));
-        dealerVal = getBlackjackValue(newData.dealerHand);
-      }
-      
-      const playerVal = getBlackjackValue(newData.playerHand);
-      status = 'finished';
-      if (dealerVal > 21 || playerVal > dealerVal) {
-        winner = userId;
-      } else if (dealerVal > playerVal) {
-        winner = opponentId;
+      if (newData.currentPlayerIndex < newData.players.length - 1) {
+        newData.currentPlayerIndex++;
+        nextTurn = newData.players[newData.currentPlayerIndex].id;
       } else {
-        winner = 'draw';
+        dealerPlay(newData);
+        status = 'finished';
       }
     }
-  } else if (game.type === 'rummy') {
+  }
+  else if (game.type === 'rummy') {
+    const hand = newData.hands[userId];
+    const opponentHand = newData.hands[opponentId];
+
     if (moveData.type === 'draw' && !newData.hasDrawn) {
-      newData.hand.push(drawCard(newData.deck));
+      hand.push(drawCard(newData.deck));
       newData.hasDrawn = true;
     } else if (moveData.type === 'draw_discard' && !newData.hasDrawn) {
       if (newData.discardPile.length > 0) {
-        newData.hand.push(newData.discardPile.pop());
+        hand.push(newData.discardPile.pop());
         newData.hasDrawn = true;
       }
     } else if (moveData.type === 'discard' && newData.hasDrawn) {
-      const card = newData.hand.splice(moveData.index, 1)[0];
+      const card = hand.splice(moveData.index, 1)[0];
       newData.discardPile.push(card);
       newData.hasDrawn = false;
-      nextTurn = opponentId;
-      if (newData.hand.length === 0) {
+      
+      if (hand.length === 0) {
         status = 'finished';
         winner = userId;
+        // Winner gets points based on opponent's hand
+        // Face cards = 10, Aces = 1, others = value
+        const calculatePoints = (h: any[]) => h.reduce((sum, c) => {
+          if (['J', 'Q', 'K'].includes(c.value)) return sum + 10;
+          if (c.value === 'A') return sum + 1;
+          return sum + parseInt(c.value);
+        }, 0);
+        const points = calculatePoints(opponentHand);
+        newData.score[userId] = (newData.score[userId] || 0) + points;
+      } else {
+        nextTurn = opponentId;
       }
     } else if (moveData.type === 'meld') {
-      const meldCards = moveData.indices.map((i: number) => newData.hand[i]);
+      const meldCards = moveData.indices.map((i: number) => hand[i]);
       if (isValidMeld(meldCards)) {
         newData.melds.push(meldCards);
         // Remove from hand (sort indices descending to avoid shift issues)
-        moveData.indices.sort((a: number, b: number) => b - a).forEach((i: number) => newData.hand.splice(i, 1));
-        if (newData.hand.length === 0) {
+        moveData.indices.sort((a: number, b: number) => b - a).forEach((i: number) => hand.splice(i, 1));
+        
+        if (hand.length === 0) {
           status = 'finished';
           winner = userId;
+          const calculatePoints = (h: any[]) => h.reduce((sum, c) => {
+            if (['J', 'Q', 'K'].includes(c.value)) return sum + 10;
+            if (c.value === 'A') return sum + 1;
+            return sum + parseInt(c.value);
+          }, 0);
+          const points = calculatePoints(opponentHand);
+          newData.score[userId] = (newData.score[userId] || 0) + points;
         }
       }
+    } else if (moveData.type === 'sort') {
+      const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+      hand.sort((a: any, b: any) => {
+        if (a.suit !== b.suit) return a.suit.localeCompare(b.suit);
+        return values.indexOf(a.value) - values.indexOf(b.value);
+      });
     }
   } else if (game.type === 'billiards') {
-    if (moveData.type === 'aim') newData.angle = moveData.angle;
-    else if (moveData.type === 'power') newData.power = moveData.power;
-    else if (moveData.type === 'call_ball') newData.calledShot = moveData.ball;
-    else if (moveData.type === 'call_pocket') newData.targetPocket = moveData.pocket;
-    else if (moveData.type === 'change_mode') newData.mode = moveData.mode;
-    else if (moveData.type === 'shoot') {
-      const cueX = newData.cueBall.x;
-      const cueY = newData.cueBall.y;
-      const angleRad = (newData.angle * Math.PI) / 180;
+    if (moveData.type === 'shoot') {
+      const { dx, dy } = moveData;
+      newData.cueBall.vx = dx * 0.1;
+      newData.cueBall.vy = dy * 0.1;
+
+      // Simulate until stopped
+      const FRICTION = 0.99;
+      const BALL_RADIUS = 10;
+      const POCKET_RADIUS = 18;
+      const pockets = [
+        { x: 0, y: 0 },
+        { x: newData.width / 2, y: 0 },
+        { x: newData.width, y: 0 },
+        { x: 0, y: newData.height },
+        { x: newData.width / 2, y: newData.height },
+        { x: newData.width, y: newData.height }
+      ];
+
+      const allBalls = [newData.cueBall, ...newData.balls];
+
+      let iterations = 0;
+      const maxIterations = 2000; // Safety cap
+
+      while (iterations < maxIterations) {
+        let moving = false;
+
+        // Update positions
+        allBalls.forEach(ball => {
+          if (!ball.active) return;
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+          ball.vx *= FRICTION;
+          ball.vy *= FRICTION;
+
+          if (Math.abs(ball.vx) < 0.01) ball.vx = 0;
+          if (Math.abs(ball.vy) < 0.01) ball.vy = 0;
+
+          if (ball.vx !== 0 || ball.vy !== 0) moving = true;
+
+          // Wall collisions
+          if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -1; }
+          if (ball.x > newData.width - BALL_RADIUS) { ball.x = newData.width - BALL_RADIUS; ball.vx *= -1; }
+          if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -1; }
+          if (ball.y > newData.height - BALL_RADIUS) { ball.y = newData.height - BALL_RADIUS; ball.vy *= -1; }
+
+          // Pockets
+          pockets.forEach(p => {
+            const dx = ball.x - p.x;
+            const dy = ball.y - p.y;
+            if (Math.sqrt(dx * dx + dy * dy) < POCKET_RADIUS) {
+              ball.active = false;
+              if (ball === newData.cueBall) {
+                ball.x = 200;
+                ball.y = 250;
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.active = true;
+              }
+            }
+          });
+        });
+
+        // Collisions
+        for (let i = 0; i < allBalls.length; i++) {
+          for (let j = i + 1; j < allBalls.length; j++) {
+            const b1 = allBalls[i];
+            const b2 = allBalls[j];
+            if (!b1.active || !b2.active) continue;
+
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < BALL_RADIUS * 2) {
+              // Simple elastic collision
+              const angle = Math.atan2(dy, dx);
+              const speed1 = Math.hypot(b1.vx, b1.vy);
+              const speed2 = Math.hypot(b2.vx, b2.vy);
+
+              b1.vx = speed2 * Math.cos(angle + Math.PI);
+              b1.vy = speed2 * Math.sin(angle + Math.PI);
+              b2.vx = speed1 * Math.cos(angle);
+              b2.vy = speed1 * Math.sin(angle);
+              
+              // Move balls apart to prevent sticking
+              const overlap = BALL_RADIUS * 2 - dist;
+              b1.x -= Math.cos(angle) * overlap / 2;
+              b1.y -= Math.sin(angle) * overlap / 2;
+              b2.x += Math.cos(angle) * overlap / 2;
+              b2.y += Math.sin(angle) * overlap / 2;
+              
+              moving = true;
+            }
+          }
+        }
+
+        if (!moving) break;
+        iterations++;
+      }
+
+      nextTurn = opponentId;
       
-      // Find the first ball hit by the cue ball along the shot line
-      let hitBallIdx = -1;
-      let minDistance = Infinity;
-
-      newData.balls.forEach((ball: any, idx: number) => {
-        // Vector from cue to ball
-        const dx = ball.x - cueX;
-        const dy = ball.y - cueY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Angle to ball
-        const ballAngle = Math.atan2(dy, dx);
-        const angleDiff = Math.abs(ballAngle - angleRad);
-        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-
-        // If the angle is close enough (within ~5 degrees)
-        if (Math.abs(normalizedDiff) < 0.1) {
-          if (dist < minDistance) {
-            minDistance = dist;
-            hitBallIdx = idx;
-          }
-        }
-      });
-
-      if (hitBallIdx !== -1) {
-        const ball = newData.balls[hitBallIdx];
-        // Simulate where the ball goes after being hit
-        // For simplicity, we'll say it goes in the direction of the hit
-        // and has a chance to be pocketed based on power
-        const successChance = (newData.power / 100) * 0.8;
-        if (Math.random() < successChance) {
-          newData.balls.splice(hitBallIdx, 1);
-          newData.pocketed.push(ball);
-          
-          // Assign types if not already assigned
-          if (!newData.playerType[userId] && ball.type !== 'black') {
-            newData.playerType[userId] = ball.type;
-            newData.playerType[opponentId] = ball.type === 'solid' ? 'striped' : 'solid';
-          }
-
-          // Move cue ball to a new position after a shot
-          newData.cueBall = {
-            x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 40)),
-            y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 40))
-          };
-          
-          // Win/Loss logic for 8-ball
-          if (ball.type === 'black') {
-            const myType = newData.playerType[userId];
-            const myBallsRemaining = newData.balls.filter((b: any) => b.type === myType).length;
-            status = 'finished';
-            winner = myBallsRemaining === 0 ? userId : opponentId;
-          }
-        } else {
-          // Missed shot: move cue ball slightly
-          newData.cueBall = {
-            x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 20)),
-            y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 20))
-          };
-          nextTurn = opponentId;
-        }
-      } else {
-        // Scratched or missed: move cue ball slightly
-        newData.cueBall = {
-          x: Math.max(10, Math.min(90, newData.cueBall.x + (Math.random() - 0.5) * 30)),
-          y: Math.max(10, Math.min(90, newData.cueBall.y + (Math.random() - 0.5) * 30))
-        };
-        nextTurn = opponentId;
+      // Check win condition
+      if (newData.balls.every((b: any) => !b.active)) {
+        status = 'finished';
+        winner = userId;
       }
     }
   }

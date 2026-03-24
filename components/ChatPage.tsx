@@ -234,16 +234,16 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   onClick={() => selectedUserId && onStartCall(selectedUserId, 'voice')}
                   className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                 >
-                  <Phone size={18} md:size={20} />
+                  <Phone size={20} />
                 </button>
                 <button 
                   onClick={() => selectedUserId && onStartCall(selectedUserId, 'video')}
                   className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"
                 >
-                  <Video size={18} md:size={20} />
+                  <Video size={20} />
                 </button>
-                <button className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all hidden sm:block"><Info size={18} md:size={20} /></button>
-                <button className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"><MoreVertical size={18} md:size={20} /></button>
+                <button className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all hidden sm:block"><Info size={20} /></button>
+                <button className="p-2 md:p-3 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all"><MoreVertical size={20} /></button>
               </div>
             </div>
             

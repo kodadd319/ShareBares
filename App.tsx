@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import Peer from 'simple-peer';
+import * as PeerNamespace from 'simple-peer';
+const SimplePeer = (PeerNamespace as any).default || PeerNamespace;
 import TopNav from './components/TopNav';
 import FriendsListModal from './components/FriendsListModal';
 import HomePage from './components/HomePage';
@@ -28,7 +29,7 @@ import {
   HelpCircle, LogOut, ChevronRight, ChevronDown, MapPin, Briefcase, Globe, Phone, Mail,
   Instagram, Twitter, ShoppingBag, Trash2, MessageCircle, Video, CreditCard,
   UserPlus, UserCheck, UserX, Users, Flame, Ban, Dices, ExternalLink, Palette, DollarSign,
-  TrendingUp, Sparkles
+  TrendingUp, Sparkles, MicOff, VideoOff
 } from 'lucide-react';
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
 
@@ -49,7 +50,10 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
             ShareBares
           </h1>
           <p className="text-[#967bb6] text-lg md:text-2xl font-black uppercase tracking-[0.2em] leading-relaxed italic px-4">
-            "Post like nobody’s watching, get paid like everyone is."
+            "share your bares"
+          </p>
+          <p className="text-slate-400 text-sm md:text-base font-medium leading-relaxed max-w-lg mx-auto px-6">
+            Completely uncensored adult community. Custom profiles, sexy content. Post free pics, sell videos and pics, buy from other users and creators. Messaging, video chat, phone sex, connect with escorts. No rules, no limits.
           </p>
           <div className="flex flex-col items-center justify-center space-y-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
             <span>Powered by</span>
@@ -124,6 +128,9 @@ const CallOverlay: React.FC<{
   isCalling: boolean;
   type: 'voice' | 'video';
 }> = ({ call, callAccepted, myVideo, userVideo, stream, remoteStream, onAnswer, onHangup, isCalling, type }) => {
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+
   useEffect(() => {
     if (myVideo.current && stream) myVideo.current.srcObject = stream;
   }, [stream]);
@@ -131,6 +138,20 @@ const CallOverlay: React.FC<{
   useEffect(() => {
     if (userVideo.current && remoteStream) userVideo.current.srcObject = remoteStream;
   }, [remoteStream]);
+
+  const toggleMute = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach(track => track.enabled = !track.enabled);
+      setIsMuted(!isMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach(track => track.enabled = !track.enabled);
+      setIsVideoOff(!isVideoOff);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in duration-300">
@@ -173,12 +194,30 @@ const CallOverlay: React.FC<{
         </div>
 
         <div className="flex items-center space-x-6">
+          {callAccepted && (
+            <>
+              <button 
+                onClick={toggleMute}
+                className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${isMuted ? 'bg-red-500 shadow-red-500/20' : 'bg-white/10 hover:bg-white/20'}`}
+              >
+                {isMuted ? <MicOff size={28} /> : <Phone size={28} />}
+              </button>
+              {type === 'video' && (
+                <button 
+                  onClick={toggleVideo}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all ${isVideoOff ? 'bg-red-500 shadow-red-500/20' : 'bg-white/10 hover:bg-white/20'}`}
+                >
+                  {isVideoOff ? <VideoOff size={28} /> : <Video size={28} />}
+                </button>
+              )}
+            </>
+          )}
           {!callAccepted && !isCalling && (
             <button 
               onClick={onAnswer}
               className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white shadow-xl shadow-green-500/20 hover:scale-110 transition-all"
             >
-              <Phone size={32} />
+              {type === 'video' ? <Video size={32} /> : <Phone size={32} />}
             </button>
           )}
           <button 
@@ -1680,7 +1719,7 @@ const AppContent: React.FC = () => {
 
   const myVideo = useRef<HTMLVideoElement>(null);
   const userVideo = useRef<HTMLVideoElement>(null);
-  const connectionRef = useRef<Peer.Instance | null>(null);
+  const connectionRef = useRef<any>(null);
 
   // Messaging state
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -1706,8 +1745,13 @@ const AppContent: React.FC = () => {
       (window as any)._ringtone.pause();
       (window as any)._ringtone = null;
     }
+    if ((window as any)._callingSound) {
+      (window as any)._callingSound.pause();
+      (window as any)._callingSound = null;
+    }
     if (connectionRef.current) {
       connectionRef.current.destroy();
+      connectionRef.current = null;
     }
     socket?.emit('end_call', { to: call?.from || selectedUserId });
     // Reset state
@@ -1726,9 +1770,15 @@ const AppContent: React.FC = () => {
     setCallType(type);
     setIsCalling(true);
     
+    // Play calling sound
+    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+    audio.loop = true;
+    audio.play().catch(e => console.warn('Calling sound failed', e));
+    (window as any)._callingSound = audio;
+    
     navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true }).then((currentStream) => {
       setStream(currentStream);
-      const peer = new Peer({ initiator: true, trickle: false, stream: currentStream });
+      const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
 
       peer.on('signal', (data) => {
         socket?.emit('call_user', {
@@ -1742,6 +1792,10 @@ const AppContent: React.FC = () => {
 
       peer.on('stream', (remoteStream) => {
         setRemoteStream(remoteStream);
+        if ((window as any)._callingSound) {
+          (window as any)._callingSound.pause();
+          (window as any)._callingSound = null;
+        }
       });
 
       peer.on('error', (err) => {
@@ -1753,6 +1807,10 @@ const AppContent: React.FC = () => {
     }).catch(err => {
       console.error('Failed to get local stream', err);
       setIsCalling(false);
+      if ((window as any)._callingSound) {
+        (window as any)._callingSound.pause();
+        (window as any)._callingSound = null;
+      }
       addNotification(NotificationType.SYSTEM, 'Call Failed', 'Could not access camera or microphone.');
     });
   }, [socket, currentUserId, me, leaveCall]);
@@ -1761,9 +1819,14 @@ const AppContent: React.FC = () => {
     setCallAccepted(true);
     setCallType(call?.type || 'voice');
 
+    if ((window as any)._ringtone) {
+      (window as any)._ringtone.pause();
+      (window as any)._ringtone = null;
+    }
+
     navigator.mediaDevices.getUserMedia({ video: call?.type === 'video', audio: true }).then((currentStream) => {
       setStream(currentStream);
-      const peer = new Peer({ initiator: false, trickle: false, stream: currentStream });
+      const peer = new SimplePeer({ initiator: false, trickle: false, stream: currentStream });
 
       peer.on('signal', (data) => {
         socket?.emit('answer_call', { signal: data, to: call?.from });
@@ -1814,6 +1877,9 @@ const AppContent: React.FC = () => {
           mediaType: 'image',
         };
         setPosts(prev => [newPost, ...prev]);
+        if (socket) {
+          socket.emit('post:create', newPost);
+        }
       } 
       // 20% chance to like a random post
       else if (roll < 0.3) {
@@ -1943,6 +2009,10 @@ const AppContent: React.FC = () => {
       });
     });
 
+    newSocket.on('post_history', (history: Post[]) => {
+      setPosts(history.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    });
+
     newSocket.on('post:created', (post: Post) => {
       setPosts(prev => {
         // Avoid duplicates
@@ -1951,11 +2021,24 @@ const AppContent: React.FC = () => {
       });
     });
 
+    newSocket.on('post:updated', (updatedPost: Post) => {
+      setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
+    });
+
+    newSocket.on('user:updated', (data: { userId: string, updates: any }) => {
+      setUsers(prev => prev.map(u => u.id === data.userId ? { ...u, ...data.updates } : u));
+    });
+
+    newSocket.on('post:deleted', (postId: string) => {
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    });
+
     // Call Signaling
     newSocket.on('incoming_call', ({ from, name, signal, type }) => {
       setCall({ isReceivingCall: true, from, name, signal, type });
+      setCallType(type);
       // Play ringtone
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3');
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
       audio.loop = true;
       audio.play().catch(e => console.warn('Ringtone failed to play:', e));
       (window as any)._ringtone = audio;
@@ -1966,6 +2049,10 @@ const AppContent: React.FC = () => {
       if ((window as any)._ringtone) {
         (window as any)._ringtone.pause();
         (window as any)._ringtone = null;
+      }
+      if ((window as any)._callingSound) {
+        (window as any)._callingSound.pause();
+        (window as any)._callingSound = null;
       }
       if (connectionRef.current) {
         connectionRef.current.signal(signal);
@@ -2194,7 +2281,7 @@ const AppContent: React.FC = () => {
       mediaType: mediaUrl ? (newPostMedia?.type.startsWith('video') ? 'video' : 'image') : undefined,
     };
     
-    setPosts([newPost, ...posts]);
+    setPosts(prev => [newPost, ...prev]);
     
     // Emit to server for real-time updates
     if (socket) {
@@ -2235,6 +2322,10 @@ const AppContent: React.FC = () => {
   const handleLikePost = (post: Post, likerId: string = currentUserId) => {
     setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likes: p.likes + 1 } : p));
     
+    if (socket) {
+      socket.emit('post:like', { postId: post.id, userId: likerId });
+    }
+    
     const liker = users.find(u => u.id === likerId);
     const author = users.find(u => u.id === post.userId);
     
@@ -2269,6 +2360,10 @@ const AppContent: React.FC = () => {
     if (!commentText) return;
 
     setPosts(prev => prev.map(p => p.id === post.id ? { ...p, commentsCount: p.commentsCount + 1 } : p));
+    
+    if (socket) {
+      socket.emit('post:comment', { postId: post.id, userId: commenterId, text: commentText });
+    }
     
     const commenter = users.find(u => u.id === commenterId);
     const author = users.find(u => u.id === post.userId);
@@ -2524,6 +2619,9 @@ const AppContent: React.FC = () => {
     if (!me.isAdmin) return;
     if (confirm('Are you sure you want to remove this post?')) {
       setPosts(prev => prev.filter(p => p.id !== postId));
+      if (socket) {
+        socket.emit('post:delete', postId);
+      }
     }
   };
 
@@ -2768,6 +2866,7 @@ const AppContent: React.FC = () => {
       onLikePost={handleLikePost}
       onCommentPost={handleCommentPost}
       onProfileClick={navigateToProfile}
+      onCreatePost={() => setIsCreating(true)}
     />
   );
 

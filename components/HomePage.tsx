@@ -14,6 +14,7 @@ interface HomePageProps {
   onLikePost?: (post: Post) => void;
   onCommentPost?: (post: Post) => void;
   onProfileClick?: (userId: string) => void;
+  onCreatePost?: () => void;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ 
@@ -24,7 +25,8 @@ const HomePage: React.FC<HomePageProps> = ({
   onSelectUser, 
   onLikePost,
   onCommentPost,
-  onProfileClick
+  onProfileClick,
+  onCreatePost
 }) => {
   const otherUsers = users.filter(u => u.id !== me.id);
   
@@ -50,9 +52,29 @@ const HomePage: React.FC<HomePageProps> = ({
             <h1 className="text-4xl font-black text-white tracking-tighter mb-4 chrome-text">
               HELLO, {me.displayName.split(' ')[0].toUpperCase()}!
             </h1>
-            <p className="text-slate-400 max-w-md text-sm leading-relaxed">
+            <p className="text-slate-400 max-w-md text-sm leading-relaxed mb-6">
               Check out what's happening in your network. New exclusive content from your favorite creators is waiting.
             </p>
+            <button 
+              onClick={onCreatePost}
+              className="px-6 py-3 bg-[#967bb6] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-[#967bb6]/20 hover:scale-105 transition-all chrome-border"
+            >
+              Create New Post
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Post Box */}
+        <div 
+          onClick={onCreatePost}
+          className="glass-panel rounded-3xl p-4 flex items-center space-x-4 cursor-pointer hover:border-[#967bb6]/30 transition-all chrome-border"
+        >
+          <img src={me.avatar} className="w-10 h-10 rounded-xl border border-white/10" alt="" />
+          <div className="flex-grow bg-white/5 rounded-xl px-4 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-widest">
+            What's on your mind, {me.displayName.split(' ')[0]}?
+          </div>
+          <div className="p-2 bg-[#967bb6]/10 text-[#967bb6] rounded-lg">
+            <Sparkles size={18} />
           </div>
         </div>
 

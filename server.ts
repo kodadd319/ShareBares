@@ -1,13 +1,12 @@
 import express from "express";
-import { createServer } from "http";
+import { createServer } from "node:http";
 import { Server } from "socket.io";
-import { createServer as createViteServer } from "vite";
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import Stripe from "stripe";
 import multer from "multer";
-import fs from "fs";
-import { createInitialGameState, handleMove, getBlackjackValue } from "./games.ts";
+import fs from "node:fs";
+import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore } from "./games.ts";
 import { GameState, GameInvite } from "./types.ts";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,6 +50,68 @@ async function startServer() {
 
   // In-memory store for messages (in a real app, use a database)
   const messages: any[] = [];
+  const posts: any[] = [
+    {
+      id: 'post-1',
+      userId: 'creator-1',
+      content: 'Check out my new masterpiece! This took 40 hours to complete.',
+      mediaUrl: 'https://picsum.photos/seed/art1/800/600',
+      mediaType: 'image',
+      createdAt: new Date().toISOString(),
+      likes: 450,
+      commentsCount: 32,
+      visibility: 'public',
+      category: 'Art',
+    },
+    {
+      id: 'post-2',
+      userId: 'creator-1',
+      content: 'Secret technique I used for the shading in my last piece.',
+      mediaUrl: 'https://picsum.photos/seed/art2/800/600',
+      mediaType: 'image',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      likes: 120,
+      commentsCount: 15,
+      visibility: 'public',
+      category: 'Art',
+    },
+    {
+      id: 'post-3',
+      userId: 'creator-2',
+      content: 'Unboxing the latest Gemini 3 Developer Kit!',
+      mediaUrl: 'https://picsum.photos/seed/tech1/800/600',
+      mediaType: 'image',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      likes: 890,
+      commentsCount: 104,
+      visibility: 'public',
+      category: 'Tech',
+    },
+    {
+      id: 'jade-post-1',
+      userId: 'ai-jade',
+      content: 'The ink tells the story that words can\'t. 🖤 New set showing off the full chest piece details. Who\'s ready to see the close-ups?',
+      mediaUrl: 'https://picsum.photos/seed/jade_ink_post1/800/1000',
+      mediaType: 'image',
+      createdAt: new Date(Date.now() - 1800000).toISOString(),
+      likes: 1240,
+      commentsCount: 88,
+      visibility: 'public',
+      category: 'Lifestyle',
+    },
+    {
+      id: 'jade-post-2',
+      userId: 'ai-jade',
+      content: 'ShareBares sessions. The contrast of the black ink against the neon lights is everything. 🔥😈 Full gallery now in the store.',
+      mediaUrl: 'https://picsum.photos/seed/jade_ink_post2/800/1000',
+      mediaType: 'image',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      likes: 3500,
+      commentsCount: 245,
+      visibility: 'private',
+      category: 'Exclusive',
+    }
+  ];
   const users: Map<string, string> = new Map(); // socketId -> userId
   const activeGames: Map<string, GameState> = new Map(); // gameId -> GameState
   const pendingInvites: Map<string, GameInvite> = new Map(); // inviteId -> GameInvite
@@ -69,6 +130,9 @@ async function startServer() {
       // Send existing messages for this user
       const userMessages = messages.filter(m => m.senderId === userId || m.receiverId === userId);
       socket.emit("message_history", userMessages);
+
+      // Send post history
+      socket.emit("post_history", posts);
     });
 
     socket.on("user:update", (data: { userId: string, updates: any }) => {
@@ -79,8 +143,33 @@ async function startServer() {
     
     socket.on("post:create", (post: any) => {
       console.log(`New post from ${post.userId}:`, post.content);
-      // Broadcast the new post to all other clients
-      socket.broadcast.emit("post:created", post);
+      posts.push(post);
+      // Broadcast the new post to all clients
+      io.emit("post:created", post);
+    });
+
+    socket.on("post:like", (data: { postId: string, userId: string }) => {
+      const post = posts.find(p => p.id === data.postId);
+      if (post) {
+        post.likes = (post.likes || 0) + 1;
+        io.emit("post:updated", post);
+      }
+    });
+
+    socket.on("post:comment", (data: { postId: string, userId: string, text: string }) => {
+      const post = posts.find(p => p.id === data.postId);
+      if (post) {
+        post.commentsCount = (post.commentsCount || 0) + 1;
+        io.emit("post:updated", post);
+      }
+    });
+
+    socket.on("post:delete", (postId: string) => {
+      const index = posts.findIndex(p => p.id === postId);
+      if (index !== -1) {
+        posts.splice(index, 1);
+        io.emit("post:deleted", postId);
+      }
     });
 
     socket.on("send_message", (data: { senderId: string, receiverId: string, text: string }) => {
@@ -269,64 +358,123 @@ async function startServer() {
               else if (moves.length > 0) botMove = moves[Math.floor(Math.random() * moves.length)];
             } else if (updatedGame.type === '10000') {
               // Bot logic for 10,000:
-              // 1. If we have temp dice to save, save them first
-              if (data.lastRollIndices && data.lastRollIndices.length > 0) {
-                const lastDice = data.lastRollIndices.map((idx: number) => data.dice[idx]);
-                // Find scoring dice indices
-                const scoringIndices: number[] = [];
-                data.lastRollIndices.forEach((idx: number) => {
-                  const val = data.dice[idx];
-                  if (val === 1 || val === 5) scoringIndices.push(idx);
-                  // Also check for 3 of a kind (simplified)
-                });
+              const scoringIndices = getScoringIndices(data.dice);
+              if (data.isFirstRoll) {
+                botMove = { type: 'roll', selectedIndices: [] };
+              } else if (scoringIndices.length > 0) {
+                // Bot strategy: if score is high enough, bank. Otherwise roll.
+                const selectedDice = scoringIndices.map(i => data.dice[i]);
+                const { score: potentialScore } = calculateDiceScore(selectedDice);
+                const totalTurnScore = data.currentTurnScore + potentialScore;
                 
-                if (scoringIndices.length > 0 && data.tempSavedIndices.length === 0) {
-                  botMove = { type: 'toggle_dice', index: scoringIndices[0] }; // Just pick one for now to keep it simple but functional
-                } else if (data.currentTurnScore + 100 >= 750 || (data.currentTurnScore >= 500 && Math.random() > 0.5)) {
-                  botMove = { type: 'bank' };
+                if (totalTurnScore >= 500 || Math.random() > 0.7) {
+                  botMove = { type: 'bank', selectedIndices: scoringIndices };
                 } else {
-                  botMove = { type: 'roll' };
+                  botMove = { type: 'roll', selectedIndices: scoringIndices };
                 }
               } else {
-                botMove = { type: 'roll' };
+                // This shouldn't happen if not farkled, but just in case
+                botMove = { type: 'bank', selectedIndices: [] };
               }
             } else if (updatedGame.type === 'blackjack') {
-              const val = getBlackjackValue(data.playerHand);
-              if (val < 17) botMove = { type: 'hit' };
-              else botMove = { type: 'stand' };
+              if (data.status === 'waiting' || data.status === 'finished') {
+                botMove = { type: 'deal' };
+              } else if (data.status === 'playing' && data.currentPlayerIndex === 1) {
+                // Bot is player 2
+                const val = getBlackjackValue(data.players[1].hand);
+                if (val < 17) botMove = { type: 'hit' };
+                else botMove = { type: 'stand' };
+              }
             } else if (updatedGame.type === 'rummy') {
+              const hand = data.hands['bot'];
               if (!data.hasDrawn) {
-                botMove = { type: 'draw' };
+                // Check if top discard is useful
+                const topDiscard = data.discardPile[data.discardPile.length - 1];
+                if (topDiscard) {
+                  const potentialHand = [...hand, topDiscard];
+                  // Check for sets
+                  const counts: Record<string, number> = {};
+                  potentialHand.forEach((c: any) => counts[c.value] = (counts[c.value] || 0) + 1);
+                  const hasSet = Object.values(counts).some(v => v >= 3);
+                  
+                  // Check for runs
+                  const suits: Record<string, string[]> = {};
+                  potentialHand.forEach((c: any) => suits[c.suit] = [...(suits[c.suit] || []), c.value]);
+                  const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+                  const hasRun = Object.values(suits).some(sValues => {
+                    const indices = sValues.map(v => values.indexOf(v)).sort((a, b) => a - b);
+                    let streak = 1;
+                    for (let i = 0; i < indices.length - 1; i++) {
+                      if (indices[i + 1] === indices[i] + 1) streak++;
+                      else streak = 1;
+                      if (streak >= 3) return true;
+                    }
+                    return false;
+                  });
+
+                  if (hasSet || hasRun) {
+                    botMove = { type: 'draw_discard' };
+                  } else {
+                    botMove = { type: 'draw' };
+                  }
+                } else {
+                  botMove = { type: 'draw' };
+                }
               } else {
                 // Try to meld first
-                const hand = data.hand;
                 const counts: Record<string, number[]> = {};
                 hand.forEach((c: any, i: number) => {
                   counts[c.value] = [...(counts[c.value] || []), i];
                 });
-                const meldIndices = Object.values(counts).find(indices => indices.length >= 3);
-                if (meldIndices) {
-                  botMove = { type: 'meld', indices: meldIndices };
+                const setIndices = Object.values(counts).find(indices => indices.length >= 3);
+                
+                if (setIndices) {
+                  botMove = { type: 'meld', indices: setIndices };
                 } else {
-                  botMove = { type: 'discard', index: 0 };
+                  // Check for runs
+                  const suits: Record<string, number[]> = {};
+                  hand.forEach((c: any, i: number) => {
+                    suits[c.suit] = [...(suits[c.suit] || []), i];
+                  });
+                  const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+                  let runIndices: number[] | null = null;
+                  for (const sIndices of Object.values(suits)) {
+                    const sorted = sIndices.map(i => ({ i, v: values.indexOf(hand[i].value) })).sort((a, b) => a.v - b.v);
+                    let currentRun = [sorted[0].i];
+                    for (let i = 0; i < sorted.length - 1; i++) {
+                      if (sorted[i + 1].v === sorted[i].v + 1) {
+                        currentRun.push(sorted[i + 1].i);
+                      } else {
+                        if (currentRun.length >= 3) break;
+                        currentRun = [sorted[i + 1].i];
+                      }
+                    }
+                    if (currentRun.length >= 3) {
+                      runIndices = currentRun;
+                      break;
+                    }
+                  }
+
+                  if (runIndices) {
+                    botMove = { type: 'meld', indices: runIndices };
+                  } else {
+                    // Discard a card that isn't part of a pair
+                    const discardIndex = hand.findIndex((c: any) => counts[c.value].length === 1);
+                    botMove = { type: 'discard', index: discardIndex === -1 ? 0 : discardIndex };
+                  }
                 }
               }
             } else if (updatedGame.type === 'billiards') {
-              if (data.balls.length > 0) {
-                const targetBall = data.balls[Math.floor(Math.random() * data.balls.length)];
-                const dx = targetBall.x - data.cueBall.x;
-                const dy = targetBall.y - data.cueBall.y;
-                const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-                botMove = { type: 'aim', angle };
-                setTimeout(() => {
-                  const shootMove = { type: 'shoot' };
-                  const finalUpdatedGame = handleMove(handleMove(updatedGame, 'bot', { type: 'aim', angle }), 'bot', shootMove);
-                  activeGames.set(updatedGame.id, finalUpdatedGame);
-                  io.to(game.players[0].id).emit("game:updated", finalUpdatedGame);
-                }, 1000);
-                return;
+              // Bot logic for Billiards:
+              // Find a random active ball and shoot towards it
+              const activeBalls = data.balls.filter((b: any) => b.active);
+              if (activeBalls.length > 0) {
+                const target = activeBalls[Math.floor(Math.random() * activeBalls.length)];
+                const dx = target.x - data.cueBall.x;
+                const dy = target.y - data.cueBall.y;
+                botMove = { type: 'shoot', dx: dx * 0.5, dy: dy * 0.5 };
               } else {
-                botMove = { type: 'shoot' };
+                botMove = { type: 'shoot', dx: Math.random() * 10 - 5, dy: Math.random() * 10 - 5 };
               }
             }
 
@@ -416,6 +564,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

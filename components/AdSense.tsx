@@ -19,29 +19,51 @@ const AdSense: React.FC<AdSenseProps> = ({
   style = { display: 'block' }
 }) => {
   const adPushed = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hasWidth, setHasWidth] = React.useState(false);
 
   useEffect(() => {
-    if (adPushed.current) return;
+    if (!containerRef.current || adPushed.current) return;
 
-    try {
-      // Check if there are any unfilled ads in the DOM
-      const unfilledAds = document.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])');
-      
-      if (unfilledAds.length > 0) {
-        // @ts-ignore
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        adPushed.current = true;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+          setHasWidth(true);
+          observer.disconnect();
+        }
       }
-    } catch (e) {
-      console.error('AdSense error:', e);
-    }
+    });
+
+    observer.observe(containerRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
+  useEffect(() => {
+    if (hasWidth && !adPushed.current) {
+      try {
+        // Ensure the script is loaded
+        if (typeof window !== 'undefined' && (window as any).adsbygoogle) {
+          // @ts-ignore
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          adPushed.current = true;
+        }
+      } catch (e) {
+        console.error('AdSense error:', e);
+      }
+    }
+  }, [hasWidth]);
+
   return (
-    <div className={`adsense-container overflow-hidden rounded-3xl border border-white/5 bg-white/[0.02] ${className}`}>
+    <div 
+      ref={containerRef}
+      className={`adsense-container overflow-hidden rounded-3xl border border-white/5 bg-white/[0.02] ${className}`}
+    >
       <ins
         className="adsbygoogle"
-        style={style}
+        style={{ ...style, minWidth: hasWidth ? 'auto' : '1px' }}
         data-ad-client={adClient}
         data-ad-slot={adSlot}
         data-ad-format={format}

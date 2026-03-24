@@ -49,6 +49,8 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isEditProfileSubMenuOpen, setIsEditProfileSubMenuOpen] = React.useState(false);
   const [isMoreVideosSubMenuOpen, setIsMoreVideosSubMenuOpen] = React.useState(false);
   const [isMoreVideosMobileOpen, setIsMoreVideosMobileOpen] = React.useState(false);
+  const [isStableSubMenuOpen, setIsStableSubMenuOpen] = React.useState(false);
+  const [isStableMobileOpen, setIsStableMobileOpen] = React.useState(false);
   const [showResults, setShowResults] = React.useState(false);
 
   const filteredUsers = searchQuery.length > 1 
@@ -75,8 +77,6 @@ const TopNav: React.FC<TopNavProps> = ({
 
   const navItems = [
     { id: 'feed', icon: Home, label: 'Home' },
-    { id: 'stable', icon: Briefcase, label: 'The Stable' },
-    { id: 'join-stable', icon: Plus, label: 'Join Stable' },
     { id: 'store-management', icon: Briefcase, label: 'Store Mgmt' },
     { id: 'monetization', icon: DollarSign, label: 'Monetize' },
     { id: 'notifications', icon: Bell, label: 'Alerts' },
@@ -233,27 +233,70 @@ const TopNav: React.FC<TopNavProps> = ({
             const activeBgColor = `${activeTextColor}0D`; // 5% opacity
             
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group ${
-                  isActive 
-                  ? 'bg-white/5' 
-                  : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
-                }`}
-                style={isActive ? { color: activeTextColor, backgroundColor: activeBgColor } : {}}
-              >
-                <div className="relative">
-                  <Icon size={18} />
-                  {hasUnread && (
-                    <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-black ${item.id === 'messages' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={item.id !== 'messages' ? { backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` } : {}}></div>
+              <React.Fragment key={item.id}>
+                <button
+                  onClick={() => setActiveTab(item.id)}
+                  className={`px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group ${
+                    isActive 
+                    ? 'bg-white/5' 
+                    : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                  }`}
+                  style={isActive ? { color: activeTextColor, backgroundColor: activeBgColor } : {}}
+                >
+                  <div className="relative">
+                    <Icon size={18} />
+                    {hasUnread && (
+                      <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-black ${item.id === 'messages' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : ''}`} style={item.id !== 'messages' ? { backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` } : {}}></div>
+                    )}
+                  </div>
+                  <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">{item.label}</span>
+                  {isActive && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` }}></div>
                   )}
-                </div>
-                <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">{item.label}</span>
-                {isActive && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` }}></div>
+                </button>
+
+                {item.id === 'feed' && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsStableSubMenuOpen(!isStableSubMenuOpen)}
+                      className={`px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group ${
+                        activeTab === 'stable' || activeTab === 'join-stable'
+                        ? 'bg-white/5' 
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                      }`}
+                      style={activeTab === 'stable' || activeTab === 'join-stable' ? { color: activeTextColor, backgroundColor: activeBgColor } : {}}
+                    >
+                      <div className="relative">
+                        <Briefcase size={18} />
+                      </div>
+                      <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">The Stable</span>
+                      <ChevronDown size={14} className={`transition-transform duration-300 ${isStableSubMenuOpen ? 'rotate-180' : ''}`} />
+                      {(activeTab === 'stable' || activeTab === 'join-stable') && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` }}></div>
+                      )}
+                    </button>
+
+                    {isStableSubMenuOpen && (
+                      <div className="absolute left-0 mt-3 w-48 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border z-[100]">
+                        <button 
+                          onClick={() => { setActiveTab('stable'); setIsStableSubMenuOpen(false); }}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 transition-all ${activeTab === 'stable' ? 'text-[#967bb6] bg-white/5' : 'text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6]'}`}
+                        >
+                          <Star size={14} />
+                          <span className="text-xs font-bold uppercase tracking-widest">View Stable</span>
+                        </button>
+                        <button 
+                          onClick={() => { setActiveTab('join-stable'); setIsStableSubMenuOpen(false); }}
+                          className={`w-full flex items-center space-x-3 px-4 py-3 transition-all ${activeTab === 'join-stable' ? 'text-[#967bb6] bg-white/5' : 'text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6]'}`}
+                        >
+                          <Plus size={14} />
+                          <span className="text-xs font-bold uppercase tracking-widest">Join Stable</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </button>
+              </React.Fragment>
             );
           })}
 
@@ -541,23 +584,62 @@ const TopNav: React.FC<TopNavProps> = ({
                   const badgeColor = item.id === 'messages' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 'bg-[#967bb6] shadow-[0_0_8px_#967bb6]';
                   
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                      className={`flex items-center space-x-4 p-4 rounded-2xl transition-all relative ${
-                        isActive 
-                        ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
-                        : 'text-slate-400 hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="relative">
-                        <Icon size={24} />
-                        {hasUnread && (
-                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-black ${badgeColor}`}></div>
-                        )}
-                      </div>
-                      <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
-                    </button>
+                    <React.Fragment key={item.id}>
+                      <button
+                        onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                        className={`flex items-center space-x-4 p-4 rounded-2xl transition-all relative ${
+                          isActive 
+                          ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
+                          : 'text-slate-400 hover:bg-white/5'
+                        }`}
+                      >
+                        <div className="relative">
+                          <Icon size={24} />
+                          {hasUnread && (
+                            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-black ${badgeColor}`}></div>
+                          )}
+                        </div>
+                        <span className="text-sm font-black uppercase tracking-widest">{item.label}</span>
+                      </button>
+
+                      {item.id === 'feed' && (
+                        <div className="pt-0">
+                          <button
+                            onClick={() => setIsStableMobileOpen(!isStableMobileOpen)}
+                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all relative ${
+                              activeTab === 'stable' || activeTab === 'join-stable'
+                              ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
+                              : 'text-slate-400 hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <Briefcase size={24} />
+                              <span className="text-sm font-black uppercase tracking-widest">The Stable</span>
+                            </div>
+                            <ChevronDown size={18} className={`transition-transform duration-300 ${isStableMobileOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {isStableMobileOpen && (
+                            <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                              <button 
+                                onClick={() => { setActiveTab('stable'); setIsMobileMenuOpen(false); }}
+                                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all ${activeTab === 'stable' ? 'bg-[#967bb6]/20 text-[#967bb6]' : 'bg-white/5 text-slate-300'}`}
+                              >
+                                <Star size={20} />
+                                <span className="text-xs font-black uppercase tracking-widest">View Stable</span>
+                              </button>
+                              <button 
+                                onClick={() => { setActiveTab('join-stable'); setIsMobileMenuOpen(false); }}
+                                className={`w-full flex items-center space-x-4 p-4 rounded-2xl transition-all ${activeTab === 'join-stable' ? 'bg-[#967bb6]/20 text-[#967bb6]' : 'bg-white/5 text-slate-300'}`}
+                              >
+                                <Plus size={20} />
+                                <span className="text-xs font-black uppercase tracking-widest">Join Stable</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </React.Fragment>
                   );
                 })}
 
