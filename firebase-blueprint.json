@@ -1,0 +1,161 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "bio": { "type": "string" },
+        "isCreator": { "type": "boolean" },
+        "isAdmin": { "type": "boolean" },
+        "subscribersCount": { "type": "integer" },
+        "followingCount": { "type": "integer" },
+        "friendIds": { "type": "array", "items": { "type": "string" } },
+        "pendingFriendRequestsSent": { "type": "array", "items": { "type": "string" } },
+        "pendingFriendRequestsReceived": { "type": "array", "items": { "type": "string" } },
+        "likedPostIds": { "type": "array", "items": { "type": "string" } },
+        "fwbIds": { "type": "array", "items": { "type": "string" } },
+        "pendingFwbRequestsSent": { "type": "array", "items": { "type": "string" } },
+        "pendingFwbRequestsReceived": { "type": "array", "items": { "type": "string" } },
+        "fwbRequestsResetDate": { "type": "string" },
+        "fwbRequestsSentCount": { "type": "integer" },
+        "fanIds": { "type": "array", "items": { "type": "string" } },
+        "hasPaidStoreFee": { "type": "boolean" },
+        "hasPaidStableFee": { "type": "boolean" },
+        "hasPaidStableBundle": { "type": "boolean" },
+        "profileCustomization": { "type": "object" }
+      },
+      "required": ["id", "username", "email"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "A post in the social feed",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["image", "video"] },
+        "createdAt": { "type": "string" },
+        "likes": { "type": "integer" },
+        "likedBy": { "type": "array", "items": { "type": "string" } },
+        "commentsCount": { "type": "integer" },
+        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "userId", "content", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A private message between users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" }
+      },
+      "required": ["id", "senderId", "receiverId", "text", "timestamp"]
+    },
+    "StoreItem": {
+      "title": "StoreItem",
+      "description": "An item for sale in the creator store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "type": { "type": "string", "enum": ["image", "video", "set"] },
+        "isExclusive": { "type": "boolean" }
+      },
+      "required": ["id", "creatorId", "name", "price"]
+    },
+    "StableListing": {
+      "title": "StableListing",
+      "description": "A horse listing in the stable",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "breed": { "type": "string" },
+        "age": { "type": "integer" },
+        "price": { "type": "number" },
+        "description": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "name", "breed", "price"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "An app notification for a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "message", "timestamp"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "postId": { "type": "string" },
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "postId", "userId", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Social feed posts"
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Private messages"
+    },
+    "/storeItems/{itemId}": {
+      "schema": "StoreItem",
+      "description": "Creator store items"
+    },
+    "/stableListings/{listingId}": {
+      "schema": "StableListing",
+      "description": "Stable listings"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/comments/{commentId}": {
+      "schema": "Comment",
+      "description": "Post comments"
+    }
+  }
+}

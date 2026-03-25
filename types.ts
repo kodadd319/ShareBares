@@ -58,6 +58,7 @@ export interface User {
   friendIds: string[];
   pendingFriendRequestsSent: string[];
   pendingFriendRequestsReceived: string[];
+  likedPostIds: string[];
   fwbIds: string[];
   pendingFwbRequestsSent: string[];
   pendingFwbRequestsReceived: string[];
@@ -91,9 +92,18 @@ export interface Post {
   mediaType?: 'image' | 'video';
   createdAt: string;
   likes: number;
+  likedBy: string[];
   commentsCount: number;
   visibility: PostVisibility;
   category?: string;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
 }
 
 export interface Message {
@@ -136,6 +146,7 @@ export enum NotificationType {
 
 export interface AppNotification {
   id: string;
+  userId: string;
   type: NotificationType;
   title: string;
   message: string;

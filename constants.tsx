@@ -150,6 +150,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -188,6 +189,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -225,6 +227,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -266,6 +269,7 @@ export const MOCK_USERS: User[] = [
     ],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -299,6 +303,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -332,6 +337,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -365,6 +371,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -398,6 +405,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -431,6 +439,7 @@ export const MOCK_USERS: User[] = [
     photos: [],
     storeUploads: [],
     blockedUserIds: [],
+    likedPostIds: [],
     settings: {
       pushNotifications: true,
       emailNotifications: true,
@@ -452,6 +461,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 32,
     visibility: PostVisibility.PUBLIC,
     category: 'Art',
+    likedBy: [],
   },
   {
     id: 'post-2',
@@ -464,6 +474,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 15,
     visibility: PostVisibility.PUBLIC,
     category: 'Art',
+    likedBy: [],
   },
   {
     id: 'post-3',
@@ -476,6 +487,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 104,
     visibility: PostVisibility.PUBLIC,
     category: 'Tech',
+    likedBy: [],
   },
   {
     id: 'jade-post-1',
@@ -488,6 +500,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 88,
     visibility: PostVisibility.PUBLIC,
     category: 'Lifestyle',
+    likedBy: [],
   },
   {
     id: 'jade-post-2',
@@ -500,6 +513,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 245,
     visibility: PostVisibility.PRIVATE,
     category: 'Exclusive',
+    likedBy: [],
   },
   {
     id: 'luna-post-1',
@@ -512,6 +526,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 45,
     visibility: PostVisibility.PUBLIC,
     category: 'Lifestyle',
+    likedBy: [],
   },
   {
     id: 'sienna-post-1',
@@ -524,6 +539,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 92,
     visibility: PostVisibility.PUBLIC,
     category: 'Lifestyle',
+    likedBy: [],
   },
   {
     id: 'raven-post-1',
@@ -536,6 +552,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 156,
     visibility: PostVisibility.PUBLIC,
     category: 'Fashion',
+    likedBy: [],
   },
   {
     id: 'lexi-post-1',
@@ -548,6 +565,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 64,
     visibility: PostVisibility.PUBLIC,
     category: 'Lifestyle',
+    likedBy: [],
   },
   {
     id: 'misty-post-1',
@@ -560,6 +578,7 @@ export const MOCK_POSTS: Post[] = [
     commentsCount: 210,
     visibility: PostVisibility.PUBLIC,
     category: 'Cosplay',
+    likedBy: [],
   }
 ];
 

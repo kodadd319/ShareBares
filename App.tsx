@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import * as PeerNamespace from 'simple-peer';
 const SimplePeer = (PeerNamespace as any).default || PeerNamespace;
@@ -21,7 +22,7 @@ import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
 import { BareBearProvider, useBareBear } from './components/BareBearContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS } from './constants';
-import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization } from './types';
+import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, Comment } from './types';
 import { 
   Plus, Image as ImageIcon, Send, X, Wand2, MessageSquare, 
   ShieldAlert, AlertCircle, Camera, Check, ArrowLeft, Star, Heart, ShieldCheck,
@@ -32,6 +33,10 @@ import {
   TrendingUp, Sparkles, MicOff, VideoOff
 } from 'lucide-react';
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
+import { 
+  auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
+  onAuthStateChanged, loginWithGoogle, logout as firebaseLogout, handleFirestoreError, OperationType, or 
+} from './firebase';
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   useEffect(() => {
@@ -522,7 +527,9 @@ const SettingsPage: React.FC<{
   onEditProfile: () => void;
   onLogout: () => void;
   onUpdateUser: (data: Partial<User>) => void;
-}> = ({ me, onEditProfile, onLogout, onUpdateUser }) => {
+  setConfirmAction: (action: { message: string, onConfirm: () => void } | null) => void;
+}> = ({ me, onEditProfile, onLogout, onUpdateUser, setConfirmAction }) => {
+  const { showMascot } = useBareBear();
   const [activeView, setActiveView] = useState<'main' | 'account' | 'privacy' | 'notifications' | 'security' | 'help'>('main');
 
   const updateSetting = (key: string, value: any) => {
@@ -589,7 +596,11 @@ const SettingsPage: React.FC<{
             <div className="flex items-center justify-between">
               <span className="text-white font-bold">••••••••••••</span>
               <button 
-                onClick={() => alert('Password reset link sent to your email.')}
+                onClick={() => showMascot({
+                  action: 'wink',
+                  message: 'Password reset link sent to your email! 😉📧',
+                  duration: 3000
+                })}
                 className="text-[#967bb6] text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
               >
                 Update
@@ -598,11 +609,13 @@ const SettingsPage: React.FC<{
           </div>
           <div className="p-6 bg-red-500/5">
             <button 
-              onClick={() => {
-                if (confirm('Are you sure you want to delete your account? This action is irreversible.')) {
+              onClick={() => setConfirmAction({
+                message: 'Are you sure you want to delete your account? This action is irreversible.',
+                onConfirm: () => {
                   onLogout();
+                  setConfirmAction(null);
                 }
-              }}
+              })}
               className="text-red-500 text-[10px] font-black uppercase tracking-widest hover:text-red-400 transition-colors"
             >
               Delete Account
@@ -1540,6 +1553,44 @@ const MonetizationPage: React.FC<{
   );
 };
 
+const ConfirmModal: React.FC<{ 
+  message: string; 
+  onConfirm: () => void; 
+  onCancel: () => void; 
+}> = ({ message, onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-[#1a1a1a] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+      >
+        <div className="w-16 h-16 bg-[#967bb6]/20 rounded-full flex items-center justify-center mb-6 mx-auto">
+          <ShieldCheck className="text-[#967bb6]" size={32} />
+        </div>
+        <h3 className="text-white text-xl font-black uppercase tracking-tight text-center mb-4">Confirm Action</h3>
+        <p className="text-slate-400 text-sm text-center mb-8 font-bold uppercase tracking-wide leading-relaxed">
+          {message}
+        </p>
+        <div className="flex gap-4">
+          <button 
+            onClick={onCancel}
+            className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all border border-white/10"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm}
+            className="flex-1 py-4 bg-[#967bb6] hover:bg-[#a68bc6] text-white font-black uppercase tracking-widest text-xs rounded-2xl transition-all shadow-lg shadow-[#967bb6]/20"
+          >
+            Confirm
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const InstallPrompt: React.FC<{ onInstall: () => void; onDismiss: () => void }> = ({ onInstall, onDismiss }) => {
   return (
     <div className="fixed bottom-24 left-4 right-4 z-[100] animate-in slide-in-from-bottom-8 duration-500">
@@ -1615,16 +1666,17 @@ const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string>(CURRENT_USER_ID);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
   const { showMascot } = useBareBear();
 
   const [profileTab, setProfileTab] = useState('posts');
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-  const [storeItems, setStoreItems] = useState<StoreItem[]>(MOCK_STORE_ITEMS);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [stableListings, setStableListings] = useState<StableListing[]>(MOCK_STABLE_LISTINGS);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [stableListings, setStableListings] = useState<StableListing[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostVisibility, setNewPostVisibility] = useState<PostVisibility>(PostVisibility.PUBLIC);
   const [newPostMedia, setNewPostMedia] = useState<File | null>(null);
@@ -1639,6 +1691,7 @@ const AppContent: React.FC = () => {
   const [pendingStoreItem, setPendingStoreItem] = useState<StoreItem | null>(null);
   const [isJadeTyping, setIsJadeTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [isViewingAsPublic, setIsViewingAsPublic] = useState(false);
 
@@ -1665,9 +1718,13 @@ const AppContent: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
 
-  const addNotification = useCallback((type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
+  const addNotification = useCallback(async (type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
+    if (!currentUserId) return;
+    
+    const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newNotification: AppNotification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: notifId,
+      userId: currentUserId,
       type,
       title,
       message,
@@ -1676,31 +1733,43 @@ const AppContent: React.FC = () => {
       ...data
     };
 
-    setAppNotifications(prev => [newNotification, ...prev]);
+    try {
+      await setDoc(doc(db, 'notifications', notifId), newNotification);
+      
+      // Browser Push Notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        console.log('Notification:', title, message);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `notifications/${notifId}`);
+    }
+  }, [currentUserId]);
 
-    // Browser Push Notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      console.log('Notification:', title, message);
+  const dismissNotification = useCallback(async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notifications/${id}`);
     }
   }, []);
 
-  const dismissNotification = useCallback((id: string) => {
-    setAppNotifications(prev => prev.filter(n => n.id !== id));
-  }, []);
-
-  const markNotificationAsRead = useCallback((id: string) => {
-    setAppNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  const markNotificationAsRead = useCallback(async (id: string) => {
+    try {
+      await updateDoc(doc(db, 'notifications', id), { isRead: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notifications/${id}`);
+    }
   }, []);
   
-  const meRaw = users.find(u => u.id === currentUserId)!;
-  const isAdminUser = meRaw.isAdmin || meRaw.email === 'jtothek319@gmail.com';
-  const me = { 
+  const meRaw = users.find(u => u.id === currentUserId);
+  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com';
+  const me = meRaw ? { 
     ...meRaw, 
     isAdmin: isAdminUser,
     hasPaidStoreFee: meRaw.hasPaidStoreFee || isAdminUser,
     hasPaidStableFee: meRaw.hasPaidStableFee || isAdminUser,
     hasPaidStableBundle: meRaw.hasPaidStableBundle || isAdminUser
-  };
+  } : MOCK_USERS[0]; // Fallback to first mock user while loading
 
   const currentProfileCustomization = (activeTab === 'profile' || activeTab === 'custom-profile') 
     ? me.profileCustomization 
@@ -1723,17 +1792,7 @@ const AppContent: React.FC = () => {
 
   // Messaging state
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>({
-    'creator-1': [
-      { id: '1', senderId: 'creator-1', receiverId: CURRENT_USER_ID, text: 'Hey Alex! Thanks for the sub.', timestamp: new Date(Date.now() - 3600000).toISOString() }
-    ],
-    'creator-2': [
-      { id: '1', senderId: 'creator-2', receiverId: CURRENT_USER_ID, text: 'Did you check out my latest unboxing?', timestamp: new Date(Date.now() - 7200000).toISOString() }
-    ],
-    'ai-jade': [
-      { id: 'jade-1', senderId: 'ai-jade', receiverId: CURRENT_USER_ID, text: 'Welcome to my world. Ready to see what is behind the ink?', timestamp: new Date(Date.now() - 1800000).toISOString() }
-    ]
-  });
+  const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>({});
   const [currentMessageInput, setCurrentMessageInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -1855,6 +1914,210 @@ const AppContent: React.FC = () => {
     selectedUserIdRef.current = selectedUserId;
   }, [selectedUserId]);
 
+  // Authentication and Real-time Listeners
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setCurrentUserId(user.uid);
+
+        // Check if user profile exists in Firestore
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (!userDoc.exists()) {
+          // Check if there's a mock user with this email
+          const mockUser = MOCK_USERS.find(u => u.email === user.email);
+          
+          // Create new user profile
+          const newUser: User = {
+            id: user.uid,
+            username: mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`,
+            displayName: mockUser?.displayName || user.displayName || 'New User',
+            email: user.email || '',
+            avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+            coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
+            bio: mockUser?.bio || 'Welcome to my profile!',
+            isCreator: mockUser?.isCreator || false,
+            isAdmin: user.email === 'jtothek319@gmail.com' || mockUser?.isAdmin || false,
+            subscribersCount: mockUser?.subscribersCount || 0,
+            followingCount: mockUser?.followingCount || 0,
+            friendIds: mockUser?.friendIds || [],
+            pendingFriendRequestsSent: [],
+            pendingFriendRequestsReceived: [],
+            likedPostIds: [],
+            fwbIds: [],
+            pendingFwbRequestsSent: [],
+            pendingFwbRequestsReceived: [],
+            fwbRequestsResetDate: new Date().toISOString(),
+            fwbRequestsSentCount: 0,
+            fanIds: [],
+            profileCustomization: mockUser?.profileCustomization || {},
+            photos: mockUser?.photos || [],
+            storeUploads: mockUser?.storeUploads || [],
+            blockedUserIds: [],
+            settings: mockUser?.settings || {
+              pushNotifications: true,
+              emailNotifications: true,
+              profileVisibility: 'public',
+              messagingPrivacy: 'everyone'
+            }
+          };
+          await setDoc(doc(db, 'users', user.uid), newUser);
+        }
+
+        // Ensure Jade exists
+        const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
+        if (!jadeDoc.exists()) {
+          const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
+          await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
+        }
+
+        // Seed other mock data if database is empty
+        const seedData = async () => {
+          try {
+            const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
+            if (usersSnap.size <= 2) { // Only Jade and current user
+              for (const mUser of MOCK_USERS) {
+                if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
+                  await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
+                }
+              }
+            }
+
+            const postsSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
+            if (postsSnap.empty) {
+              for (const post of MOCK_POSTS) {
+                await setDoc(doc(db, 'posts', post.id), { ...post, likedBy: [] });
+              }
+            }
+
+            const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
+            if (storeSnap.empty) {
+              for (const item of MOCK_STORE_ITEMS) {
+                await setDoc(doc(db, 'storeItems', item.id), item);
+              }
+            }
+
+            const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
+            if (stableSnap.empty) {
+              for (const listing of MOCK_STABLE_LISTINGS) {
+                await setDoc(doc(db, 'stableListings', listing.id), listing);
+              }
+            }
+          } catch (err) {
+            console.error('Seeding failed:', err);
+          }
+        };
+        seedData();
+      } else {
+        setIsLoggedIn(false);
+        setCurrentUserId('');
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+    };
+  }, []);
+
+  // Real-time Listeners
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUsers([]);
+      setPosts([]);
+      setStoreItems([]);
+      setStableListings([]);
+      setComments([]);
+      return;
+    }
+
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const updatedUsers = snapshot.docs.map(doc => doc.data() as User);
+      setUsers(updatedUsers);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+
+    const unsubPosts = onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), (snapshot) => {
+      const updatedPosts = snapshot.docs.map(doc => doc.data() as Post);
+      setPosts(updatedPosts);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts'));
+
+    const unsubStoreItems = onSnapshot(collection(db, 'storeItems'), (snapshot) => {
+      const updatedItems = snapshot.docs.map(doc => doc.data() as StoreItem);
+      setStoreItems(updatedItems);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'storeItems'));
+
+    const unsubStableListings = onSnapshot(collection(db, 'stableListings'), (snapshot) => {
+      const updatedListings = snapshot.docs.map(doc => doc.data() as StableListing);
+      setStableListings(updatedListings);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'stableListings'));
+
+    const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
+      const updatedComments = snapshot.docs.map(doc => doc.data() as Comment);
+      setComments(updatedComments);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
+
+    return () => {
+      unsubUsers();
+      unsubPosts();
+      unsubStoreItems();
+      unsubStableListings();
+      unsubComments();
+    };
+  }, [isLoggedIn]);
+
+  // Notifications Listener
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const unsubNotifs = onSnapshot(
+      query(collection(db, 'notifications'), where('userId', '==', currentUserId), orderBy('timestamp', 'desc')),
+      (snapshot) => {
+        const updatedNotifs = snapshot.docs.map(doc => doc.data() as AppNotification);
+        setAppNotifications(updatedNotifs);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, 'notifications')
+    );
+
+    return () => unsubNotifs();
+  }, [currentUserId]);
+
+  // Messages Listener
+  useEffect(() => {
+    if (!currentUserId) {
+      setChatMessages({});
+      return;
+    }
+
+    const unsubMessages = onSnapshot(
+      query(
+        collection(db, 'messages'), 
+        or(where('senderId', '==', currentUserId), where('receiverId', '==', currentUserId))
+      ),
+      (snapshot) => {
+        const allMessages = snapshot.docs.map(doc => doc.data() as Message);
+        
+        setChatMessages(prev => {
+          const newMessages: Record<string, Message[]> = {};
+          
+          allMessages.forEach(msg => {
+            const otherId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
+            if (!newMessages[otherId]) newMessages[otherId] = [];
+            newMessages[otherId].push(msg);
+          });
+          
+          // Sort each thread by timestamp
+          Object.keys(newMessages).forEach(id => {
+            newMessages[id].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          });
+          
+          return newMessages;
+        });
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, 'messages')
+    );
+
+    return () => unsubMessages();
+  }, [currentUserId]);
+
   // Jade AI Activity Loop
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -1865,20 +2128,24 @@ const AppContent: React.FC = () => {
       // 10% chance to post something new
       if (roll < 0.1) {
         const content = await generateJadePost();
+        const postId = `jade-post-${Date.now()}`;
         const newPost: Post = {
-          id: `jade-post-${Date.now()}`,
+          id: postId,
           userId: 'ai-jade',
           content: content,
           createdAt: new Date().toISOString(),
           likes: Math.floor(Math.random() * 500),
+          likedBy: [],
           commentsCount: 0,
           visibility: PostVisibility.PUBLIC,
+          category: 'Jade',
           mediaUrl: `https://picsum.photos/seed/jade_${Date.now()}/800/1000`,
           mediaType: 'image',
         };
-        setPosts(prev => [newPost, ...prev]);
-        if (socket) {
-          socket.emit('post:create', newPost);
+        try {
+          await setDoc(doc(db, 'posts', postId), newPost);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
         }
       } 
       // 20% chance to like a random post
@@ -1902,34 +2169,6 @@ const AppContent: React.FC = () => {
   }, [isLoggedIn, posts]);
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const success = urlParams.get('payment_success');
-    if (success) {
-      if (success === 'store') {
-        setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, hasPaidStoreFee: true } : u));
-        setActiveTab('store-management');
-        setIsPaying(false);
-        addNotification(
-          NotificationType.PURCHASE,
-          'Store Activated!',
-          'Your one-time store fee has been processed. You can now upload paid content.',
-        );
-      } else if (success === 'stable') {
-        setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, hasPaidStableFee: true } : u));
-        setActiveTab('join-stable');
-        setIsPaying(false);
-        addNotification(
-          NotificationType.PURCHASE,
-          'Stable Activated!',
-          'You now have unlimited access to The Stable.',
-        );
-      }
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [currentUserId]);
-
-  useEffect(() => {
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
       try {
@@ -1944,94 +2183,13 @@ const AppContent: React.FC = () => {
 
     newSocket.on('connect', () => {
       console.log('Connected to server');
-      newSocket.emit('identify', currentUserId);
-    });
-
-    newSocket.on('message_history', (history: Message[]) => {
-      setChatMessages(prev => {
-        const newMessages = { ...prev };
-        history.forEach(msg => {
-          const otherId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId;
-          if (!newMessages[otherId]) newMessages[otherId] = [];
-          // Avoid duplicates
-          if (!newMessages[otherId].find(m => m.id === msg.id)) {
-            newMessages[otherId].push(msg);
-          }
-        });
-        return newMessages;
-      });
-    });
-
-    newSocket.on('receive_message', (message: Message) => {
-      setChatMessages(prev => {
-        const otherId = message.senderId === currentUserId ? message.receiverId : message.senderId;
-        return {
-          ...prev,
-          [otherId]: [...(prev[otherId] || []), message]
-        };
-      });
-
-      // Add notification
-      if (selectedUserIdRef.current !== message.senderId && message.senderId !== currentUserId) {
-        const sender = users.find(u => u.id === message.senderId);
-        addNotification(
-          NotificationType.MESSAGE,
-          `New message from ${sender?.displayName || 'Someone'}`,
-          message.text,
-          { senderId: message.senderId }
-        );
-      } else if (selectedUserIdRef.current === message.senderId) {
-        // If chat is open, mark as read immediately
-        newSocket.emit('mark_messages_read', { senderId: message.senderId, receiverId: currentUserId });
+      if (currentUserId) {
+        newSocket.emit('identify', currentUserId);
       }
     });
 
-    newSocket.on('messages_marked_read', (data: { senderId: string, receiverId: string }) => {
-      setChatMessages(prev => {
-        const otherId = data.senderId === currentUserId ? data.receiverId : data.senderId;
-        if (!prev[otherId]) return prev;
-        return {
-          ...prev,
-          [otherId]: prev[otherId].map(m => 
-            (m.senderId === data.senderId && m.receiverId === data.receiverId) ? { ...m, isRead: true } : m
-          )
-        };
-      });
-    });
-
-    newSocket.on('message_sent', (message: Message) => {
-      setChatMessages(prev => {
-        const otherId = message.receiverId;
-        return {
-          ...prev,
-          [otherId]: [...(prev[otherId] || []), message]
-        };
-      });
-    });
-
-    newSocket.on('post_history', (history: Post[]) => {
-      setPosts(history.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    });
-
-    newSocket.on('post:created', (post: Post) => {
-      setPosts(prev => {
-        // Avoid duplicates
-        if (prev.find(p => p.id === post.id)) return prev;
-        return [post, ...prev];
-      });
-    });
-
-    newSocket.on('post:updated', (updatedPost: Post) => {
-      setPosts(prev => prev.map(p => p.id === updatedPost.id ? updatedPost : p));
-    });
-
-    newSocket.on('user:updated', (data: { userId: string, updates: any }) => {
-      setUsers(prev => prev.map(u => u.id === data.userId ? { ...u, ...data.updates } : u));
-    });
-
-    newSocket.on('post:deleted', (postId: string) => {
-      setPosts(prev => prev.filter(p => p.id !== postId));
-    });
+    // Socket.IO is now only for signaling and presence, not for data history
+    // Data is handled by Firestore onSnapshot listeners
 
     // Call Signaling
     newSocket.on('incoming_call', ({ from, name, signal, type }) => {
@@ -2091,151 +2249,165 @@ const AppContent: React.FC = () => {
   }, [currentUserId, users]);
 
   useEffect(() => {
-    if (selectedUserId && socket) {
-      // Mark messages as read on the server
-      socket.emit('mark_messages_read', { senderId: selectedUserId, receiverId: currentUserId });
+    if (selectedUserId && currentUserId) {
+      // Mark messages as read in Firestore
+      const markMessagesRead = async () => {
+        try {
+          const q = query(
+            collection(db, 'messages'),
+            where('senderId', '==', selectedUserId),
+            where('receiverId', '==', currentUserId),
+            where('isRead', '==', false)
+          );
+          const snapshot = await getDocs(q);
+          const updatePromises = snapshot.docs.map(doc => updateDoc(doc.ref, { isRead: true }));
+          await Promise.all(updatePromises);
+        } catch (error) {
+          console.error('Failed to mark messages as read:', error);
+        }
+      };
 
-      // Mark local messages as read
-      setChatMessages(prev => {
-        if (!prev[selectedUserId]) return prev;
-        return {
-          ...prev,
-          [selectedUserId]: prev[selectedUserId].map(m => 
-            (m.senderId === selectedUserId && m.receiverId === currentUserId) ? { ...m, isRead: true } : m
-          )
-        };
-      });
+      // Mark notifications as read in Firestore
+      const markNotificationsRead = async () => {
+        try {
+          const q = query(
+            collection(db, 'notifications'),
+            where('userId', '==', currentUserId),
+            where('senderId', '==', selectedUserId),
+            where('type', '==', NotificationType.MESSAGE),
+            where('isRead', '==', false)
+          );
+          const snapshot = await getDocs(q);
+          const updatePromises = snapshot.docs.map(doc => updateDoc(doc.ref, { isRead: true }));
+          await Promise.all(updatePromises);
+        } catch (error) {
+          console.error('Failed to mark notifications as read:', error);
+        }
+      };
 
-      // Mark notifications as read by clearing notifications from this sender
-      setAppNotifications(prev => prev.map(n => 
-        (n.type === NotificationType.MESSAGE && n.senderId === selectedUserId) 
-        ? { ...n, isRead: true } 
-        : n
-      ));
+      markMessagesRead();
+      markNotificationsRead();
     }
-  }, [selectedUserId, socket, currentUserId]);
+  }, [selectedUserId, currentUserId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [selectedUserId, chatMessages]);
 
   useEffect(() => {
-    if (activeTab === 'notifications') {
-      setAppNotifications(prev => prev.map(n => n.type !== NotificationType.MESSAGE ? { ...n, isRead: true } : n));
+    if (activeTab === 'notifications' && currentUserId) {
+      const markAllNotificationsRead = async () => {
+        try {
+          const q = query(
+            collection(db, 'notifications'),
+            where('userId', '==', currentUserId),
+            where('isRead', '==', false)
+          );
+          const snapshot = await getDocs(q);
+          const updatePromises = snapshot.docs.map(doc => {
+            const data = doc.data() as AppNotification;
+            if (data.type !== NotificationType.MESSAGE) {
+              return updateDoc(doc.ref, { isRead: true });
+            }
+            return null;
+          }).filter(p => p !== null);
+          await Promise.all(updatePromises);
+        } catch (error) {
+          console.error('Failed to mark all notifications as read:', error);
+        }
+      };
+      markAllNotificationsRead();
     }
-  }, [activeTab]);
+  }, [activeTab, currentUserId]);
 
-  const handleLogin = (email: string, password: string) => {
-    const user = users.find(u => u.email === email && u.password === password);
-    
-    if (user) {
-      if (user.isBanned) {
-        alert("Your account has been banned for misconduct.");
-        return;
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      await loginWithGoogle();
+      setActiveTab('feed');
+    } catch (error) {
+      console.error('Login failed:', error);
+      addNotification(NotificationType.SYSTEM, 'Login Failed', 'Please try again or use Google Login.');
+    }
+  };
+
+  const handleRegister = async (displayName: string, username: string, email: string, password: string) => {
+    try {
+      await loginWithGoogle();
+      setActiveTab('profile-edit');
+    } catch (error) {
+      console.error('Registration failed:', error);
+      addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Please try again or use Google Login.');
+    }
+  };
+
+  const handleSocialLogin = async (provider: string) => {
+    try {
+      await loginWithGoogle();
+      setActiveTab('feed');
+    } catch (error) {
+      console.error('Social login failed:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await firebaseLogout();
+      setIsLoggedIn(false);
+      setCurrentUserId(CURRENT_USER_ID);
+      setActiveTab('feed');
+      setViewingUserId(null);
+      setIsVerified(false);
+      setShowSplash(true);
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const handleProfileUpdate = async (profileData: Partial<User>) => {
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), profileData);
+      if (!hasCreatedProfile) setHasCreatedProfile(true);
+      setActiveTab('feed');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
+  };
+
+  const handleUpdateUser = async (profileData: Partial<User>) => {
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), profileData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('payment_success');
+    if (success && currentUserId) {
+      if (success === 'store') {
+        handleUpdateUser({ hasPaidStoreFee: true });
+        setActiveTab('store-management');
+        setIsPaying(false);
+        addNotification(
+          NotificationType.PURCHASE,
+          'Store Activated!',
+          'Your one-time store fee has been processed. You can now upload paid content.',
+        );
+      } else if (success === 'stable') {
+        handleUpdateUser({ hasPaidStableFee: true });
+        setActiveTab('join-stable');
+        setIsPaying(false);
+        addNotification(
+          NotificationType.PURCHASE,
+          'Stable Activated!',
+          'You now have unlimited access to The Stable.',
+        );
       }
-      setCurrentUserId(user.id);
-      setIsLoggedIn(true);
-      setHasCreatedProfile(true);
-      return;
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
-
-    // Default login for demo if no user found (optional, but keep for compatibility)
-    if (email && password) {
-      setIsLoggedIn(true);
-      if (me.username && me.displayName && me.bio) {
-        setHasCreatedProfile(true);
-      } else {
-        setHasCreatedProfile(false);
-      }
-    }
-  };
-
-  const handleRegister = (displayName: string, username: string, email: string, password: string) => {
-    // Check if email or username already exists
-    if (users.find(u => u.email === email || u.username === username)) {
-      alert("Email or username already exists.");
-      return;
-    }
-
-    const newUser: User = {
-      id: `user-${Date.now()}`,
-      username,
-      displayName,
-      email,
-      password,
-      isBanned: false,
-      avatar: `https://picsum.photos/seed/sharebares_${username}/200`,
-      coverImage: `https://picsum.photos/seed/sharebares_${username}_cover/1200/400`,
-      bio: '',
-      isCreator: false,
-      isAdmin: email === 'jtothek319@gmail.com',
-      subscribersCount: 0,
-      followingCount: 0,
-      friendIds: [],
-      pendingFriendRequestsSent: [],
-      pendingFriendRequestsReceived: [],
-      fwbIds: [],
-      pendingFwbRequestsSent: [],
-      pendingFwbRequestsReceived: [],
-      fwbRequestsResetDate: new Date().toISOString(),
-      fwbRequestsSentCount: 0,
-      fanIds: [],
-      profileCustomization: {},
-      photos: [],
-      storeUploads: [],
-      blockedUserIds: [],
-      settings: {
-        pushNotifications: true,
-        emailNotifications: true,
-        profileVisibility: 'public',
-        messagingPrivacy: 'everyone'
-      }
-    };
-
-    setUsers(prev => [...prev, newUser]);
-    setCurrentUserId(newUser.id);
-    setIsLoggedIn(true);
-    setHasCreatedProfile(false);
-    setActiveTab('profile-edit');
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    console.log(`Social login with ${provider}`);
-    // For demo, just log them in as a random user or create one
-    const demoUser = users[Math.floor(Math.random() * users.length)];
-    setCurrentUserId(demoUser.id);
-    setIsLoggedIn(true);
-    setHasCreatedProfile(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setActiveTab('feed');
-    setViewingUserId(null);
-    setIsVerified(false);
-    setShowSplash(true);
-  };
-
-  const handleProfileUpdate = (profileData: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...profileData } : u));
-    if (!hasCreatedProfile) setHasCreatedProfile(true);
-    
-    // Emit update to server
-    if (socket) {
-      socket.emit('user:update', { userId: currentUserId, updates: profileData });
-    }
-    
-    setActiveTab('feed');
-  };
-
-  const handleUpdateUser = (profileData: Partial<User>) => {
-    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...profileData } : u));
-    
-    // Emit update to server
-    if (socket) {
-      socket.emit('user:update', { userId: currentUserId, updates: profileData });
-    }
-  };
+  }, [currentUserId, handleUpdateUser]);
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -2251,7 +2423,6 @@ const AppContent: React.FC = () => {
     
     let mediaUrl = undefined;
     
-    // If we have a real file, upload it to the server
     if (newPostMedia) {
       const formData = new FormData();
       formData.append('file', newPostMedia);
@@ -2269,85 +2440,102 @@ const AppContent: React.FC = () => {
       }
     }
     
+    const postId = `post-${Date.now()}`;
     const newPost: Post = {
-      id: `post-${Date.now()}`,
+      id: postId,
       userId: currentUserId,
       content: newPostContent.trim(),
       createdAt: new Date().toISOString(),
       likes: 0,
+      likedBy: [],
       commentsCount: 0,
       visibility: newPostVisibility,
       mediaUrl: mediaUrl,
       mediaType: mediaUrl ? (newPostMedia?.type.startsWith('video') ? 'video' : 'image') : undefined,
     };
     
-    setPosts(prev => [newPost, ...prev]);
-    
-    // Emit to server for real-time updates
-    if (socket) {
-      socket.emit('post:create', newPost);
+    try {
+      await setDoc(doc(db, 'posts', postId), newPost);
+      setNewPostContent('');
+      setNewPostVisibility(PostVisibility.PUBLIC);
+      setNewPostMedia(null);
+      setNewPostMediaPreview(null);
+      setIsCreating(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
     }
-    
-    setNewPostContent('');
-    setIsCreating(false);
-    setNewPostVisibility(PostVisibility.PUBLIC);
-    setNewPostMedia(null);
-    setNewPostMediaPreview(null);
   };
 
-  const handleToggleFan = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === targetUserId) {
-        const fanIds = u.fanIds || [];
-        const isFan = fanIds.includes(currentUserId);
-        const newFanIds = isFan 
-          ? fanIds.filter(id => id !== currentUserId)
-          : [...fanIds, currentUserId];
-        
-        if (!isFan) {
-          addNotification(
-            NotificationType.FOLLOW,
-            'New Fan!',
-            `${me.displayName} joined your Fan Club!`,
-            { senderId: currentUserId }
-          );
-        }
-        
-        return { ...u, fanIds: newFanIds };
+  const handleToggleFan = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    const fanIds = targetUser.fanIds || [];
+    const isFan = fanIds.includes(currentUserId);
+    const newFanIds = isFan 
+      ? fanIds.filter(id => id !== currentUserId)
+      : [...fanIds, currentUserId];
+    
+    try {
+      await updateDoc(doc(db, 'users', targetUserId), { fanIds: newFanIds });
+      
+      if (!isFan) {
+        addNotification(
+          NotificationType.FOLLOW,
+          'New Fan!',
+          `${me.displayName} joined your Fan Club!`,
+          { userId: targetUserId, senderId: currentUserId }
+        );
       }
-      return u;
-    }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleLikePost = (post: Post, likerId: string = currentUserId) => {
-    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likes: p.likes + 1 } : p));
-    
-    if (socket) {
-      socket.emit('post:like', { postId: post.id, userId: likerId });
-    }
+  const handleLikePost = async (post: Post, likerId: string = currentUserId) => {
+    const isLiked = post.likedBy?.includes(likerId);
+    const newLikedBy = isLiked 
+      ? (post.likedBy || []).filter(id => id !== likerId)
+      : [...(post.likedBy || []), likerId];
     
     const liker = users.find(u => u.id === likerId);
-    const author = users.find(u => u.id === post.userId);
-    
-    if (author && author.id !== likerId) {
-      addNotification(
-        NotificationType.LIKE,
-        'New Like!',
-        `${liker?.displayName || 'Someone'} liked your post: "${post.content.substring(0, 20)}..."`,
-        { postId: post.id, senderId: likerId }
-      );
+    const userLikedPostIds = liker?.likedPostIds || [];
+    const newUserLikedPostIds = isLiked
+      ? userLikedPostIds.filter(id => id !== post.id)
+      : [...userLikedPostIds, post.id];
 
-      // If liking Jade's post, she might respond with a message or like back
-      if (author.id === 'ai-jade' && likerId === currentUserId && Math.random() < 0.3) {
-        setTimeout(() => {
-          addNotification(
-            NotificationType.MESSAGE,
-            'Jade Vixen',
-            'Thanks for the love, babe. 🖤 Check your DMs.',
-            { senderId: 'ai-jade' }
-          );
-        }, 2000);
+    try {
+      await updateDoc(doc(db, 'posts', post.id), {
+        likedBy: newLikedBy,
+        likes: newLikedBy.length
+      });
+      await updateDoc(doc(db, 'users', likerId), {
+        likedPostIds: newUserLikedPostIds
+      });
+      
+      const author = users.find(u => u.id === post.userId);
+      
+      if (!isLiked && author && author.id !== likerId) {
+        addNotification(
+          NotificationType.LIKE,
+          'New Like!',
+          `${liker?.displayName || 'Someone'} liked your post: "${post.content.substring(0, 20)}..."`,
+          { userId: author.id, postId: post.id, senderId: likerId }
+        );
+
+        if (author.id === 'ai-jade' && likerId === currentUserId && Math.random() < 0.3) {
+          setTimeout(() => {
+            addNotification(
+              NotificationType.MESSAGE,
+              'Jade Vixen',
+              'Thanks for the love, babe. 🖤 Check your DMs.',
+              { senderId: 'ai-jade', userId: currentUserId }
+            );
+          }, 2000);
+        }
       }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${post.id}`);
     }
   };
 
@@ -2359,30 +2547,43 @@ const AppContent: React.FC = () => {
     
     if (!commentText) return;
 
-    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, commentsCount: p.commentsCount + 1 } : p));
-    
-    if (socket) {
-      socket.emit('post:comment', { postId: post.id, userId: commenterId, text: commentText });
-    }
-    
-    const commenter = users.find(u => u.id === commenterId);
-    const author = users.find(u => u.id === post.userId);
-    
-    if (author && author.id !== commenterId) {
-      addNotification(
-        NotificationType.COMMENT,
-        'New Comment!',
-        `${commenter?.displayName || 'Someone'} commented on your post: "${post.content.substring(0, 20)}..."`,
-        { postId: post.id, senderId: commenterId }
-      );
+    try {
+      const commentId = `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const newComment: Comment = {
+        id: commentId,
+        postId: post.id,
+        userId: commenterId,
+        text: commentText,
+        createdAt: new Date().toISOString()
+      };
 
-      // If commenting on Jade's post as the current user, she responds
-      if (author.id === 'ai-jade' && commenterId === currentUserId) {
-        const jadeComment = await generateJadeComment(commentText);
-        setTimeout(() => {
-          handleCommentPost(post, 'ai-jade', jadeComment);
-        }, 3000);
+      await setDoc(doc(db, 'comments', commentId), newComment);
+
+      const postRef = doc(db, 'posts', post.id);
+      await updateDoc(postRef, {
+        commentsCount: post.commentsCount + 1
+      });
+      
+      const commenter = users.find(u => u.id === commenterId);
+      const author = users.find(u => u.id === post.userId);
+      
+      if (author && author.id !== commenterId) {
+        addNotification(
+          NotificationType.COMMENT,
+          'New Comment!',
+          `${commenter?.displayName || 'Someone'} commented on your post: "${post.content.substring(0, 20)}..."`,
+          { userId: author.id, postId: post.id, senderId: commenterId }
+        );
+
+        if (author.id === 'ai-jade' && commenterId === currentUserId) {
+          const jadeComment = await generateJadeComment(commentText);
+          setTimeout(() => {
+            handleCommentPost(post, 'ai-jade', jadeComment);
+          }, 3000);
+        }
       }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${post.id}`);
     }
   };
 
@@ -2396,85 +2597,94 @@ const AppContent: React.FC = () => {
     setIsPaying(true);
   };
 
-  const handleSendFriendRequest = (targetUserId: string) => {
+  const handleSendFriendRequest = async (targetUserId: string) => {
     if (targetUserId === currentUserId) return;
     
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { ...u, pendingFriendRequestsSent: [...u.pendingFriendRequestsSent, targetUserId] };
-      }
-      if (u.id === targetUserId) {
-        addNotification(
-          NotificationType.FOLLOW,
-          'Friend Request',
-          `${me.displayName || 'Someone'} sent you a friend request!`,
-          { senderId: currentUserId }
-        );
-        return { ...u, pendingFriendRequestsReceived: [...u.pendingFriendRequestsReceived, currentUserId] };
-      }
-      return u;
-    }));
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFriendRequestsSent: [...me.pendingFriendRequestsSent, targetUserId]
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFriendRequestsReceived: [...targetUser.pendingFriendRequestsReceived, currentUserId]
+      });
+
+      addNotification(
+        NotificationType.FOLLOW,
+        'Friend Request',
+        `${me.displayName || 'Someone'} sent you a friend request!`,
+        { senderId: currentUserId, userId: targetUserId }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleAcceptFriendRequest = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          pendingFriendRequestsReceived: u.pendingFriendRequestsReceived.filter(id => id !== targetUserId),
-          friendIds: [...u.friendIds, targetUserId]
-        };
-      }
-      if (u.id === targetUserId) {
-        addNotification(
-          NotificationType.FOLLOW,
-          'Friend Request Accepted',
-          `${me.displayName || 'Someone'} accepted your friend request!`,
-          { senderId: currentUserId }
-        );
-        return { 
-          ...u, 
-          pendingFriendRequestsSent: u.pendingFriendRequestsSent.filter(id => id !== currentUserId),
-          friendIds: [...u.friendIds, currentUserId]
-        };
-      }
-      return u;
-    }));
+  const handleAcceptFriendRequest = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFriendRequestsReceived: me.pendingFriendRequestsReceived.filter(id => id !== targetUserId),
+        friendIds: [...me.friendIds, targetUserId]
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFriendRequestsSent: targetUser.pendingFriendRequestsSent.filter(id => id !== currentUserId),
+        friendIds: [...targetUser.friendIds, currentUserId]
+      });
+
+      addNotification(
+        NotificationType.FOLLOW,
+        'Friend Request Accepted',
+        `${me.displayName || 'Someone'} accepted your friend request!`,
+        { senderId: currentUserId, userId: targetUserId }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleDeclineFriendRequest = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          pendingFriendRequestsReceived: u.pendingFriendRequestsReceived.filter(id => id !== targetUserId)
-        };
-      }
-      if (u.id === targetUserId) {
-        return { 
-          ...u, 
-          pendingFriendRequestsSent: u.pendingFriendRequestsSent.filter(id => id !== currentUserId)
-        };
-      }
-      return u;
-    }));
+  const handleDeclineFriendRequest = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFriendRequestsReceived: me.pendingFriendRequestsReceived.filter(id => id !== targetUserId)
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFriendRequestsSent: targetUser.pendingFriendRequestsSent.filter(id => id !== currentUserId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleUnfriend = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { ...u, friendIds: u.friendIds.filter(id => id !== targetUserId) };
-      }
-      if (u.id === targetUserId) {
-        return { ...u, friendIds: u.friendIds.filter(id => id !== currentUserId) };
-      }
-      return u;
-    }));
+  const handleUnfriend = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        friendIds: me.friendIds.filter(id => id !== targetUserId)
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        friendIds: targetUser.friendIds.filter(id => id !== currentUserId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleSendFwbRequest = (targetUserId: string) => {
+  const handleSendFwbRequest = async (targetUserId: string) => {
     if (targetUserId === currentUserId) return;
     
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
     const now = new Date();
     const resetDate = new Date(me.fwbRequestsResetDate);
     
@@ -2490,198 +2700,234 @@ const AppContent: React.FC = () => {
     }
     
     if (currentSentCount >= 2) {
-      alert("You have reached your limit of 2 FWB requests per month. Your limit resets on " + new Date(currentResetDate).toLocaleDateString());
+      showMascot({
+        action: 'wink',
+        message: `You have reached your limit of 2 FWB requests per month. Your limit resets on ${new Date(currentResetDate).toLocaleDateString()} 😉💎`,
+        duration: 5000
+      });
       return;
     }
 
     if (me.pendingFwbRequestsSent.includes(targetUserId) || me.fwbIds.includes(targetUserId)) {
-      alert("You have already sent a request to this user or are already FWB.");
+      showMascot({
+        action: 'wink',
+        message: 'You have already sent a request to this user or are already FWB. 😉🔥',
+        duration: 5000
+      });
       return;
     }
 
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          pendingFwbRequestsSent: [...u.pendingFwbRequestsSent, targetUserId],
-          fwbRequestsSentCount: currentSentCount + 1,
-          fwbRequestsResetDate: currentResetDate
-        };
-      }
-      if (u.id === targetUserId) {
-        addNotification(
-          NotificationType.FOLLOW,
-          'FWB Request',
-          `Someone sent you a private FWB request!`,
-          { senderId: currentUserId }
-        );
-        return { ...u, pendingFwbRequestsReceived: [...u.pendingFwbRequestsReceived, currentUserId] };
-      }
-      return u;
-    }));
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFwbRequestsSent: [...me.pendingFwbRequestsSent, targetUserId],
+        fwbRequestsSentCount: currentSentCount + 1,
+        fwbRequestsResetDate: currentResetDate
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFwbRequestsReceived: [...targetUser.pendingFwbRequestsReceived, currentUserId]
+      });
+
+      addNotification(
+        NotificationType.FOLLOW,
+        'FWB Request',
+        `Someone sent you a private FWB request!`,
+        { senderId: currentUserId, userId: targetUserId }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleAcceptFwbRequest = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          pendingFwbRequestsReceived: u.pendingFwbRequestsReceived.filter(id => id !== targetUserId),
-          fwbIds: [...u.fwbIds, targetUserId]
-        };
-      }
-      if (u.id === targetUserId) {
-        addNotification(
-          NotificationType.FOLLOW,
-          'FWB Request Accepted',
-          `Your private FWB request was accepted!`,
-          { senderId: currentUserId }
-        );
-        return { 
-          ...u, 
-          pendingFwbRequestsSent: u.pendingFwbRequestsSent.filter(id => id !== currentUserId),
-          fwbIds: [...u.fwbIds, currentUserId]
-        };
-      }
-      return u;
-    }));
+  const handleAcceptFwbRequest = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFwbRequestsReceived: me.pendingFwbRequestsReceived.filter(id => id !== targetUserId),
+        fwbIds: [...me.fwbIds, targetUserId]
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFwbRequestsSent: targetUser.pendingFwbRequestsSent.filter(id => id !== currentUserId),
+        fwbIds: [...targetUser.fwbIds, currentUserId]
+      });
+
+      addNotification(
+        NotificationType.FOLLOW,
+        'FWB Request Accepted',
+        `Your private FWB request was accepted!`,
+        { senderId: currentUserId, userId: targetUserId }
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleDeclineFwbRequest = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          pendingFwbRequestsReceived: u.pendingFwbRequestsReceived.filter(id => id !== targetUserId)
-        };
-      }
-      if (u.id === targetUserId) {
-        return { 
-          ...u, 
-          pendingFwbRequestsSent: u.pendingFwbRequestsSent.filter(id => id !== currentUserId)
-        };
-      }
-      return u;
-    }));
+  const handleDeclineFwbRequest = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        pendingFwbRequestsReceived: me.pendingFwbRequestsReceived.filter(id => id !== targetUserId)
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        pendingFwbRequestsSent: targetUser.pendingFwbRequestsSent.filter(id => id !== currentUserId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleUnfwb = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { ...u, fwbIds: u.fwbIds.filter(id => id !== targetUserId) };
-      }
-      if (u.id === targetUserId) {
-        return { ...u, fwbIds: u.fwbIds.filter(id => id !== currentUserId) };
-      }
-      return u;
-    }));
+  const handleUnfwb = async (targetUserId: string) => {
+    const targetUser = users.find(u => u.id === targetUserId);
+    if (!targetUser) return;
+
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), {
+        fwbIds: me.fwbIds.filter(id => id !== targetUserId)
+      });
+      await updateDoc(doc(db, 'users', targetUserId), {
+        fwbIds: targetUser.fwbIds.filter(id => id !== currentUserId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+    }
   };
 
-  const handleBlockUser = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { 
-          ...u, 
-          blockedUserIds: [...u.blockedUserIds, targetUserId],
-          friendIds: u.friendIds.filter(id => id !== targetUserId),
-          fwbIds: u.fwbIds.filter(id => id !== targetUserId)
-        };
-      }
-      return u;
-    }));
-    addNotification(NotificationType.FOLLOW, 'User Blocked', 'You will no longer see content from this user.');
+  const handleBlockUser = async (targetUserId: string) => {
+    try {
+      const updates = { 
+        blockedUserIds: [...me.blockedUserIds, targetUserId],
+        friendIds: me.friendIds.filter(id => id !== targetUserId),
+        fwbIds: me.fwbIds.filter(id => id !== targetUserId)
+      };
+      await updateDoc(doc(db, 'users', currentUserId), updates);
+      addNotification(NotificationType.FOLLOW, 'User Blocked', 'You will no longer see content from this user.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
   };
 
-  const handleUnblockUser = (targetUserId: string) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === currentUserId) {
-        return { ...u, blockedUserIds: u.blockedUserIds.filter(id => id !== targetUserId) };
-      }
-      return u;
-    }));
+  const handleUnblockUser = async (targetUserId: string) => {
+    try {
+      const updates = { 
+        blockedUserIds: me.blockedUserIds.filter(id => id !== targetUserId)
+      };
+      await updateDoc(doc(db, 'users', currentUserId), updates);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
   };
 
-  const handleUploadPhoto = (photo: Omit<MediaItem, 'id' | 'createdAt'>) => {
+  const handleUploadPhoto = async (photo: Omit<MediaItem, 'id' | 'createdAt'>) => {
     const newPhoto: MediaItem = {
       ...photo,
       id: `photo-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
-    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, photos: [newPhoto, ...u.photos] } : u));
-    addNotification(NotificationType.FOLLOW, 'Photo Uploaded', 'Your new photo is now live on your profile.');
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), { photos: [newPhoto, ...me.photos] });
+      addNotification(NotificationType.FOLLOW, 'Photo Uploaded', 'Your new photo is now live on your profile.');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
   };
 
-  const handleDeletePhoto = (photoId: string) => {
-    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, photos: u.photos.filter(p => p.id !== photoId) } : u));
+  const handleDeletePhoto = async (photoId: string) => {
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), { photos: me.photos.filter(p => p.id !== photoId) });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
   };
 
-  const handleDeletePost = (postId: string) => {
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deleteDoc(doc(db, 'posts', postId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `posts/${postId}`);
+    }
+  };
+
+  const handleDeleteStoreItem = async (itemId: string) => {
+    try {
+      await deleteDoc(doc(db, 'storeItems', itemId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `storeItems/${itemId}`);
+    }
+  };
+
+  const handleUpdateStoreItem = async (itemId: string, updates: Partial<StoreItem>) => {
+    try {
+      await updateDoc(doc(db, 'storeItems', itemId), updates);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `storeItems/${itemId}`);
+    }
+  };
+
+  const handleStoreCustomizationUpdate = async (customization: StoreCustomization) => {
+    try {
+      await updateDoc(doc(db, 'users', currentUserId), { storeCustomization: customization });
+      setActiveTab('store-management');
+      addNotification(
+        NotificationType.FOLLOW,
+        'Store Customized!',
+        'Your store visual appearance has been updated successfully.'
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+    }
+  };
+
+  const handleBanUser = async (userId: string) => {
     if (!me.isAdmin) return;
-    if (confirm('Are you sure you want to remove this post?')) {
-      setPosts(prev => prev.filter(p => p.id !== postId));
-      if (socket) {
-        socket.emit('post:delete', postId);
+    setConfirmAction({
+      message: 'Are you sure you want to BAN this user? They will no longer be able to log in.',
+      onConfirm: async () => {
+        try {
+          await updateDoc(doc(db, 'users', userId), { isBanned: true });
+          if (viewingUserId === userId) {
+            setActiveTab('feed');
+          }
+          setConfirmAction(null);
+          showMascot({
+            action: 'wink',
+            message: 'User has been banned. 🚫🔨',
+            duration: 3000
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+        }
       }
-    }
+    });
   };
 
-  const handleDeleteStoreItem = (itemId: string) => {
-    const item = storeItems.find(i => i.id === itemId);
-    if (!item) return;
-    
-    const isOwner = item.userId === currentUserId;
-    if (!me.isAdmin && !isOwner) return;
-    
-    if (confirm('Are you sure you want to remove this store item?')) {
-      setStoreItems(prev => prev.filter(i => i.id !== itemId));
-    }
-  };
-
-  const handleUpdateStoreItem = (itemId: string, updates: Partial<StoreItem>) => {
-    setStoreItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, ...updates } : item
-    ));
-  };
-
-  const handleStoreCustomizationUpdate = (customization: StoreCustomization) => {
-    setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, storeCustomization: customization } : u));
-    setActiveTab('store-management');
-    addNotification(
-      NotificationType.FOLLOW,
-      'Store Customized!',
-      'Your store visual appearance has been updated successfully.'
-    );
-  };
-
-  const handleBanUser = (userId: string) => {
-    if (!me.isAdmin) return;
-    if (confirm('Are you sure you want to BAN this user? They will no longer be able to log in.')) {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, isBanned: true } : u));
-      if (viewingUserId === userId) {
-        setActiveTab('feed');
-      }
-    }
-  };
-
-  const handleAddItemToStore = (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
+  const handleAddItemToStore = async (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
+    const itemId = `si-${Date.now()}`;
     const mediaUrls = files.map(file => URL.createObjectURL(file));
     const newItem: StoreItem = {
-      id: `si-${Date.now()}`,
+      id: itemId,
       userId: currentUserId,
       ...itemData,
-      thumbnailUrl: mediaUrls[0], // Use first file as thumbnail
+      thumbnailUrl: mediaUrls[0],
       mediaUrls: mediaUrls,
       createdAt: new Date().toISOString()
     };
-    setStoreItems(prev => [newItem, ...prev]);
-    addNotification(
-      NotificationType.PURCHASE,
-      'Item Added!',
-      `Your item "${itemData.title}" has been added to your store.`,
-    );
+    
+    try {
+      await setDoc(doc(db, 'storeItems', itemId), newItem);
+      addNotification(
+        NotificationType.PURCHASE,
+        'Item Added!',
+        `Your item "${itemData.title}" has been added to your store.`,
+      );
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `storeItems/${itemId}`);
+    }
   };
 
-  const handleCreateStableListing = (listingData: Omit<StableListing, 'id' | 'createdAt'>, postToStore: boolean) => {
+  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt'>, postToStore: boolean) => {
     if (!me.hasPaidStableFee && !me.isAdmin) {
       setPendingStableListing(listingData);
       setStableBundleSelected(postToStore);
@@ -2690,118 +2936,131 @@ const AppContent: React.FC = () => {
       return;
     }
 
+    const listingId = `sl-${Date.now()}`;
     const newListing: StableListing = {
-      id: `sl-${Date.now()}`,
+      id: listingId,
       userId: currentUserId,
       ...listingData,
       createdAt: new Date().toISOString()
     };
-    setStableListings(prev => [newListing, ...prev]);
-
-    if (postToStore) {
-      const newStoreItem: StoreItem = {
-        id: `si-stable-${Date.now()}`,
-        userId: currentUserId,
-        title: `${listingData.providerName} - Stable Listing`,
-        description: listingData.services,
-        price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
-        thumbnailUrl: listingData.avatarUrl || listingData.photos?.[0] || '',
-        mediaUrls: listingData.photos || [listingData.avatarUrl || ''],
-        type: 'other',
-        createdAt: new Date().toISOString()
-      };
-      setStoreItems(prev => [newStoreItem, ...prev]);
-    }
-
-    setActiveTab('stable');
-  };
-
-  const handlePaymentSuccess = () => {
-    let updates: Partial<User> = {};
     
-    if (paymentType === 'store') {
-      updates = { hasPaidStoreFee: true };
-      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...updates } : u));
-      setIsPaying(false);
-      setActiveTab('store-management');
-      
-      addNotification(
-        NotificationType.PURCHASE,
-        'Store Activated!',
-        'Your one-time store fee has been processed. You can now upload paid content.',
-      );
-    } else if (paymentType === 'stable') {
-      const isBundle = stableBundleSelected;
-      updates = { 
-        hasPaidStableFee: true, 
-        hasPaidStableBundle: isBundle || (users.find(u => u.id === currentUserId)?.hasPaidStableBundle || false)
-      };
-      setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, ...updates } : u));
-      
-      if (pendingStableListing) {
-        const newListing: StableListing = {
-          id: `sl-${Date.now()}`,
+    try {
+      await setDoc(doc(db, 'stableListings', listingId), newListing);
+
+      if (postToStore) {
+        const itemId = `si-stable-${Date.now()}`;
+        const newStoreItem: StoreItem = {
+          id: itemId,
           userId: currentUserId,
-          ...pendingStableListing,
+          title: `${listingData.providerName} - Stable Listing`,
+          description: listingData.services,
+          price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
+          thumbnailUrl: listingData.avatarUrl || listingData.photos?.[0] || '',
+          mediaUrls: listingData.photos || [listingData.avatarUrl || ''],
+          type: 'other',
           createdAt: new Date().toISOString()
         };
-        setStableListings(prev => [newListing, ...prev]);
+        await setDoc(doc(db, 'storeItems', itemId), newStoreItem);
+      }
 
-        if (isBundle) {
-          const newStoreItem: StoreItem = {
-            id: `si-stable-${Date.now()}`,
+      setActiveTab('stable');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `stableListings/${listingId}`);
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    setIsPaying(false);
+    
+    try {
+      let updates: Partial<User> = {};
+      let successMessage = '';
+      
+      if (paymentType === 'store') {
+        updates = { hasPaidStoreFee: true };
+        successMessage = 'Your store has been activated! You can now upload items.';
+        setActiveTab('store-management');
+      } else if (paymentType === 'stable') {
+        const isBundle = stableBundleSelected;
+        updates = { 
+          hasPaidStableFee: true, 
+          hasPaidStableBundle: isBundle || (me.hasPaidStableBundle || false)
+        };
+        
+        if (pendingStableListing) {
+          const listingId = `sl-${Date.now()}`;
+          const newListing: StableListing = {
+            id: listingId,
             userId: currentUserId,
-            title: `${pendingStableListing.providerName} - Stable Listing`,
-            description: pendingStableListing.services,
-            price: parseFloat(pendingStableListing.pricing.replace(/[^0-9.]/g, '')) || 0,
-            thumbnailUrl: pendingStableListing.avatarUrl || pendingStableListing.photos?.[0] || '',
-            mediaUrls: pendingStableListing.photos || [pendingStableListing.avatarUrl || ''],
-            type: 'other',
+            ...pendingStableListing,
             createdAt: new Date().toISOString()
           };
-          setStoreItems(prev => [newStoreItem, ...prev]);
+          await setDoc(doc(db, 'stableListings', listingId), newListing);
+
+          if (isBundle) {
+            const itemId = `si-stable-${Date.now()}`;
+            const newStoreItem: StoreItem = {
+              id: itemId,
+              userId: currentUserId,
+              title: `${pendingStableListing.providerName} - Stable Listing`,
+              description: pendingStableListing.services,
+              price: parseFloat(pendingStableListing.pricing.replace(/[^0-9.]/g, '')) || 0,
+              thumbnailUrl: pendingStableListing.avatarUrl || pendingStableListing.photos?.[0] || '',
+              mediaUrls: pendingStableListing.photos || [pendingStableListing.avatarUrl || ''],
+              type: 'other',
+              createdAt: new Date().toISOString()
+            };
+            await setDoc(doc(db, 'storeItems', itemId), newStoreItem);
+          }
+          setActiveTab('stable');
+        } else {
+          setActiveTab('join-stable');
         }
-
-        setPendingStableListing(null);
-        setStableBundleSelected(false);
-      }
-      
-      setIsPaying(false);
-      if (pendingStableListing) {
-        setActiveTab('stable');
-      } else {
-        setActiveTab('join-stable');
-      }
-
-      addNotification(
-        NotificationType.PURCHASE,
-        'The Stable Activated!',
-        isBundle 
+        
+        successMessage = isBundle 
           ? 'Your Store Bundle has been processed. Your listing is live in the feed and your store.'
-          : 'Your one-time stable fee has been processed. Your listing is now live.',
-      );
-    } else if (paymentType === 'item' && pendingStoreItem) {
-      setUsers(prev => prev.map(u => u.id === currentUserId ? { 
-        ...u, 
-        purchasedItemIds: [...(u.purchasedItemIds || []), pendingStoreItem.id] 
-      } : u));
+          : 'Your one-time stable fee has been processed. Your listing is now live.';
+      } else if (paymentType === 'item' && pendingStoreItem) {
+        const currentPurchased = me.purchasedItemIds || [];
+        updates = { 
+          purchasedItemIds: [...currentPurchased, pendingStoreItem.id] 
+        };
       
-      const seller = users.find(u => u.id === pendingStoreItem.userId);
-      if (seller) {
-        addNotification(
-          NotificationType.PURCHASE,
-          'Item Purchased!',
-          `${me.displayName || 'Someone'} purchased "${pendingStoreItem.title}" from your store for $${pendingStoreItem.price}`,
-          { storeItemId: pendingStoreItem.id }
-        );
+        // Notify seller
+        const sellerId = pendingStoreItem.userId;
+        const msgId = `msg-notif-${Date.now()}`;
+        const notification: AppNotification = {
+          id: msgId,
+          userId: sellerId,
+          type: NotificationType.PURCHASE,
+          title: 'New Sale!',
+          message: `${me.displayName || 'Someone'} purchased "${pendingStoreItem.title}" from your store for $${pendingStoreItem.price}`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          storeItemId: pendingStoreItem.id
+        };
+        await setDoc(doc(db, 'notifications', msgId), notification);
+        
+        successMessage = `You have successfully purchased ${pendingStoreItem.title}`;
       }
       setPendingStoreItem(null);
       setIsPaying(false);
-    }
 
-    // Emit update to server
-    if (socket && Object.keys(updates).length > 0) {
-      socket.emit('user:update', { userId: currentUserId, updates });
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(db, 'users', currentUserId), updates);
+      }
+
+      addNotification(
+        NotificationType.SYSTEM,
+        'Payment Successful!',
+        successMessage
+      );
+      
+      setPendingStableListing(null);
+      setPendingStoreItem(null);
+      setStableBundleSelected(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
     }
   };
 
@@ -2813,46 +3072,77 @@ const AppContent: React.FC = () => {
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || !selectedUserId || !socket) return;
+    if (!text.trim() || !selectedUserId) return;
     
-    socket.emit('send_message', {
+    const messageId = `msg-${Date.now()}`;
+    const newMessage: Message = {
+      id: messageId,
       senderId: currentUserId,
       receiverId: selectedUserId,
-      text: text
-    });
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
 
-    // Handle Jade AI Response
-    if (selectedUserId === 'ai-jade') {
-      setIsJadeTyping(true);
-      
-      // Get chat history for context
-      const history = (chatMessages['ai-jade'] || []).map(msg => ({
-        role: msg.senderId === 'ai-jade' ? 'model' as const : 'user' as const,
-        text: msg.text
-      }));
+    try {
+      await setDoc(doc(db, 'messages', messageId), newMessage);
 
-      const responseText = await generateJadeResponse(text, history);
-      
-      // Simulate typing delay
-      setTimeout(() => {
-        setIsJadeTyping(false);
-        socket.emit('send_message', {
-          senderId: 'ai-jade',
-          receiverId: currentUserId,
-          text: responseText
-        });
-      }, 2000 + Math.random() * 3000);
+      // Handle Jade AI Response
+      if (selectedUserId === 'ai-jade') {
+        setIsJadeTyping(true);
+        
+        // Get chat history for context
+        const history = (chatMessages['ai-jade'] || []).map(msg => ({
+          role: msg.senderId === 'ai-jade' ? 'model' as const : 'user' as const,
+          text: msg.text
+        }));
+
+        const responseText = await generateJadeResponse(text, history);
+        
+        // Simulate typing delay
+        setTimeout(async () => {
+          setIsJadeTyping(false);
+          const jadeMsgId = `msg-jade-${Date.now()}`;
+          const jadeMsg: Message = {
+            id: jadeMsgId,
+            senderId: 'ai-jade',
+            receiverId: currentUserId,
+            text: responseText,
+            timestamp: new Date().toISOString(),
+            isRead: false
+          };
+          await setDoc(doc(db, 'messages', jadeMsgId), jadeMsg);
+        }, 2000 + Math.random() * 3000);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `messages/${messageId}`);
     }
   };
 
-  const handleDeleteConversation = (userId: string) => {
-    setChatMessages(prev => {
-      const newMessages = { ...prev };
-      delete newMessages[userId];
-      return newMessages;
-    });
-    if (selectedUserId === userId) {
-      setSelectedUserId(null);
+  const handleDeleteConversation = async (userId: string) => {
+    if (!currentUserId) return;
+    
+    try {
+      // Find all messages between current user and target user
+      const q1 = query(collection(db, 'messages'), where('senderId', '==', currentUserId), where('receiverId', '==', userId));
+      const q2 = query(collection(db, 'messages'), where('senderId', '==', userId), where('receiverId', '==', currentUserId));
+      
+      const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+      
+      const deletePromises = [...snap1.docs, ...snap2.docs].map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      setChatMessages(prev => {
+        const newMessages = { ...prev };
+        delete newMessages[userId];
+        return newMessages;
+      });
+      
+      if (selectedUserId === userId) {
+        setSelectedUserId(null);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `messages conversation with ${userId}`);
     }
   };
 
@@ -2861,6 +3151,7 @@ const AppContent: React.FC = () => {
       me={me}
       users={users}
       posts={posts}
+      comments={comments}
       searchQuery={searchQuery}
       onSelectUser={navigateToProfile}
       onLikePost={handleLikePost}
@@ -3339,6 +3630,8 @@ const AppContent: React.FC = () => {
                       onLike={() => handleLikePost(post)}
                       onComment={() => handleCommentPost(post)}
                       onProfileClick={navigateToProfile}
+                      comments={comments}
+                      users={users}
                     />
                   ))
                 ) : (
@@ -3500,6 +3793,7 @@ const AppContent: React.FC = () => {
             onEditProfile={() => setActiveTab('profile-edit')} 
             onLogout={() => setIsLoggedIn(false)}
             onUpdateUser={handleUpdateUser}
+            setConfirmAction={setConfirmAction}
           />
         )}
         {activeTab === 'media-store' && viewingUserId && (
@@ -3798,6 +4092,14 @@ const AppContent: React.FC = () => {
       )}
 
       {showPrompt && <InstallPrompt onInstall={install} onDismiss={dismiss} />}
+
+      {confirmAction && (
+        <ConfirmModal 
+          message={confirmAction.message} 
+          onConfirm={confirmAction.onConfirm} 
+          onCancel={() => setConfirmAction(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@ interface HomePageProps {
   me: User;
   users: User[];
   posts: Post[];
+  comments: Comment[];
   searchQuery: string;
   onSelectUser: (userId: string) => void;
   onLikePost?: (post: Post) => void;
@@ -21,6 +22,7 @@ const HomePage: React.FC<HomePageProps> = ({
   me, 
   users, 
   posts, 
+  comments,
   searchQuery, 
   onSelectUser, 
   onLikePost,
@@ -137,6 +139,8 @@ const HomePage: React.FC<HomePageProps> = ({
                       onLike={() => onLikePost?.(post)}
                       onComment={() => onCommentPost?.(post)}
                       onProfileClick={onProfileClick}
+                      comments={comments}
+                      users={users}
                     />
                     {index === 1 && <AdPlaceholder size="md" />}
                   </React.Fragment>
