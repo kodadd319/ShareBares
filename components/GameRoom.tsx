@@ -5,7 +5,8 @@ import {
   X, ChevronLeft, Trophy, MessageSquare, Send,
   Circle, Square, Layers, Spade, Club, Heart, Diamond,
   Target, Zap, Flame, Sparkles, Info, Plus,
-  ArrowRight, History, RotateCcw, Eye, EyeOff
+  ArrowRight, History, RotateCcw, Eye, EyeOff,
+  ZoomIn, ZoomOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Logo from './Logo';
@@ -25,7 +26,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<GameType | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<User[]>([]);
-
+  const [zoom, setZoom] = useState(1);
   const [isWaitingForInvite, setIsWaitingForInvite] = useState<{ toId: string, gameType: GameType } | null>(null);
 
   useEffect(() => {
@@ -465,13 +466,49 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
               </button>
             </div>
           ) : (
-            <div className="w-full max-w-4xl aspect-square lg:aspect-video bg-black/40 rounded-[3rem] border border-white/10 shadow-2xl relative overflow-hidden chrome-border p-8">
-              {/* Game Specific Rendering */}
-              {activeGame.type === 'checkers' && <CheckersGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
-              {activeGame.type === '10000' && <DiceGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
-              {activeGame.type === 'rummy' && <RummyGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
-              {activeGame.type === 'blackjack' && <BlackjackGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
-              {activeGame.type === 'billiards' && <BilliardsGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+            <div className="w-full max-w-full lg:max-w-[95vw] aspect-square lg:aspect-video relative overflow-hidden p-2 lg:p-4">
+              {/* Zoom Controls */}
+              <div className="absolute top-4 right-4 z-50 flex flex-col space-y-2">
+                <button 
+                  onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))}
+                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  title="Zoom In"
+                >
+                  <ZoomIn size={20} />
+                </button>
+                <button 
+                  onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))}
+                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  title="Zoom Out"
+                >
+                  <ZoomOut size={20} />
+                </button>
+                <button 
+                  onClick={() => setZoom(1)}
+                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  title="Reset Zoom"
+                >
+                  <RotateCcw size={20} />
+                </button>
+              </div>
+
+              <div 
+                className="w-full h-full flex items-center justify-center transition-transform duration-300 ease-out"
+                style={{ 
+                  transform: `scale(${zoom})`,
+                  touchAction: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}
+              >
+                <div className="w-full h-full flex items-center justify-center bg-black/20 rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden">
+                  {/* Game Specific Rendering */}
+                  {activeGame.type === 'checkers' && <CheckersGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                  {activeGame.type === '10000' && <DiceGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                  {activeGame.type === 'rummy' && <RummyGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                  {activeGame.type === 'blackjack' && <BlackjackGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                  {activeGame.type === 'billiards' && <BilliardsGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -2582,11 +2582,29 @@ const AppContent: React.FC = () => {
   };
 
   const handleSocialLogin = async (provider: string) => {
+    console.log('Starting social login for provider:', provider);
     try {
-      await loginWithGoogle();
-      setActiveTab('feed');
-    } catch (error) {
+      if (provider === 'google') {
+        toast.loading('Opening Google login...');
+        await loginWithGoogle();
+        toast.success('Successfully logged in with Google!');
+        setActiveTab('feed');
+      } else {
+        toast.error(`${provider} login is not implemented yet.`);
+      }
+    } catch (error: any) {
       console.error('Social login failed:', error);
+      toast.error(`Login failed: ${error.message || 'Unknown error'}`);
+      
+      if (error.code === 'auth/popup-blocked') {
+        toast.error('The login popup was blocked by your browser. Please allow popups for this site.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // Ignore user cancellation
+      } else if (error.code === 'auth/operation-not-allowed') {
+        toast.error('Google login is not enabled in Firebase Console.');
+      }
+    } finally {
+      toast.dismiss();
     }
   };
 
