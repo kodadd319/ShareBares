@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, DollarSign, Edit3, Search, X, Palette } from 'lucide-react';
 import { User, StoreItem } from '../types';
+import { toast } from 'sonner';
 
 interface StoreManagementPageProps {
   user: User;
@@ -119,7 +120,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
         price: item.price.toString()
       });
     } else {
-      alert('Media item not found with that title.');
+      toast.error('Media item not found with that title.');
     }
   };
 
@@ -135,7 +136,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
     setEditingItem(null);
     setSearchTitle('');
-    alert('Item updated successfully!');
+    toast.success('Item updated successfully!');
   };
 
   const handleDelete = () => {

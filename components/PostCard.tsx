@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Post, PostVisibility, User, Comment } from '../types';
+import { Post, PostVisibility, User, AppComment } from '../types';
 import { Heart, MessageCircle, Eye, Star, Trash2, Lock, Share2, Check } from 'lucide-react';
 import { useBareBear } from './BareBearContext';
 import { APP_URL } from '../constants';
@@ -15,7 +15,7 @@ interface PostCardProps {
   onDelete?: () => void;
   onProfileClick?: (userId: string) => void;
   isFan?: boolean;
-  comments?: Comment[];
+  comments?: AppComment[];
   users?: User[];
 }
 

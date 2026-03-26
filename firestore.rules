@@ -1,110 +1,128 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: userId (Firebase Auth UID)
+// Fields:
+//   - id: string (required)
+//   - username: string (required)
+//   - displayName: string (required)
+//   - email: string (required, PII)
+//   - avatar: string
+//   - coverImage: string
+//   - bio: string
+//   - isCreator: bool
+//   - isAdmin: bool
+//   - subscribersCount: int
+//   - followingCount: int
+//   - friendIds: list (strings)
+//   - pendingFriendRequestsSent: list (strings)
+//   - pendingFriendRequestsReceived: list (strings)
+//   - likedPostIds: list (strings)
+//   - fwbIds: list (strings)
+//   - pendingFwbRequestsSent: list (strings)
+//   - pendingFwbRequestsReceived: list (strings)
+//   - fwbRequestsResetDate: string (ISO 8601)
+//   - fwbRequestsSentCount: int
+//   - fanIds: list (strings)
+//   - hasPaidStoreFee: bool
+//   - hasPaidStableFee: bool
+//   - hasPaidStableBundle: bool
+//   - profileCustomization: map
+//   - stripeConnectId: string
+//   - purchasedItemIds: list (strings)
+//
+// Collection: profiles
+// Document ID: userId (Firebase Auth UID)
+// Fields: (Public subset of User)
+//   - id: string (required)
+//   - username: string (required)
+//   - displayName: string (required)
+//   - avatar: string
+//   - coverImage: string
+//   - bio: string
+//   - isCreator: bool
+//   - subscribersCount: int
+//   - followingCount: int
+//
+// Collection: posts
+// Document ID: postId
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - content: string (required)
+//   - mediaUrl: string
+//   - mediaType: string (enum: image, video)
+//   - createdAt: string (required, ISO 8601)
+//   - likes: int
+//   - likedBy: list (strings)
+//   - commentsCount: int
+//   - visibility: string (enum: PUBLIC, PRIVATE)
+//   - category: string
+//
+// Collection: messages
+// Document ID: messageId
+// Fields:
+//   - id: string (required)
+//   - senderId: string (required)
+//   - receiverId: string (required)
+//   - text: string (required)
+//   - timestamp: string (required, ISO 8601)
+//   - isRead: bool
+//
+// Collection: storeItems
+// Document ID: itemId
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - title: string (required)
+//   - description: string
+//   - price: number (required)
+//   - thumbnailUrl: string
+//   - mediaUrls: list (strings)
+//   - type: string (enum: video, picture_pack, other)
+//   - createdAt: string (required, ISO 8601)
+//
+// Collection: stableListings
+// Document ID: listingId
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - providerName: string (required)
+//   - providerGender: string (enum: male, female, non-binary, transgender)
+//   - services: string
+//   - city: string
+//   - pricing: string (required)
+//   - contactInfo: string
+//   - avatarUrl: string
+//   - createdAt: string (required, ISO 8601)
+//
+// Collection: notifications
+// Document ID: notificationId
+// Fields:
+//   - id: string (required)
+//   - userId: string (required)
+//   - type: string (required)
+//   - title: string (required)
+//   - message: string (required)
+//   - timestamp: string (required, ISO 8601)
+//   - isRead: bool
+//
+// Collection: comments
+// Document ID: commentId
+// Fields:
+//   - id: string (required)
+//   - postId: string (required)
+//   - userId: string (required)
+//   - text: string (required)
+//   - createdAt: string (required, ISO 8601)
+//
+// ===============================================================
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: userId
-    // Fields:
-    //   - id: string (required)
-    //   - username: string (required)
-    //   - email: string (required)
-    //   - avatar: string
-    //   - coverImage: string
-    //   - bio: string
-    //   - isCreator: boolean
-    //   - isAdmin: boolean
-    //   - subscribersCount: integer
-    //   - followingCount: integer
-    //   - friendIds: array of strings
-    //   - pendingFriendRequestsSent: array of strings
-    //   - pendingFriendRequestsReceived: array of strings
-    //   - fwbIds: array of strings
-    //   - pendingFwbRequestsSent: array of strings
-    //   - pendingFwbRequestsReceived: array of strings
-    //   - fwbRequestsResetDate: string
-    //   - fwbRequestsSentCount: integer
-    //   - fanIds: array of strings
-    //   - hasPaidStoreFee: boolean
-    //   - hasPaidStableFee: boolean
-    //   - hasPaidStableBundle: boolean
-    //   - profileCustomization: map
-    //
-    // Collection: posts
-    // Document ID: postId
-    // Fields:
-    //   - id: string (required)
-    //   - userId: string (required)
-    //   - content: string (required)
-    //   - mediaUrl: string
-    //   - mediaType: string (image/video)
-    //   - createdAt: string (required)
-    //   - likes: integer
-    //   - commentsCount: integer
-    //   - visibility: string (public/private)
-    //   - category: string
-    //
-    // Collection: messages
-    // Document ID: messageId
-    // Fields:
-    //   - id: string (required)
-    //   - senderId: string (required)
-    //   - receiverId: string (required)
-    //   - text: string (required)
-    //   - timestamp: string (required)
-    //   - isRead: boolean
-    //
-    // Collection: storeItems
-    // Document ID: itemId
-    // Fields:
-    //   - id: string (required)
-    //   - userId: string (required)
-    //   - title: string (required)
-    //   - description: string
-    //   - price: number (required)
-    //   - thumbnailUrl: string
-    //   - mediaUrls: array of strings
-    //   - type: string (video/picture_pack/other)
-    //   - createdAt: string
-    //   - videoDuration: number
-    //
-    // Collection: stableListings
-    // Document ID: listingId
-    // Fields:
-    //   - id: string (required)
-    //   - userId: string (required)
-    //   - providerName: string (required)
-    //   - providerGender: string (required)
-    //   - services: string
-    //   - price: number (required)
-    //   - location: string
-    //   - imageUrl: string
-    //   - createdAt: string
-    //
-    // Collection: comments
-    // Document ID: commentId
-    // Fields:
-    //   - id: string (required)
-    //   - postId: string (required)
-    //   - userId: string (required)
-    //   - text: string (required)
-    //   - createdAt: string (required)
-    //
-    // Collection: notifications
-    // Document ID: notificationId
-    // Fields:
-    //   - id: string (required)
-    //   - type: string
-    //   - title: string (required)
-    //   - message: string (required)
-    //   - timestamp: string (required)
-    //   - isRead: boolean
-    //   - userId: string (required)
-    //
-    // ===============================================================
 
     // ===============================================================
     // Helper Functions
@@ -118,14 +136,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.userId;
-    }
-
     function isAdmin() {
-      return isAuthenticated() &&
+      return isAuthenticated() && 
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-          (request.auth.token.email == "jtothek319@gmail.com" && request.auth.token.email_verified == true));
+         (request.auth.token.email == "jtothek319@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function hasRequiredFields(fields) {
@@ -150,105 +164,135 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return hasRequiredFields(['id', 'username', 'email']) &&
-             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
-             data.username is string && data.username.size() > 0 && data.username.size() < 50 &&
-             isValidEmail(data.email);
+             data.id is string && data.id.size() > 0 &&
+             data.username is string && data.username.size() >= 3 && data.username.size() <= 30 &&
+             isValidEmail(data.email) &&
+             (data.avatar == null || (data.avatar is string && data.avatar.size() < 1000)) &&
+             (data.coverImage == null || (data.coverImage is string && data.coverImage.size() < 1000));
+    }
+
+    function isValidProfile(data) {
+      return hasRequiredFields(['id', 'username', 'displayName']) &&
+             data.id is string && data.username is string && data.displayName is string;
     }
 
     function isValidPost(data) {
       return hasRequiredFields(['id', 'userId', 'content', 'createdAt']) &&
              data.id is string && data.userId is string &&
-             data.content is string && data.content.size() < 5000 &&
-             isValidDateString(data.createdAt);
+             data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
+             isValidDateString(data.createdAt) &&
+             (data.visibility in ['PUBLIC', 'PRIVATE']);
     }
 
     function isValidMessage(data) {
       return hasRequiredFields(['id', 'senderId', 'receiverId', 'text', 'timestamp']) &&
              data.id is string && data.senderId is string && data.receiverId is string &&
-             data.text is string && data.text.size() < 2000 &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
              isValidDateString(data.timestamp);
     }
 
     function isValidStoreItem(data) {
-      return hasRequiredFields(['id', 'userId', 'title', 'price', 'type']) &&
+      return hasRequiredFields(['id', 'userId', 'title', 'price', 'createdAt']) &&
              data.id is string && data.userId is string &&
-             data.title is string && data.title.size() < 100 &&
-             data.price is number && data.price >= 0;
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             isValidDateString(data.createdAt);
     }
 
     function isValidStableListing(data) {
-      return hasRequiredFields(['id', 'userId', 'providerName', 'providerGender', 'price']) &&
+      return hasRequiredFields(['id', 'userId', 'providerName', 'pricing', 'createdAt']) &&
              data.id is string && data.userId is string &&
-             data.providerName is string && data.providerName.size() < 100 &&
-             data.providerGender is string && data.price is number && data.price >= 0;
-    }
-
-    function isValidComment(data) {
-      return hasRequiredFields(['id', 'postId', 'userId', 'text', 'createdAt']) &&
-             data.id is string && data.postId is string && data.userId is string &&
-             data.text is string && data.text.size() < 1000 &&
+             data.providerName is string && data.providerName.size() > 0 &&
+             data.pricing is string &&
              isValidDateString(data.createdAt);
     }
 
     function isValidNotification(data) {
       return hasRequiredFields(['id', 'userId', 'title', 'message', 'timestamp']) &&
              data.id is string && data.userId is string &&
-             data.title is string && data.title.size() < 200 &&
-             data.message is string && data.message.size() < 1000 &&
+             data.title is string && data.message is string &&
              isValidDateString(data.timestamp);
     }
 
+    function isValidAppComment(data) {
+      return hasRequiredFields(['id', 'postId', 'userId', 'text', 'createdAt']) &&
+             data.id is string && data.postId is string && data.userId is string &&
+             data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
+             isValidDateString(data.createdAt);
+    }
+
     // ===============================================================
-    // Rules
+    // Collection Rules
     // ===============================================================
 
     match /users/{userId} {
+      // PII Protection: Only owner or admin can read full user doc
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == false || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == resource.data.isAdmin || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /profiles/{userId} {
+      // Profiles are public but contain no PII
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == false || isAdmin());
-      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == resource.data.isAdmin || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidPost(request.resource.data);
-      allow update: if (isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin())) && isValidPost(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId || isAdmin());
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId && isValidMessage(request.resource.data);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.receiverId || isAdmin()) && isValidMessage(request.resource.data);
+      // Allow read if user is sender or receiver. 
+      // For queries, this requires filtering by senderId or receiverId.
+      allow read: if isAuthenticated() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && 
+        request.resource.data.senderId == request.auth.uid && 
+        isValidMessage(request.resource.data);
+      allow update: if isAuthenticated() && 
+        (resource.data.receiverId == request.auth.uid || isAdmin()) && 
+        hasOnlyAllowedFields(resource.data.keys().concat(['isRead']));
       allow delete: if isAdmin();
     }
 
     match /storeItems/{itemId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || isAdmin()) && isValidStoreItem(request.resource.data);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidStoreItem(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidStoreItem(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStoreItem(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /stableListings/{listingId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.auth.uid == request.resource.data.userId || isAdmin()) && isValidStableListing(request.resource.data);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidStableListing(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidStableListing(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStableListing(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && 
+        (request.resource.data.userId == request.auth.uid || isAdmin()) &&
+        isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && hasOnlyAllowedFields(resource.data.keys().concat(['isRead']));
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /comments/{commentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId && isValidComment(request.resource.data);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidComment(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-    }
-
-    match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
-      allow update: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin()) && isValidNotification(request.resource.data);
-      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidAppComment(request.resource.data);
+      allow update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidAppComment(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     // Default deny

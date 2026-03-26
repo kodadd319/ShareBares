@@ -313,7 +313,7 @@ async function startServer() {
         io.to(game.players[0].id).emit("game:updated", updatedGame);
         if (game.players[1].id !== 'bot') {
           io.to(game.players[1].id).emit("game:updated", updatedGame);
-        } else if (updatedGame.status === 'playing' && updatedGame.turn === 'bot') {
+        } else if ((updatedGame.status === 'playing' && updatedGame.turn === 'bot') || (updatedGame.type === 'blackjack' && (updatedGame.status === 'waiting' || updatedGame.status === 'finished') && updatedGame.players.some(p => p.id === 'bot'))) {
           // Automated Bot Turn
           setTimeout(() => {
             let botMove: any = null;

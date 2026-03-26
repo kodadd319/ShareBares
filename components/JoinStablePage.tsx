@@ -7,7 +7,7 @@ import { StableListing } from '../types';
 interface JoinStablePageProps {
   onBack: () => void;
   onGoToMonetization: () => void;
-  onSubmit: (listing: Omit<StableListing, 'id' | 'createdAt'>, postToStore: boolean) => void;
+  onSubmit: (listing: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean) => void;
   hasPaidStableFee: boolean;
 }
 

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, Post } from '../types';
+import { User, Post, AppComment } from '../types';
 import PostCard from './PostCard';
 import AdPlaceholder from './AdPlaceholder';
 import { Star, TrendingUp, Users, ChevronRight, Sparkles } from 'lucide-react';
@@ -9,7 +9,7 @@ interface HomePageProps {
   me: User;
   users: User[];
   posts: Post[];
-  comments: Comment[];
+  comments: AppComment[];
   searchQuery: string;
   onSelectUser: (userId: string) => void;
   onLikePost?: (post: Post) => void;
@@ -127,7 +127,9 @@ const HomePage: React.FC<HomePageProps> = ({
           {feedPosts.length > 0 ? (
             <div className="space-y-6">
               {feedPosts.map((post, index) => {
-                const author = users.find(u => u.id === post.userId)!;
+                const author = users.find(u => u.id === post.userId);
+                if (!author) return null;
+                
                 return (
                   <React.Fragment key={post.id}>
                     <PostCard 
@@ -142,6 +144,18 @@ const HomePage: React.FC<HomePageProps> = ({
                       comments={comments}
                       users={users}
                     />
+                    {index === 0 && (
+                      <div className="w-full rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl hover:border-[#967bb6]/50 transition-all chrome-border bg-black/40">
+                        <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
+                          <img 
+                            src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+                            className="w-full h-auto object-cover" 
+                            alt="Featured Content"
+                            referrerPolicy="no-referrer"
+                          />
+                        </a>
+                      </div>
+                    )}
                     {index === 1 && <AdPlaceholder size="md" />}
                   </React.Fragment>
                 );
@@ -184,7 +198,16 @@ const HomePage: React.FC<HomePageProps> = ({
           </button>
         </div>
 
-        <AdPlaceholder size="lg" />
+        <div className="w-full rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl hover:border-[#967bb6]/50 transition-all chrome-border bg-black/40">
+          <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
+            <img 
+              src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+              className="w-full h-auto object-cover" 
+              alt="Featured Content"
+              referrerPolicy="no-referrer"
+            />
+          </a>
+        </div>
 
         {/* Stats Card */}
         <div className="glass-panel rounded-[2rem] border-[#c0c0c0]/10 p-6 chrome-border bg-gradient-to-br from-[#967bb6]/5 to-transparent">

@@ -82,6 +82,8 @@ export interface User {
     profileVisibility: 'public' | 'private';
     messagingPrivacy: 'everyone' | 'following' | 'none';
   };
+  createdAt?: string;
+  lastActive?: string;
 }
 
 export interface Post {
@@ -98,7 +100,7 @@ export interface Post {
   category?: string;
 }
 
-export interface Comment {
+export interface AppComment {
   id: string;
   postId: string;
   userId: string;

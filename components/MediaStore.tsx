@@ -12,7 +12,7 @@ interface MediaStoreProps {
   purchasedItemIds?: string[];
   onBack: () => void;
   onPurchase?: (item: StoreItem) => void;
-  onDeleteItem?: (item: StoreItem) => void;
+  onDeleteItem?: (itemId: string) => void;
   onAddItem?: (item: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onProfileClick?: (userId: string) => void;
 }
@@ -225,7 +225,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                       customization={customization} 
                       onPurchase={() => onPurchase?.(item)} 
-                      onDelete={() => onDeleteItem?.(item)} 
+                      onDelete={() => onDeleteItem?.(item.id)} 
                     />
                     {index === 3 && customization.layout === 'grid' && <AdPlaceholder size="md" className="sm:col-span-2 lg:col-span-1" />}
                   </React.Fragment>
@@ -264,7 +264,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                     customization={customization} 
                     onPurchase={() => onPurchase?.(item)} 
-                    onDelete={() => onDeleteItem?.(item)} 
+                    onDelete={() => onDeleteItem?.(item.id)} 
                   />
                 ))}
               </div>
@@ -301,7 +301,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                     customization={customization} 
                     onPurchase={() => onPurchase?.(item)} 
-                    onDelete={() => onDeleteItem?.(item)} 
+                    onDelete={() => onDeleteItem?.(item.id)} 
                   />
                 ))}
               </div>

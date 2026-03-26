@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import * as PeerNamespace from 'simple-peer';
@@ -22,7 +22,8 @@ import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
 import { BareBearProvider, useBareBear } from './components/BareBearContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS } from './constants';
-import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, Comment } from './types';
+import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
+import { Toaster, toast } from 'sonner';
 import { 
   Plus, Image as ImageIcon, Send, X, Wand2, MessageSquare, 
   ShieldAlert, AlertCircle, Camera, Check, ArrowLeft, Star, Heart, ShieldCheck,
@@ -35,14 +36,15 @@ import {
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
 import { 
   auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
-  onAuthStateChanged, loginWithGoogle, logout as firebaseLogout, handleFirestoreError, OperationType, or 
+  onAuthStateChanged, loginWithGoogle, logout as firebaseLogout, handleFirestoreError, OperationType, or,
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
 } from './firebase';
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
-    }, 5000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -831,7 +833,7 @@ const SettingsPage: React.FC<{
   );
 };
 
-const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => void }> = ({ onComplete }) => {
+const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile: Partial<User>) => void }> = ({ initialEmail, onComplete }) => {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
@@ -841,7 +843,7 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
   const [location, setLocation] = useState('');
   const [occupation, setOccupation] = useState('');
   const [tagline, setTagline] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(initialEmail);
   const [phone, setPhone] = useState('');
   const [twitter, setTwitter] = useState('');
   const [instagram, setInstagram] = useState('');
@@ -907,7 +909,7 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
               className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
               onClick={() => coverInputRef.current?.click()}
             >
-              <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+              <img src={cover || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
               <input 
                 type="file" 
                 ref={coverInputRef} 
@@ -927,7 +929,7 @@ const ProfileCreationPage: React.FC<{ onComplete: (profile: Partial<User>) => vo
                 className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border cursor-pointer"
                 onClick={() => avatarInputRef.current?.click()}
               >
-                <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
+                <img src={avatar || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Avatar" />
                 <input 
                   type="file" 
                   ref={avatarInputRef} 
@@ -1661,11 +1663,70 @@ const usePWA = () => {
   return { showPrompt, install, dismiss };
 };
 
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="fixed inset-0 z-[2000] bg-black flex flex-col items-center justify-center p-6 text-center">
+          <div className="glass-panel p-8 rounded-[2.5rem] border-red-500/30 bg-red-500/5 max-w-md w-full chrome-border">
+            <ShieldAlert size={64} className="text-red-500 mx-auto mb-6" />
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Something went wrong</h2>
+            <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+              The application encountered an unexpected error. This might be due to a connection issue or a temporary glitch.
+            </p>
+            <div className="bg-black/40 rounded-2xl p-4 mb-8 text-left overflow-auto max-h-32 border border-white/5">
+              <p className="text-red-400 font-mono text-[10px] whitespace-pre-wrap">
+                {this.state.error?.message || "Unknown error"}
+              </p>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-gradient-to-r from-red-500 to-red-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-red-500/20 transition-all hover:scale-105 active:scale-95"
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const AppContent: React.FC = () => {
   const { showPrompt, install, dismiss } = usePWA();
   const [showSplash, setShowSplash] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isVerified, setIsVerified] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('isVerified') === 'true';
+    }
+    return false;
+  });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
@@ -1676,7 +1737,7 @@ const AppContent: React.FC = () => {
   const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stableListings, setStableListings] = useState<StableListing[]>([]);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<AppComment[]>([]);
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostVisibility, setNewPostVisibility] = useState<PostVisibility>(PostVisibility.PUBLIC);
   const [newPostMedia, setNewPostMedia] = useState<File | null>(null);
@@ -1687,7 +1748,7 @@ const AppContent: React.FC = () => {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentType, setPaymentType] = useState<'store' | 'stable' | 'item'>('store');
   const [stableBundleSelected, setStableBundleSelected] = useState(false);
-  const [pendingStableListing, setPendingStableListing] = useState<Omit<StableListing, 'id' | 'createdAt'> | null>(null);
+  const [pendingStableListing, setPendingStableListing] = useState<Omit<StableListing, 'id' | 'createdAt' | 'userId'> | null>(null);
   const [pendingStoreItem, setPendingStoreItem] = useState<StoreItem | null>(null);
   const [isJadeTyping, setIsJadeTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1719,7 +1780,7 @@ const AppContent: React.FC = () => {
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
 
   const addNotification = useCallback(async (type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
-    if (!currentUserId) return;
+    if (!currentUserId || !auth.currentUser) return;
     
     const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newNotification: AppNotification = {
@@ -1768,8 +1829,21 @@ const AppContent: React.FC = () => {
     isAdmin: isAdminUser,
     hasPaidStoreFee: meRaw.hasPaidStoreFee || isAdminUser,
     hasPaidStableFee: meRaw.hasPaidStableFee || isAdminUser,
-    hasPaidStableBundle: meRaw.hasPaidStableBundle || isAdminUser
-  } : MOCK_USERS[0]; // Fallback to first mock user while loading
+    hasPaidStableBundle: meRaw.hasPaidStableBundle || isAdminUser,
+    friendIds: meRaw.friendIds || [],
+    pendingFriendRequestsSent: meRaw.pendingFriendRequestsSent || [],
+    pendingFriendRequestsReceived: meRaw.pendingFriendRequestsReceived || [],
+    likedPostIds: meRaw.likedPostIds || [],
+    fwbIds: meRaw.fwbIds || [],
+    pendingFwbRequestsSent: meRaw.pendingFwbRequestsSent || [],
+    pendingFwbRequestsReceived: meRaw.pendingFwbRequestsReceived || [],
+    fanIds: meRaw.fanIds || [],
+    photos: meRaw.photos || [],
+    storeUploads: meRaw.storeUploads || [],
+    blockedUserIds: meRaw.blockedUserIds || [],
+    purchasedItemIds: meRaw.purchasedItemIds || [],
+    settings: meRaw.settings || MOCK_USERS[0].settings
+  } : MOCK_USERS[0];
 
   const currentProfileCustomization = (activeTab === 'profile' || activeTab === 'custom-profile') 
     ? me.profileCustomization 
@@ -1916,101 +1990,161 @@ const AppContent: React.FC = () => {
 
   // Authentication and Real-time Listeners
   useEffect(() => {
+    setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setIsLoggedIn(true);
-        setCurrentUserId(user.uid);
+      console.log('Auth state changed:', user?.email);
+      try {
+        if (user) {
+          setCurrentUserId(user.uid);
+          setIsLoggedIn(true);
 
-        // Check if user profile exists in Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-          // Check if there's a mock user with this email
-          const mockUser = MOCK_USERS.find(u => u.email === user.email);
-          
-          // Create new user profile
-          const newUser: User = {
-            id: user.uid,
-            username: mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`,
-            displayName: mockUser?.displayName || user.displayName || 'New User',
-            email: user.email || '',
-            avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
-            coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
-            bio: mockUser?.bio || 'Welcome to my profile!',
-            isCreator: mockUser?.isCreator || false,
-            isAdmin: user.email === 'jtothek319@gmail.com' || mockUser?.isAdmin || false,
-            subscribersCount: mockUser?.subscribersCount || 0,
-            followingCount: mockUser?.followingCount || 0,
-            friendIds: mockUser?.friendIds || [],
-            pendingFriendRequestsSent: [],
-            pendingFriendRequestsReceived: [],
-            likedPostIds: [],
-            fwbIds: [],
-            pendingFwbRequestsSent: [],
-            pendingFwbRequestsReceived: [],
-            fwbRequestsResetDate: new Date().toISOString(),
-            fwbRequestsSentCount: 0,
-            fanIds: [],
-            profileCustomization: mockUser?.profileCustomization || {},
-            photos: mockUser?.photos || [],
-            storeUploads: mockUser?.storeUploads || [],
-            blockedUserIds: [],
-            settings: mockUser?.settings || {
-              pushNotifications: true,
-              emailNotifications: true,
-              profileVisibility: 'public',
-              messagingPrivacy: 'everyone'
-            }
-          };
-          await setDoc(doc(db, 'users', user.uid), newUser);
-        }
-
-        // Ensure Jade exists
-        const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
-        if (!jadeDoc.exists()) {
-          const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
-          await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
-        }
-
-        // Seed other mock data if database is empty
-        const seedData = async () => {
+          // Check if user profile exists in Firestore
           try {
-            const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
-            if (usersSnap.size <= 2) { // Only Jade and current user
-              for (const mUser of MOCK_USERS) {
-                if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
-                  await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              setHasCreatedProfile(true);
+              const userData = userDoc.data() as User;
+              // Sync public profile
+              const profileData = {
+                id: userData.id,
+                username: userData.username,
+                displayName: userData.displayName,
+                avatar: userData.avatar || null,
+                coverImage: userData.coverImage || null,
+                bio: userData.bio || null,
+                isCreator: userData.isCreator || false,
+                subscribersCount: userData.subscribersCount || 0,
+                followingCount: userData.followingCount || 0
+              };
+              await setDoc(doc(db, 'profiles', user.uid), profileData);
+            } else {
+              // Create new user profile if it doesn't exist
+              const mockUser = MOCK_USERS.find(u => u.email === user.email);
+              const newUser: User = {
+                id: user.uid,
+                username: mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`,
+                displayName: mockUser?.displayName || user.displayName || 'New User',
+                email: user.email || '',
+                avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+                coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
+                bio: mockUser?.bio || 'Welcome to my profile!',
+                isCreator: mockUser?.isCreator || false,
+                isAdmin: user.email === 'jtothek319@gmail.com' || mockUser?.isAdmin || false,
+                subscribersCount: mockUser?.subscribersCount || 0,
+                followingCount: mockUser?.followingCount || 0,
+                friendIds: mockUser?.friendIds || [],
+                pendingFriendRequestsSent: [],
+                pendingFriendRequestsReceived: [],
+                likedPostIds: [],
+                fwbIds: [],
+                pendingFwbRequestsSent: [],
+                pendingFwbRequestsReceived: [],
+                fwbRequestsResetDate: new Date().toISOString(),
+                fwbRequestsSentCount: 0,
+                fanIds: [],
+                profileCustomization: mockUser?.profileCustomization || {},
+                photos: mockUser?.photos || [],
+                storeUploads: mockUser?.storeUploads || [],
+                blockedUserIds: [],
+                settings: mockUser?.settings || {
+                  pushNotifications: true,
+                  emailNotifications: true,
+                  profileVisibility: 'public',
+                  messagingPrivacy: 'everyone'
+                },
+                stripeConnectId: '',
+                purchasedItemIds: []
+              };
+              await setDoc(doc(db, 'users', user.uid), newUser);
+              
+              // Create public profile
+              const profileData = {
+                id: newUser.id,
+                username: newUser.username,
+                displayName: newUser.displayName,
+                avatar: newUser.avatar || null,
+                coverImage: newUser.coverImage || null,
+                bio: newUser.bio || null,
+                isCreator: newUser.isCreator || false,
+                subscribersCount: newUser.subscribersCount || 0,
+                followingCount: newUser.followingCount || 0
+              };
+              await setDoc(doc(db, 'profiles', user.uid), profileData);
+              
+              setHasCreatedProfile(true);
+            }
+          } catch (profileError) {
+            console.error('Error checking/creating user profile:', profileError);
+            handleFirestoreError(profileError, OperationType.GET, `users/${user.uid}`);
+            setHasCreatedProfile(false);
+          }
+
+          // Seed other mock data if database is empty (non-blocking)
+          const seedData = async () => {
+            try {
+              // Ensure Jade exists
+              try {
+                const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
+                if (!jadeDoc.exists()) {
+                  const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
+                  await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
+                }
+              } catch (jadeErr) {
+                console.warn('Could not ensure Jade exists:', jadeErr);
+              }
+
+              const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
+              if (usersSnap.size <= 2) {
+                for (const mUser of MOCK_USERS) {
+                  if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
+                    try {
+                      await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
+                    } catch (e) {}
+                  }
                 }
               }
-            }
 
-            const postsSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
-            if (postsSnap.empty) {
-              for (const post of MOCK_POSTS) {
-                await setDoc(doc(db, 'posts', post.id), { ...post, likedBy: [] });
+              const postsSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
+              if (postsSnap.empty) {
+                for (const post of MOCK_POSTS) {
+                  try {
+                    await setDoc(doc(db, 'posts', post.id), { ...post, likedBy: [] });
+                  } catch (e) {}
+                }
               }
-            }
 
-            const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
-            if (storeSnap.empty) {
-              for (const item of MOCK_STORE_ITEMS) {
-                await setDoc(doc(db, 'storeItems', item.id), item);
+              const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
+              if (storeSnap.empty) {
+                for (const item of MOCK_STORE_ITEMS) {
+                  try {
+                    await setDoc(doc(db, 'storeItems', item.id), item);
+                  } catch (e) {}
+                }
               }
-            }
 
-            const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
-            if (stableSnap.empty) {
-              for (const listing of MOCK_STABLE_LISTINGS) {
-                await setDoc(doc(db, 'stableListings', listing.id), listing);
+              const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
+              if (stableSnap.empty) {
+                for (const listing of MOCK_STABLE_LISTINGS) {
+                  try {
+                    await setDoc(doc(db, 'stableListings', listing.id), listing);
+                  } catch (e) {}
+                }
               }
+            } catch (err) {
+              console.error('Seeding failed:', err);
             }
-          } catch (err) {
-            console.error('Seeding failed:', err);
-          }
-        };
-        seedData();
-      } else {
-        setIsLoggedIn(false);
-        setCurrentUserId('');
+          };
+          seedData();
+        } else {
+          setIsLoggedIn(false);
+          setCurrentUserId('');
+          setHasCreatedProfile(false);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setIsAuthReady(true);
       }
     });
 
@@ -2021,7 +2155,7 @@ const AppContent: React.FC = () => {
 
   // Real-time Listeners
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !auth.currentUser) {
       setUsers([]);
       setPosts([]);
       setStoreItems([]);
@@ -2051,7 +2185,7 @@ const AppContent: React.FC = () => {
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'stableListings'));
 
     const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
-      const updatedComments = snapshot.docs.map(doc => doc.data() as Comment);
+      const updatedComments = snapshot.docs.map(doc => doc.data() as AppComment);
       setComments(updatedComments);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
 
@@ -2066,7 +2200,7 @@ const AppContent: React.FC = () => {
 
   // Notifications Listener
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId || !auth.currentUser) return;
 
     const unsubNotifs = onSnapshot(
       query(collection(db, 'notifications'), where('userId', '==', currentUserId), orderBy('timestamp', 'desc')),
@@ -2082,7 +2216,7 @@ const AppContent: React.FC = () => {
 
   // Messages Listener
   useEffect(() => {
-    if (!currentUserId) {
+    if (!currentUserId || !auth.currentUser) {
       setChatMessages({});
       return;
     }
@@ -2120,7 +2254,7 @@ const AppContent: React.FC = () => {
 
   // Jade AI Activity Loop
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || !auth.currentUser) return;
 
     const jadeActivity = setInterval(async () => {
       const roll = Math.random();
@@ -2320,23 +2454,130 @@ const AppContent: React.FC = () => {
     }
   }, [activeTab, currentUserId]);
 
-  const handleLogin = async (email: string, password: string) => {
+  const handleLogin = async (emailOrUsername: string, password: string) => {
     try {
-      await loginWithGoogle();
+      if (emailOrUsername && password) {
+        let loginEmail = emailOrUsername;
+        if (!emailOrUsername.includes('@')) {
+          // Try to find user by username
+          const usersRef = collection(db, 'users');
+          const q = query(usersRef, where('username', '==', emailOrUsername), limit(1));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            loginEmail = querySnapshot.docs[0].data().email;
+          } else {
+            throw { code: 'auth/user-not-found' };
+          }
+        }
+        await signInWithEmailAndPassword(auth, loginEmail, password);
+      } else {
+        await loginWithGoogle();
+      }
       setActiveTab('feed');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
-      addNotification(NotificationType.SYSTEM, 'Login Failed', 'Please try again or use Google Login.');
+      if (error.code === 'auth/operation-not-allowed') {
+        const helpMsg = 'Email/Password login is currently disabled in your Firebase Console. As the project owner, you must enable it to allow this login method.';
+        addNotification(NotificationType.SYSTEM, 'Action Required', helpMsg);
+        setConfirmAction({
+          message: helpMsg + '\n\nWould you like to open your Firebase Console to enable "Email/Password" now?',
+          onConfirm: () => window.open('https://console.firebase.google.com/project/gen-lang-client-0036974014/authentication/providers', '_blank')
+        });
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        addNotification(NotificationType.SYSTEM, 'Login Failed', 'Invalid email or password. Please check your credentials and try again.');
+        toast.error('Invalid email or password. Please try again.');
+      } else {
+        addNotification(NotificationType.SYSTEM, 'Login Failed', 'Please try again or use Google Login.');
+        toast.error('Login failed. Please check your credentials.');
+      }
     }
   };
 
   const handleRegister = async (displayName: string, username: string, email: string, password: string) => {
     try {
-      await loginWithGoogle();
+      if (email && password) {
+        // Check if username is already taken
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('username', '==', username), limit(1));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          toast.error('Username is already taken. Please choose another one.');
+          return;
+        }
+
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        if (result.user) {
+          const newUser: User = {
+            id: result.user.uid,
+            username: username,
+            displayName: displayName,
+            email: email,
+            avatar: `https://picsum.photos/seed/${result.user.uid}/200`,
+            coverImage: `https://picsum.photos/seed/${result.user.uid}_cover/800/300`,
+            bio: 'Welcome to my profile!',
+            isCreator: false,
+            isAdmin: email === 'jtothek319@gmail.com',
+            subscribersCount: 0,
+            followingCount: 0,
+            friendIds: [],
+            pendingFriendRequestsSent: [],
+            pendingFriendRequestsReceived: [],
+            likedPostIds: [],
+            fwbIds: [],
+            pendingFwbRequestsSent: [],
+            pendingFwbRequestsReceived: [],
+            fwbRequestsResetDate: new Date().toISOString(),
+            fwbRequestsSentCount: 0,
+            fanIds: [],
+            profileCustomization: {},
+            photos: [],
+            storeUploads: [],
+            blockedUserIds: [],
+            settings: {
+              pushNotifications: true,
+              emailNotifications: true,
+              profileVisibility: 'public',
+              messagingPrivacy: 'everyone'
+            },
+            createdAt: new Date().toISOString(),
+            lastActive: new Date().toISOString()
+          };
+          await setDoc(doc(db, 'users', result.user.uid), newUser);
+          await setDoc(doc(db, 'profiles', result.user.uid), {
+            id: newUser.id,
+            username: newUser.username,
+            displayName: newUser.displayName,
+            avatar: newUser.avatar,
+            coverImage: newUser.coverImage,
+            bio: newUser.bio,
+            isCreator: newUser.isCreator,
+            subscribersCount: 0,
+            followingCount: 0
+          });
+        }
+      } else {
+        await loginWithGoogle();
+      }
       setActiveTab('profile-edit');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration failed:', error);
-      addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Please try again or use Google Login.');
+      if (error.code === 'auth/operation-not-allowed') {
+        const helpMsg = 'Email/Password registration is currently disabled in your Firebase Console. As the project owner, you must enable it to allow this login method.';
+        addNotification(NotificationType.SYSTEM, 'Action Required', helpMsg);
+        setConfirmAction({
+          message: helpMsg + '\n\nWould you like to open your Firebase Console to enable "Email/Password" now?',
+          onConfirm: () => window.open('https://console.firebase.google.com/project/gen-lang-client-0036974014/authentication/providers', '_blank')
+        });
+      } else if (error.code === 'auth/email-already-in-use') {
+        addNotification(NotificationType.SYSTEM, 'Registration Failed', 'This email is already in use. Please try logging in instead.');
+        toast.error('Email already in use. Please try logging in.');
+      } else if (error.code === 'auth/weak-password') {
+        addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Password is too weak. Please use a stronger password.');
+        toast.error('Password is too weak.');
+      } else {
+        addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Please try again or use Google Login.');
+        toast.error('Registration failed. Please try again.');
+      }
     }
   };
 
@@ -2357,6 +2598,7 @@ const AppContent: React.FC = () => {
       setActiveTab('feed');
       setViewingUserId(null);
       setIsVerified(false);
+      sessionStorage.removeItem('isVerified');
       setShowSplash(true);
     } catch (error) {
       console.error('Logout failed:', error);
@@ -2549,7 +2791,7 @@ const AppContent: React.FC = () => {
 
     try {
       const commentId = `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const newComment: Comment = {
+      const newComment: AppComment = {
         id: commentId,
         postId: post.id,
         userId: commenterId,
@@ -2927,7 +3169,7 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt'>, postToStore: boolean) => {
+  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean) => {
     if (!me.hasPaidStableFee && !me.isAdmin) {
       setPendingStableListing(listingData);
       setStableBundleSelected(postToStore);
@@ -3239,14 +3481,14 @@ const AppContent: React.FC = () => {
       {/* Header Section: Cover & Avatar Integration */}
       <div className="relative mb-24">
         <div className="h-[350px] md:h-[450px] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl">
-          <img src={user.coverImage || undefined} className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" alt="" />
+          <img src={user.coverImage || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" alt="" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
           
           {/* Stats Overlay on Cover */}
           <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex items-end space-x-6">
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] border-4 border-black overflow-hidden shadow-2xl bg-black chrome-border shrink-0 relative z-10">
-                <img src={user.avatar || undefined} className="w-full h-full object-cover" alt="" />
+                <img src={user.avatar || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="" />
               </div>
               <div className="pb-2">
                 <div className="flex items-center space-x-3 mb-2">
@@ -3654,7 +3896,7 @@ const AppContent: React.FC = () => {
                 {user.photos.length > 0 ? (
                   user.photos.map(photo => (
                     <div key={photo.id} className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/5 group cursor-pointer relative chrome-border shadow-2xl">
-                      <img src={photo.url} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                      <img src={photo.url} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                         <div className="flex items-center space-x-2 text-white/60">
                           <ImageIcon size={16} />
@@ -3683,8 +3925,13 @@ const AppContent: React.FC = () => {
     return null;
   };
 
-  if (showSplash) return <SplashScreen onComplete={() => setShowSplash(false)} />;
-  if (!isVerified) return <AgeVerificationGate onVerify={() => setIsVerified(true)} />;
+  if (showSplash || !isAuthReady) return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  if (!isVerified) return (
+    <AgeVerificationGate onVerify={() => {
+      setIsVerified(true);
+      sessionStorage.setItem('isVerified', 'true');
+    }} />
+  );
   if (!isLoggedIn) return (
     <LoginPage 
       onLogin={handleLogin} 
@@ -3692,7 +3939,12 @@ const AppContent: React.FC = () => {
       onSocialLogin={handleSocialLogin}
     />
   );
-  if (!hasCreatedProfile) return <ProfileCreationPage onComplete={handleProfileUpdate} />;
+  if (!hasCreatedProfile) return (
+    <ProfileCreationPage 
+      initialEmail={auth.currentUser?.email || ''} 
+      onComplete={handleProfileUpdate} 
+    />
+  );
   if (isPaying) return (
     <PaymentPage 
       amount={
@@ -3791,7 +4043,7 @@ const AppContent: React.FC = () => {
           <SettingsPage 
             me={me} 
             onEditProfile={() => setActiveTab('profile-edit')} 
-            onLogout={() => setIsLoggedIn(false)}
+            onLogout={handleLogout}
             onUpdateUser={handleUpdateUser}
             setConfirmAction={setConfirmAction}
           />
@@ -3998,7 +4250,7 @@ const AppContent: React.FC = () => {
                   {newPostMedia?.type.startsWith('video') ? (
                     <video src={newPostMediaPreview} className="w-full h-full object-cover" controls />
                   ) : (
-                    <img src={newPostMediaPreview} className="w-full h-full object-cover" alt="Preview" />
+                    <img src={newPostMediaPreview} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Preview" />
                   )}
                   <button 
                     onClick={() => {
@@ -4106,9 +4358,12 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <BareBearProvider>
-      <AppContent />
-    </BareBearProvider>
+    <ErrorBoundary>
+      <BareBearProvider>
+        <AppContent />
+        <Toaster position="top-center" richColors theme="dark" />
+      </BareBearProvider>
+    </ErrorBoundary>
   );
 };
 

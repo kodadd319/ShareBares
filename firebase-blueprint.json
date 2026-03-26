@@ -29,7 +29,9 @@
         "hasPaidStoreFee": { "type": "boolean" },
         "hasPaidStableFee": { "type": "boolean" },
         "hasPaidStableBundle": { "type": "boolean" },
-        "profileCustomization": { "type": "object" }
+        "profileCustomization": { "type": "object" },
+        "stripeConnectId": { "type": "string" },
+        "purchasedItemIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "username", "email"]
     },
@@ -47,7 +49,7 @@
         "likes": { "type": "integer" },
         "likedBy": { "type": "array", "items": { "type": "string" } },
         "commentsCount": { "type": "integer" },
-        "visibility": { "type": "string", "enum": ["public", "private"] },
+        "visibility": { "type": "string", "enum": ["PUBLIC", "PRIVATE"] },
         "category": { "type": "string" }
       },
       "required": ["id", "userId", "content", "createdAt"]
@@ -72,15 +74,16 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "creatorId": { "type": "string" },
-        "name": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
         "description": { "type": "string" },
         "price": { "type": "number" },
-        "imageUrl": { "type": "string" },
-        "type": { "type": "string", "enum": ["image", "video", "set"] },
-        "isExclusive": { "type": "boolean" }
+        "thumbnailUrl": { "type": "string" },
+        "mediaUrls": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "string", "enum": ["video", "picture_pack", "other"] },
+        "createdAt": { "type": "string" }
       },
-      "required": ["id", "creatorId", "name", "price"]
+      "required": ["id", "userId", "title", "price", "createdAt"]
     },
     "StableListing": {
       "title": "StableListing",
@@ -89,15 +92,16 @@
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
-        "name": { "type": "string" },
-        "breed": { "type": "string" },
-        "age": { "type": "integer" },
-        "price": { "type": "number" },
-        "description": { "type": "string" },
-        "imageUrl": { "type": "string" },
+        "providerName": { "type": "string" },
+        "providerGender": { "type": "string", "enum": ["male", "female", "non-binary", "transgender"] },
+        "services": { "type": "string" },
+        "city": { "type": "string" },
+        "pricing": { "type": "string" },
+        "contactInfo": { "type": "string" },
+        "avatarUrl": { "type": "string" },
         "createdAt": { "type": "string" }
       },
-      "required": ["id", "userId", "name", "breed", "price"]
+      "required": ["id", "userId", "providerName", "pricing", "createdAt"]
     },
     "Notification": {
       "title": "Notification",

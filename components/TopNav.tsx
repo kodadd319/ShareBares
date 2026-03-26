@@ -60,11 +60,11 @@ const TopNav: React.FC<TopNavProps> = ({
       ).slice(0, 5)
     : [];
 
-  const filteredStores = searchQuery.length > 1
-    ? users.filter(u => 
-        u.displayName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        u.username.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 3) // Assuming each user has a store
+  const filteredStoreItems = searchQuery.length > 1
+    ? storeItems.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      ).slice(0, 3)
     : [];
 
   const filteredStable = searchQuery.length > 1
@@ -151,27 +151,31 @@ const TopNav: React.FC<TopNavProps> = ({
                   </div>
                 )}
 
-                {filteredStores.length > 0 && (
+                {filteredStoreItems.length > 0 && (
                   <div className="mb-4">
-                    <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Stores</div>
-                    {filteredStores.map(u => (
+                    <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Store Items</div>
+                    {filteredStoreItems.map(item => (
                       <button
-                        key={`store-${u.id}`}
+                        key={`store-item-${item.id}`}
                         onClick={() => {
-                          // Assuming navigation to store means viewing their profile and then store tab or a dedicated store view
-                          // For now, let's navigate to profile and we can potentially set a tab if we had that capability
-                          navigateToProfile(u.id);
+                          // Find the user who owns this item
+                          const owner = users.find(u => u.id === item.userId);
+                          if (owner) navigateToProfile(owner.id);
                           setShowResults(false);
                           setSearchQuery('');
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-emerald-500/10 transition-all text-left"
                       >
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                          <Briefcase size={14} className="text-emerald-500" />
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center overflow-hidden">
+                          {item.thumbnailUrl ? (
+                            <img src={item.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                          ) : (
+                            <Briefcase size={14} className="text-emerald-500" />
+                          )}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white">{u.displayName}'s Store</p>
-                          <p className="text-[10px] text-slate-500">Premium Content</p>
+                          <p className="text-xs font-bold text-white truncate max-w-[200px]">{item.title}</p>
+                          <p className="text-[10px] text-slate-500">${item.price}</p>
                         </div>
                       </button>
                     ))}
@@ -203,7 +207,7 @@ const TopNav: React.FC<TopNavProps> = ({
                   </div>
                 )}
 
-                {filteredUsers.length === 0 && filteredStores.length === 0 && filteredStable.length === 0 && (
+                {filteredUsers.length === 0 && filteredStoreItems.length === 0 && filteredStable.length === 0 && (
                   <div className="px-4 py-8 text-center">
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No results found</p>
                   </div>
@@ -498,83 +502,97 @@ const TopNav: React.FC<TopNavProps> = ({
                   className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-10 pr-4 text-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6]"
                 />
 
-                {/* Mobile Search Results */}
-                {showResults && searchQuery.length > 1 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-3 overflow-hidden chrome-border z-50 max-h-[50vh] overflow-y-auto">
-                    {filteredUsers.length > 0 && (
-                      <div className="mb-4">
-                        <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-[#967bb6] mb-1">Profiles</div>
-                        {filteredUsers.map(u => (
-                          <button
-                            key={`mob-u-${u.id}`}
-                            onClick={() => {
-                              navigateToProfile(u.id);
-                              setShowResults(false);
-                              setSearchQuery('');
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
-                          >
-                            <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                            <div>
-                              <p className="text-xs font-bold text-white">{u.displayName}</p>
-                              <p className="text-[10px] text-slate-500">@{u.username}</p>
-                            </div>
-                          </button>
-                        ))}
+                    {/* Mobile Search Results */}
+                    {showResults && searchQuery.length > 1 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-3 overflow-hidden chrome-border z-50 max-h-[50vh] overflow-y-auto">
+                        {filteredUsers.length > 0 && (
+                          <div className="mb-4">
+                            <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-[#967bb6] mb-1">Profiles</div>
+                            {filteredUsers.map(u => (
+                              <button
+                                key={`mob-u-${u.id}`}
+                                onClick={() => {
+                                  navigateToProfile(u.id);
+                                  setShowResults(false);
+                                  setSearchQuery('');
+                                  setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
+                              >
+                                <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                                <div>
+                                  <p className="text-xs font-bold text-white">{u.displayName}</p>
+                                  <p className="text-[10px] text-slate-500">@{u.username}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {filteredStoreItems.length > 0 && (
+                          <div className="mb-4">
+                            <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Store Items</div>
+                            {filteredStoreItems.map(item => (
+                              <button
+                                key={`mob-store-item-${item.id}`}
+                                onClick={() => {
+                                  const owner = users.find(u => u.id === item.userId);
+                                  if (owner) navigateToProfile(owner.id);
+                                  setShowResults(false);
+                                  setSearchQuery('');
+                                  setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-emerald-500/10 transition-all text-left"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center overflow-hidden">
+                                  {item.thumbnailUrl ? (
+                                    <img src={item.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                                  ) : (
+                                    <Briefcase size={14} className="text-emerald-500" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-white truncate max-w-[200px]">{item.title}</p>
+                                  <p className="text-[10px] text-slate-500">${item.price}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {filteredStable.length > 0 && (
+                          <div className="mb-2">
+                            <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">The Stable</div>
+                            {filteredStable.map(l => (
+                              <button
+                                key={`mob-stable-${l.id}`}
+                                onClick={() => {
+                                  setActiveTab('stable');
+                                  setShowResults(false);
+                                  setSearchQuery('');
+                                  setIsMobileMenuOpen(false);
+                                }}
+                                className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-amber-500/10 transition-all text-left"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                                  <Star size={14} className="text-amber-500" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-white">{l.providerName}</p>
+                                  <p className="text-[10px] text-slate-500 truncate max-w-[200px]">{l.city}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {filteredUsers.length === 0 && filteredStoreItems.length === 0 && filteredStable.length === 0 && (
+                          <div className="px-4 py-8 text-center">
+                            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No results found</p>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {/* ... other results ... */}
-                    {filteredStores.length > 0 && (
-                      <div className="mb-4">
-                        <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-1">Stores</div>
-                        {filteredStores.map(u => (
-                          <button
-                            key={`mob-store-${u.id}`}
-                            onClick={() => {
-                              navigateToProfile(u.id);
-                              setShowResults(false);
-                              setSearchQuery('');
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-emerald-500/10 transition-all text-left"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                              <Briefcase size={14} className="text-emerald-500" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-white">{u.displayName}'s Store</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {filteredStable.length > 0 && (
-                      <div className="mb-2">
-                        <div className="px-4 py-1 text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">The Stable</div>
-                        {filteredStable.map(l => (
-                          <button
-                            key={`mob-stable-${l.id}`}
-                            onClick={() => {
-                              setActiveTab('stable');
-                              setShowResults(false);
-                              setSearchQuery('');
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-amber-500/10 transition-all text-left"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                              <Star size={14} className="text-amber-500" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-white">{l.title}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
               <div className="grid grid-cols-1 gap-2">
                 {navItems.map((item) => {

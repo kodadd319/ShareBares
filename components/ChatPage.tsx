@@ -315,8 +315,8 @@ const ChatPage: React.FC<ChatPageProps> = ({
             <div className="p-4 md:p-8 pt-0 sticky bottom-0 bg-black/40 backdrop-blur-xl z-20">
               <div className="relative glass-panel rounded-[2rem] p-1 md:p-2 border-[#c0c0c0]/10 chrome-border flex items-center space-x-1 md:space-x-2 shadow-2xl">
                 <div className="flex items-center px-1 md:px-2 space-x-1">
-                  <button className="p-2 md:p-3 text-slate-500 hover:text-[#967bb6] transition-all"><ImageIcon size={18} md:size={20} /></button>
-                  <button className="p-2 md:p-3 text-slate-500 hover:text-[#967bb6] transition-all hidden sm:block"><Smile size={18} md:size={20} /></button>
+                  <button className="p-2 md:p-3 text-slate-500 hover:text-[#967bb6] transition-all"><ImageIcon size={20} /></button>
+                  <button className="p-2 md:p-3 text-slate-500 hover:text-[#967bb6] transition-all hidden sm:block"><Smile size={20} /></button>
                 </div>
                 
                 <input 
@@ -333,7 +333,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   disabled={!messageInput.trim()}
                   className="p-3 md:p-4 bg-gradient-to-tr from-[#967bb6] to-[#6b46c1] rounded-2xl text-white hover:brightness-110 transition-all shadow-xl shadow-[#967bb6]/30 disabled:opacity-50 disabled:grayscale"
                 >
-                  <Send size={18} md:size={20} />
+                  <Send size={20} />
                 </button>
               </div>
             </div>
@@ -341,12 +341,24 @@ const ChatPage: React.FC<ChatPageProps> = ({
         ) : (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-12">
             <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-[#967bb6]/20 to-transparent rounded-[2rem] md:rounded-[3rem] flex items-center justify-center mb-8 border border-[#967bb6]/10">
-              <MessageSquare size={48} md:size={64} className="text-[#967bb6] opacity-50" />
+              <MessageSquare size={64} className="text-[#967bb6] opacity-50" />
             </div>
             <h3 className="text-2xl md:text-3xl font-black chrome-text uppercase tracking-tighter mb-4">Your Private Space</h3>
             <p className="text-slate-500 max-w-sm text-sm leading-relaxed">
               Connect with creators privately. Send messages, share media, and build deeper connections in a secure environment.
             </p>
+            
+            <div className="mt-12 w-full max-w-md rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl hover:border-[#967bb6]/50 transition-all chrome-border bg-black/40">
+              <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
+                <img 
+                  src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+                  className="w-full h-auto object-cover" 
+                  alt="Featured Content"
+                  referrerPolicy="no-referrer"
+                />
+              </a>
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4 mt-8">
               <button 
                 onClick={() => searchInputRef.current?.focus()}

@@ -49,6 +49,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
           </p>
         </div>
 
+        <div className="mb-8">
+          <button 
+            onClick={() => onSocialLogin('google')}
+            className="w-full bg-white text-black py-4 rounded-2xl font-black text-sm shadow-xl shadow-white/10 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center space-x-3 group"
+          >
+            <Chrome size={20} className="text-black" />
+            <span>Sign in with Google</span>
+          </button>
+          
+          <div className="relative flex items-center justify-center my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/5"></div>
+            </div>
+            <span className="relative px-4 bg-black text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Or use email</span>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {!isLogin && (
             <>
@@ -78,15 +95,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
           )}
 
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-4">Email Address</label>
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-4">Email or Username</label>
             <div className="relative group">
               <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-[#967bb6] transition-colors" size={18} />
               <input 
-                type="email" 
+                type="text" 
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="alex@example.com"
+                placeholder="alex@example.com or alex_rivers"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all text-slate-200"
               />
             </div>
@@ -126,16 +143,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/5"></div>
             </div>
-            <span className="relative px-4 bg-black text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Or Continue With</span>
+            <span className="relative px-4 bg-black text-[9px] font-black uppercase tracking-[0.3em] text-slate-600">Other Options</span>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <button 
-              onClick={() => onSocialLogin('google')}
-              className="flex items-center justify-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group"
-            >
-              <Chrome size={20} className="text-slate-400 group-hover:text-white transition-colors" />
-            </button>
+          <div className="grid grid-cols-2 gap-4">
             <button 
               onClick={() => onSocialLogin('twitter')}
               className="flex items-center justify-center p-4 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group"
@@ -160,6 +171,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
             {isLogin ? 'Sign Up' : 'Login'}
           </button>
         </p>
+
+        <div className="mt-12 w-full rounded-2xl overflow-hidden border border-white/10 shadow-2xl hover:border-[#967bb6]/50 transition-all chrome-border bg-black/40">
+          <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
+            <img 
+              src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+              className="w-full h-auto object-cover" 
+              alt="Featured Content"
+              referrerPolicy="no-referrer"
+            />
+          </a>
+        </div>
       </div>
     </div>
   );

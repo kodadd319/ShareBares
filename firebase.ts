@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { 
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
+} from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -45,8 +48,11 @@ interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
+  const isPermissionError = errMessage.includes('Missing or insufficient permissions');
+  
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -63,7 +69,17 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
+
+  if (isPermissionError) {
+    console.warn('Firestore Permission Denied: ', JSON.stringify(errInfo));
+    // Don't throw for permission errors in listeners to avoid crashing the app
+    if (operationType === OperationType.LIST || operationType === OperationType.GET) {
+      return;
+    }
+  } else {
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
+  }
+  
   throw new Error(JSON.stringify(errInfo));
 }
 
@@ -80,5 +96,6 @@ async function testConnection() {
 testConnection();
 
 export { 
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or,
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
 };

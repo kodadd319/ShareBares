@@ -44,29 +44,80 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     data.hasDrawn = false;
     data.score = {};
     players.forEach(p => data.score[p.id] = 0);
+    data.deckCount = data.deck.length;
   } else if (type === 'billiards') {
     const balls: any[] = [];
-    const colors = ["red", "yellow", "blue", "orange", "purple", "pink"];
-    const startX = 600;
-    const startY = 250;
+    const BALL_RADIUS = 12;
+    const TABLE_WIDTH = 800;
+    const TABLE_HEIGHT = 400;
+    const startX = TABLE_WIDTH * 0.65;
+    const startY = TABLE_HEIGHT / 2;
+    const spacing = 1;
+    
+    const ballOrder = [
+        1,
+        9, 2,
+        3, 8, 10,
+        11, 4, 12, 5,
+        6, 13, 7, 14, 15
+    ];
+    
+    let ballIdx = 0;
+    for (let col = 0; col < 5; col++) {
+        for (let row = 0; row <= col; row++) {
+            const num = ballOrder[ballIdx++];
+            const x = startX + col * (BALL_RADIUS * 2 * Math.cos(Math.PI/6) + spacing);
+            const y = startY + (row - col/2) * (BALL_RADIUS * 2 + spacing);
+            
+            let ballType = 'solid';
+            let color = '#e74c3c'; // Default solid red
+            if (num === 8) {
+              ballType = 'black';
+              color = '#2c3e50';
+            } else if (num > 8) {
+              ballType = 'stripe';
+              color = '#f1c40f'; // Default stripe yellow
+            }
+            
+            // Assign specific colors for 8-ball
+            const colors = [
+              '#f1c40f', // 1 yellow
+              '#2980b9', // 2 blue
+              '#e74c3c', // 3 red
+              '#8e44ad', // 4 purple
+              '#e67e22', // 5 orange
+              '#27ae60', // 6 green
+              '#95a5a6', // 7 maroon/grey
+              '#2c3e50', // 8 black
+              '#f1c40f', // 9 yellow stripe
+              '#2980b9', // 10 blue stripe
+              '#e74c3c', // 11 red stripe
+              '#8e44ad', // 12 purple stripe
+              '#e67e22', // 13 orange stripe
+              '#27ae60', // 14 green stripe
+              '#95a5a6'  // 15 maroon stripe
+            ];
+            color = colors[num - 1];
 
-    for (let row = 0; row < 5; row++) {
-      for (let i = 0; i <= row; i++) {
-        balls.push({
-          x: startX + row * 22,
-          y: startY - row * 11 + i * 22,
-          vx: 0,
-          vy: 0,
-          color: colors[(row + i) % colors.length],
-          active: true
-        });
-      }
+            balls.push({
+              id: num,
+              x,
+              y,
+              vx: 0,
+              vy: 0,
+              type: ballType,
+              color,
+              active: true
+            });
+        }
     }
 
     data.balls = balls;
-    data.cueBall = { x: 200, y: 250, vx: 0, vy: 0, color: "white", active: true };
-    data.width = 900;
-    data.height = 500;
+    data.cueBall = { x: TABLE_WIDTH * 0.25, y: TABLE_HEIGHT / 2, vx: 0, vy: 0, type: 'cue', color: 'white', active: true };
+    data.width = TABLE_WIDTH;
+    data.height = TABLE_HEIGHT;
+    data.pottedThisTurn = [];
+    data.playerTypes = {}; // { userId: 'solid' | 'stripe' }
   }
 
   return {
@@ -498,6 +549,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
     if (moveData.type === 'draw' && !newData.hasDrawn) {
       hand.push(drawCard(newData.deck));
       newData.hasDrawn = true;
+      newData.deckCount = newData.deck.length;
     } else if (moveData.type === 'draw_discard' && !newData.hasDrawn) {
       if (newData.discardPile.length > 0) {
         hand.push(newData.discardPile.pop());
@@ -523,7 +575,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       } else {
         nextTurn = opponentId;
       }
-    } else if (moveData.type === 'meld') {
+    } else if (moveData.type === 'meld' && newData.hasDrawn) {
       const meldCards = moveData.indices.map((i: number) => hand[i]);
       if (isValidMeld(meldCards)) {
         newData.melds.push(meldCards);
@@ -554,11 +606,15 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       const { dx, dy } = moveData;
       newData.cueBall.vx = dx * 0.1;
       newData.cueBall.vy = dy * 0.1;
+      newData.pottedThisTurn = [];
 
       // Simulate until stopped
-      const FRICTION = 0.99;
-      const BALL_RADIUS = 10;
-      const POCKET_RADIUS = 18;
+      const FRICTION = 0.985;
+      const WALL_BOUNCE = 0.6;
+      const BALL_BOUNCE = 0.95;
+      const BALL_RADIUS = 12;
+      const POCKET_RADIUS = 22;
+      
       const pockets = [
         { x: 0, y: 0 },
         { x: newData.width / 2, y: 0 },
@@ -569,14 +625,13 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       ];
 
       const allBalls = [newData.cueBall, ...newData.balls];
-
       let iterations = 0;
-      const maxIterations = 2000; // Safety cap
+      const maxIterations = 3000;
+      let scratch = false;
 
       while (iterations < maxIterations) {
         let moving = false;
 
-        // Update positions
         allBalls.forEach(ball => {
           if (!ball.active) return;
           ball.x += ball.vx;
@@ -584,16 +639,15 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
           ball.vx *= FRICTION;
           ball.vy *= FRICTION;
 
-          if (Math.abs(ball.vx) < 0.01) ball.vx = 0;
-          if (Math.abs(ball.vy) < 0.01) ball.vy = 0;
-
+          if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
+          if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
           if (ball.vx !== 0 || ball.vy !== 0) moving = true;
 
           // Wall collisions
-          if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -1; }
-          if (ball.x > newData.width - BALL_RADIUS) { ball.x = newData.width - BALL_RADIUS; ball.vx *= -1; }
-          if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -1; }
-          if (ball.y > newData.height - BALL_RADIUS) { ball.y = newData.height - BALL_RADIUS; ball.vy *= -1; }
+          if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
+          if (ball.x > newData.width - BALL_RADIUS) { ball.x = newData.width - BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
+          if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
+          if (ball.y > newData.height - BALL_RADIUS) { ball.y = newData.height - BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
 
           // Pockets
           pockets.forEach(p => {
@@ -601,18 +655,18 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
             const dy = ball.y - p.y;
             if (Math.sqrt(dx * dx + dy * dy) < POCKET_RADIUS) {
               ball.active = false;
+              ball.vx = 0;
+              ball.vy = 0;
               if (ball === newData.cueBall) {
-                ball.x = 200;
-                ball.y = 250;
-                ball.vx = 0;
-                ball.vy = 0;
-                ball.active = true;
+                scratch = true;
+              } else {
+                newData.pottedThisTurn.push(ball);
               }
             }
           });
         });
 
-        // Collisions
+        // Ball-to-ball collisions
         for (let i = 0; i < allBalls.length; i++) {
           for (let j = i + 1; j < allBalls.length; j++) {
             const b1 = allBalls[i];
@@ -624,38 +678,81 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < BALL_RADIUS * 2) {
-              // Simple elastic collision
-              const angle = Math.atan2(dy, dx);
-              const speed1 = Math.hypot(b1.vx, b1.vy);
-              const speed2 = Math.hypot(b2.vx, b2.vy);
-
-              b1.vx = speed2 * Math.cos(angle + Math.PI);
-              b1.vy = speed2 * Math.sin(angle + Math.PI);
-              b2.vx = speed1 * Math.cos(angle);
-              b2.vy = speed1 * Math.sin(angle);
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const rvx = b1.vx - b2.vx;
+              const rvy = b1.vy - b2.vy;
+              const velAlongNormal = rvx * nx + rvy * ny;
               
-              // Move balls apart to prevent sticking
+              if (velAlongNormal < 0) {
+                const impulse = -(1 + BALL_BOUNCE) * velAlongNormal / 2;
+                const impulseX = impulse * nx;
+                const impulseY = impulse * ny;
+                b1.vx += impulseX;
+                b1.vy += impulseY;
+                b2.vx -= impulseX;
+                b2.vy -= impulseY;
+              }
+              
               const overlap = BALL_RADIUS * 2 - dist;
-              b1.x -= Math.cos(angle) * overlap / 2;
-              b1.y -= Math.sin(angle) * overlap / 2;
-              b2.x += Math.cos(angle) * overlap / 2;
-              b2.y += Math.sin(angle) * overlap / 2;
-              
+              b1.x -= nx * overlap / 2;
+              b1.y -= ny * overlap / 2;
+              b2.x += nx * overlap / 2;
+              b2.y += ny * overlap / 2;
               moving = true;
             }
           }
         }
-
         if (!moving) break;
         iterations++;
       }
 
-      nextTurn = opponentId;
-      
-      // Check win condition
-      if (newData.balls.every((b: any) => !b.active)) {
-        status = 'finished';
-        winner = userId;
+      // Handle scratch
+      if (scratch) {
+        newData.cueBall.x = newData.width * 0.25;
+        newData.cueBall.y = newData.height / 2;
+        newData.cueBall.vx = 0;
+        newData.cueBall.vy = 0;
+        newData.cueBall.active = true;
+      }
+
+      // 8-Ball Rules
+      const myType = newData.playerTypes[userId];
+      let switchTurn = true;
+
+      if (newData.pottedThisTurn.length > 0) {
+        const hasEightBall = newData.pottedThisTurn.some((b: any) => b.id === 8);
+        
+        if (hasEightBall) {
+          const myBallsRemaining = newData.balls.filter((b: any) => b.active && b.type === myType).length;
+          if (myBallsRemaining === 0 && myType) {
+            status = 'finished';
+            winner = userId;
+          } else {
+            status = 'finished';
+            winner = opponentId;
+          }
+        } else {
+          // Assign types if not yet assigned
+          if (!myType) {
+            const firstPotted = newData.pottedThisTurn[0];
+            if (firstPotted.type === 'solid' || firstPotted.type === 'stripe') {
+              newData.playerTypes[userId] = firstPotted.type;
+              newData.playerTypes[opponentId] = firstPotted.type === 'solid' ? 'stripe' : 'solid';
+              switchTurn = false;
+            }
+          } else {
+            // Check if any of my balls were potted
+            const pottedMyBall = newData.pottedThisTurn.some((b: any) => b.type === myType);
+            if (pottedMyBall && !scratch) {
+              switchTurn = false;
+            }
+          }
+        }
+      }
+
+      if (switchTurn || scratch) {
+        nextTurn = opponentId;
       }
     }
   }
