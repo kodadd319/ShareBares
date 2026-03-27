@@ -466,38 +466,49 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
               </button>
             </div>
           ) : (
-            <div className="w-full max-w-full lg:max-w-[95vw] aspect-square lg:aspect-video relative overflow-hidden p-2 lg:p-4">
+            <div className="w-full max-w-full lg:max-w-[95vw] aspect-square lg:aspect-video relative overflow-hidden p-2 lg:p-4 select-none touch-none">
               {/* Zoom Controls */}
-              <div className="absolute top-4 right-4 z-50 flex flex-col space-y-2">
+              <div className="absolute top-4 right-4 z-[100] flex flex-col space-y-3">
                 <button 
-                  onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))}
-                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  onClick={() => setZoom(prev => Math.min(prev + 0.2, 4))}
+                  className="p-4 bg-black/80 backdrop-blur-xl border-2 border-white/20 rounded-2xl text-white hover:bg-[#967bb6] hover:border-[#967bb6] transition-all shadow-[0_0_30px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center"
                   title="Zoom In"
                 >
-                  <ZoomIn size={20} />
+                  <ZoomIn size={24} />
                 </button>
                 <button 
                   onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.5))}
-                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  className="p-4 bg-black/80 backdrop-blur-xl border-2 border-white/20 rounded-2xl text-white hover:bg-[#967bb6] hover:border-[#967bb6] transition-all shadow-[0_0_30px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center"
                   title="Zoom Out"
                 >
-                  <ZoomOut size={20} />
+                  <ZoomOut size={24} />
                 </button>
                 <button 
                   onClick={() => setZoom(1)}
-                  className="p-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl text-white hover:bg-[#967bb6] transition-all shadow-2xl active:scale-90"
+                  className="p-4 bg-black/80 backdrop-blur-xl border-2 border-white/20 rounded-2xl text-white hover:bg-[#967bb6] hover:border-[#967bb6] transition-all shadow-[0_0_30px_rgba(0,0,0,0.5)] active:scale-90 flex items-center justify-center"
                   title="Reset Zoom"
                 >
-                  <RotateCcw size={20} />
+                  <RotateCcw size={24} />
                 </button>
+                <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-[10px] font-black text-white text-center uppercase tracking-widest">
+                  {Math.round(zoom * 100)}%
+                </div>
               </div>
 
               <div 
-                className="w-full h-full flex items-center justify-center transition-transform duration-300 ease-out"
+                className="w-full h-full flex items-center justify-center transition-transform duration-300 ease-out cursor-grab active:cursor-grabbing"
+                onWheel={(e) => {
+                  if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                    setZoom(prev => Math.min(Math.max(prev + delta, 0.5), 4));
+                  }
+                }}
                 style={{ 
                   transform: `scale(${zoom})`,
                   touchAction: 'none',
-                  WebkitOverflowScrolling: 'touch'
+                  WebkitOverflowScrolling: 'touch',
+                  userSelect: 'none'
                 }}
               >
                 <div className="w-full h-full flex items-center justify-center bg-black/20 rounded-[2rem] lg:rounded-[3rem] border border-white/5 shadow-2xl overflow-hidden">

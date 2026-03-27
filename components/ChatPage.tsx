@@ -88,7 +88,22 @@ const ChatPage: React.FC<ChatPageProps> = ({
   );
 
   return (
-    <div className="h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] flex bg-black/40 md:rounded-[2.5rem] overflow-hidden glass-panel border-[#c0c0c0]/10 md:m-4 chrome-border shadow-2xl relative">
+    <div className="flex flex-col h-full overflow-y-auto scrollbar-hide">
+      {/* Top Banner */}
+      <div className="w-full flex justify-center py-6 px-4 shrink-0">
+        <a href="https://t.aenhance.link/408699/7106/0?aff_sub=Main+page+top+bamner&aff_sub2=Chat+page+top+banner&source=sharebares&file_id=438055&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block hover:scale-[1.02] transition-transform">
+          <img 
+            src="https://www.imglnkx.com/7106/009227A_EXTZ_18_ALL_EN_71_L.jpg" 
+            width="300" 
+            height="250" 
+            className="rounded-2xl shadow-2xl border border-white/10" 
+            alt="Promotional Banner" 
+            referrerPolicy="no-referrer"
+          />
+        </a>
+      </div>
+
+      <div className="h-[calc(100vh-5rem)] md:h-[calc(100vh-6rem)] flex bg-black/40 md:rounded-[2.5rem] overflow-hidden glass-panel border-[#c0c0c0]/10 md:m-4 chrome-border shadow-2xl relative shrink-0">
       {/* Sidebar - Hidden on mobile if a user is selected */}
       <div className={`${selectedUserId ? 'hidden md:flex' : 'flex'} w-full md:w-1/3 border-r border-white/5 flex-col min-w-[320px] bg-black/20`}>
         <div className="p-6 border-b border-white/5 sticky top-0 bg-black/40 backdrop-blur-xl z-20">
@@ -377,7 +392,8 @@ const ChatPage: React.FC<ChatPageProps> = ({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default ChatPage;

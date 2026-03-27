@@ -36,7 +36,7 @@ import {
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
 import { 
   auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
-  onAuthStateChanged, loginWithGoogle, logout as firebaseLogout, handleFirestoreError, OperationType, or,
+  onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
 } from './firebase';
 
@@ -624,6 +624,19 @@ const SettingsPage: React.FC<{
             </button>
           </div>
         </div>
+
+        <div className="mt-12 flex justify-center">
+          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+            <img 
+              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+              width="300" 
+              height="250" 
+              referrerPolicy="no-referrer"
+              alt="Advertisement"
+              className="rounded-2xl shadow-2xl border border-white/10"
+            />
+          </a>
+        </div>
       </div>
     );
   }
@@ -667,6 +680,19 @@ const SettingsPage: React.FC<{
             </div>
           </div>
         </div>
+
+        <div className="mt-12 flex justify-center">
+          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+            <img 
+              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+              width="300" 
+              height="250" 
+              referrerPolicy="no-referrer"
+              alt="Advertisement"
+              className="rounded-2xl shadow-2xl border border-white/10"
+            />
+          </a>
+        </div>
       </div>
     );
   }
@@ -701,6 +727,19 @@ const SettingsPage: React.FC<{
             </button>
           </div>
         </div>
+
+        <div className="mt-12 flex justify-center">
+          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+            <img 
+              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+              width="300" 
+              height="250" 
+              referrerPolicy="no-referrer"
+              alt="Advertisement"
+              className="rounded-2xl shadow-2xl border border-white/10"
+            />
+          </a>
+        </div>
       </div>
     );
   }
@@ -725,6 +764,19 @@ const SettingsPage: React.FC<{
             <ChevronRight size={16} className="text-slate-700 group-hover:text-[#967bb6] transition-colors" />
           </div>
         </div>
+
+        <div className="mt-12 flex justify-center">
+          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+            <img 
+              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+              width="300" 
+              height="250" 
+              referrerPolicy="no-referrer"
+              alt="Advertisement"
+              className="rounded-2xl shadow-2xl border border-white/10"
+            />
+          </a>
+        </div>
       </div>
     );
   }
@@ -740,6 +792,19 @@ const SettingsPage: React.FC<{
               <ChevronRight size={18} className="text-slate-700 group-hover:text-[#967bb6]" />
             </button>
           ))}
+        </div>
+
+        <div className="mt-12 flex justify-center">
+          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+            <img 
+              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+              width="300" 
+              height="250" 
+              referrerPolicy="no-referrer"
+              alt="Advertisement"
+              className="rounded-2xl shadow-2xl border border-white/10"
+            />
+          </a>
         </div>
       </div>
     );
@@ -828,6 +893,19 @@ const SettingsPage: React.FC<{
           <LogOut size={20} />
           <span>Log Out</span>
         </button>
+      </div>
+
+      <div className="mt-12 flex justify-center">
+        <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+          <img 
+            src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+            width="300" 
+            height="250" 
+            referrerPolicy="no-referrer"
+            alt="Advertisement"
+            className="rounded-2xl shadow-2xl border border-white/10"
+          />
+        </a>
       </div>
     </div>
   );
@@ -1992,6 +2070,20 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
 
+    // Handle redirect result
+    getGoogleRedirectResult().then((result) => {
+      if (result?.user) {
+        console.log('Redirect login successful:', result.user.email);
+        toast.success('Successfully logged in with Google!');
+        setActiveTab('feed');
+      }
+    }).catch((error) => {
+      console.error('Redirect login failed:', error);
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+        toast.error(`Login failed: ${error.message}`);
+      }
+    });
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       console.log('Auth state changed:', user?.email);
       try {
@@ -2005,6 +2097,11 @@ const AppContent: React.FC = () => {
             if (userDoc.exists()) {
               setHasCreatedProfile(true);
               const userData = userDoc.data() as User;
+              // Ensure admin flag is set for the admin user
+              if (user.email === 'jtothek319@gmail.com' && !userData.isAdmin) {
+                userData.isAdmin = true;
+                await updateDoc(doc(db, 'users', user.uid), { isAdmin: true });
+              }
               // Sync public profile
               const profileData = {
                 id: userData.id,
@@ -2455,13 +2552,20 @@ const AppContent: React.FC = () => {
   }, [activeTab, currentUserId]);
 
   const handleLogin = async (emailOrUsername: string, password: string) => {
+    let toastId: string | number | undefined;
     try {
-      if (emailOrUsername && password) {
-        let loginEmail = emailOrUsername;
-        if (!emailOrUsername.includes('@')) {
+      const trimmedInput = emailOrUsername?.trim();
+      if (trimmedInput && password) {
+        toastId = toast.loading('Logging in...');
+        let loginEmail = trimmedInput;
+        
+        // Admin fallback for username
+        if (trimmedInput === 'jameson319') {
+          loginEmail = 'jtothek319@gmail.com';
+        } else if (!trimmedInput.includes('@')) {
           // Try to find user by username
           const usersRef = collection(db, 'users');
-          const q = query(usersRef, where('username', '==', emailOrUsername), limit(1));
+          const q = query(usersRef, where('username', '==', trimmedInput), limit(1));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
             loginEmail = querySnapshot.docs[0].data().email;
@@ -2469,9 +2573,26 @@ const AppContent: React.FC = () => {
             throw { code: 'auth/user-not-found' };
           }
         }
-        await signInWithEmailAndPassword(auth, loginEmail, password);
+
+        if (loginEmail === 'jtothek319@gmail.com') {
+          console.log('Admin login attempt with:', loginEmail);
+        }
+
+        try {
+          await signInWithEmailAndPassword(auth, loginEmail, password);
+        } catch (authError: any) {
+          // Special case: If admin user doesn't exist yet, try to register them
+          if (authError.code === 'auth/user-not-found' && loginEmail === 'jtothek319@gmail.com' && password === '#Caleb918') {
+            console.log('Admin user not found, attempting auto-registration...');
+            await createUserWithEmailAndPassword(auth, loginEmail, password);
+          } else {
+            throw authError;
+          }
+        }
+        
+        toast.success('Welcome back!', { id: toastId });
       } else {
-        await loginWithGoogle();
+        await handleSocialLogin('google');
       }
       setActiveTab('feed');
     } catch (error: any) {
@@ -2483,25 +2604,28 @@ const AppContent: React.FC = () => {
           message: helpMsg + '\n\nWould you like to open your Firebase Console to enable "Email/Password" now?',
           onConfirm: () => window.open('https://console.firebase.google.com/project/gen-lang-client-0036974014/authentication/providers', '_blank')
         });
-      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        toast.error('Login method disabled.', { id: toastId });
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-email') {
         addNotification(NotificationType.SYSTEM, 'Login Failed', 'Invalid email or password. Please check your credentials and try again.');
-        toast.error('Invalid email or password. Please try again.');
+        toast.error('Invalid credentials. Please try again.', { id: toastId });
       } else {
         addNotification(NotificationType.SYSTEM, 'Login Failed', 'Please try again or use Google Login.');
-        toast.error('Login failed. Please check your credentials.');
+        toast.error('Login failed. Please check your credentials.', { id: toastId });
       }
     }
   };
 
   const handleRegister = async (displayName: string, username: string, email: string, password: string) => {
+    let toastId: string | number | undefined;
     try {
       if (email && password) {
+        toastId = toast.loading('Creating account...');
         // Check if username is already taken
         const usersRef = collection(db, 'users');
         const q = query(usersRef, where('username', '==', username), limit(1));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          toast.error('Username is already taken. Please choose another one.');
+          toast.error('Username is already taken. Please choose another one.', { id: toastId });
           return;
         }
 
@@ -2554,9 +2678,10 @@ const AppContent: React.FC = () => {
             subscribersCount: 0,
             followingCount: 0
           });
+          toast.success('Account created successfully!', { id: toastId });
         }
       } else {
-        await loginWithGoogle();
+        await handleSocialLogin('google');
       }
       setActiveTab('profile-edit');
     } catch (error: any) {
@@ -2568,43 +2693,54 @@ const AppContent: React.FC = () => {
           message: helpMsg + '\n\nWould you like to open your Firebase Console to enable "Email/Password" now?',
           onConfirm: () => window.open('https://console.firebase.google.com/project/gen-lang-client-0036974014/authentication/providers', '_blank')
         });
+        toast.error('Registration method disabled.', { id: toastId });
       } else if (error.code === 'auth/email-already-in-use') {
         addNotification(NotificationType.SYSTEM, 'Registration Failed', 'This email is already in use. Please try logging in instead.');
-        toast.error('Email already in use. Please try logging in.');
+        toast.error('Email already in use.', { id: toastId });
       } else if (error.code === 'auth/weak-password') {
         addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Password is too weak. Please use a stronger password.');
-        toast.error('Password is too weak.');
+        toast.error('Password too weak.', { id: toastId });
       } else {
         addNotification(NotificationType.SYSTEM, 'Registration Failed', 'Please try again or use Google Login.');
-        toast.error('Registration failed. Please try again.');
+        toast.error('Registration failed.', { id: toastId });
       }
     }
   };
 
-  const handleSocialLogin = async (provider: string) => {
-    console.log('Starting social login for provider:', provider);
+  const handleSocialLogin = async (provider: string, useRedirect = false) => {
+    console.log('Starting social login for provider:', provider, 'useRedirect:', useRedirect);
+    let toastId: string | number | undefined;
     try {
       if (provider === 'google') {
-        toast.loading('Opening Google login...');
-        await loginWithGoogle();
-        toast.success('Successfully logged in with Google!');
-        setActiveTab('feed');
+        if (useRedirect) {
+          toast.loading('Redirecting to Google login...');
+          await loginWithGoogleRedirect();
+        } else {
+          toastId = toast.loading('Opening Google login...');
+          await loginWithGoogle();
+          toast.success('Successfully logged in with Google!', { id: toastId });
+          setActiveTab('feed');
+        }
       } else {
         toast.error(`${provider} login is not implemented yet.`);
       }
     } catch (error: any) {
       console.error('Social login failed:', error);
-      toast.error(`Login failed: ${error.message || 'Unknown error'}`);
+      const errorMessage = error.message || 'Unknown error';
       
       if (error.code === 'auth/popup-blocked') {
-        toast.error('The login popup was blocked by your browser. Please allow popups for this site.');
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        // Ignore user cancellation
+        toast.error('The login popup was blocked by your browser. Attempting redirect login instead...', { id: toastId });
+        // Fallback to redirect
+        setTimeout(() => handleSocialLogin(provider, true), 2000);
+      } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
+        toast.dismiss(toastId);
       } else if (error.code === 'auth/operation-not-allowed') {
-        toast.error('Google login is not enabled in Firebase Console.');
+        toast.error('Google login is not enabled in Firebase Console.', { id: toastId });
+      } else if (error.code === 'auth/unauthorized-domain') {
+        toast.error('This domain is not authorized for Firebase Auth. Please add it in your Firebase Console.', { id: toastId });
+      } else {
+        toast.error(`Login failed: ${errorMessage}`, { id: toastId });
       }
-    } finally {
-      toast.dismiss();
     }
   };
 
@@ -2959,7 +3095,7 @@ const AppContent: React.FC = () => {
       currentResetDate = nextReset.toISOString();
     }
     
-    if (currentSentCount >= 2) {
+    if (currentSentCount >= 2 && !me.isAdmin) {
       showMascot({
         action: 'wink',
         message: `You have reached your limit of 2 FWB requests per month. Your limit resets on ${new Date(currentResetDate).toLocaleDateString()} 😉💎`,
@@ -3511,6 +3647,12 @@ const AppContent: React.FC = () => {
               <div className="pb-2">
                 <div className="flex items-center space-x-3 mb-2">
                   <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase chrome-text drop-shadow-2xl" style={{ color: fontColor }}>{user.displayName}</h1>
+                  {user.isAdmin && (
+                    <div className="flex items-center space-x-1 border border-red-500/40 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.3)] bg-red-500/10 text-red-400" title="System Administrator">
+                      <ShieldCheck size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Administrator</span>
+                    </div>
+                  )}
                   {stableListings.some(l => l.userId === user.id) && (
                     <div className="flex items-center space-x-1 border border-white/20 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)]" title="Stable Member - Escort Services" style={{ backgroundColor: '#000000', color: '#967bb6' }}>
                       <Briefcase size={14} />

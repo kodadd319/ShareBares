@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { 
-  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or } from 'firebase/firestore';
@@ -16,7 +16,15 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Auth helpers
-export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+export const loginWithGoogle = () => {
+  console.log('Calling signInWithPopup with Google provider');
+  return signInWithPopup(auth, googleProvider);
+};
+export const loginWithGoogleRedirect = () => {
+  console.log('Calling signInWithRedirect with Google provider');
+  return signInWithRedirect(auth, googleProvider);
+};
+export const getGoogleRedirectResult = () => getRedirectResult(auth);
 export const logout = () => signOut(auth);
 
 // Firestore helpers with error handling

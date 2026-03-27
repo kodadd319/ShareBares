@@ -40,7 +40,22 @@ const HomePage: React.FC<HomePageProps> = ({
   const suggestedFollows = otherUsers.slice(0, 3);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Top Banner */}
+      <div className="w-full flex justify-center mb-8">
+        <a href="https://t.aenhance.link/408699/7106/0?aff_sub=Main+page+top+bamner&aff_sub2=Chat+page+top+banner&source=sharebares&file_id=438055&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block hover:scale-[1.02] transition-transform">
+          <img 
+            src="https://www.imglnkx.com/7106/009227A_EXTZ_18_ALL_EN_71_L.jpg" 
+            width="300" 
+            height="250" 
+            className="rounded-2xl shadow-2xl border border-white/10" 
+            alt="Promotional Banner" 
+            referrerPolicy="no-referrer"
+          />
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Left Column: Main Feed */}
       <div className="lg:col-span-8 space-y-8">
         {/* Welcome Hero */}
@@ -224,7 +239,8 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default HomePage;
