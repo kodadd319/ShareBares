@@ -527,29 +527,45 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      console.log(`Login attempt for: ${email}`);
+      const trimmedEmail = email?.trim()?.toLowerCase();
+      const trimmedPassword = password?.trim();
+      
+      console.log(`Login attempt for: ${trimmedEmail}`);
       
       // Admin credentials check (hardcoded for bootstrap admin)
-      if (email === "jtothek319@gmail.com" && password === "#Caleb918") {
+      if (trimmedEmail === "jtothek319@gmail.com" && trimmedPassword === "#Caleb918") {
         console.log("Admin credentials matched. Generating custom token...");
         
         // Use a fixed UID for the admin to avoid calling Identity Toolkit API (getUserByEmail/createUser)
         // Firebase will automatically create the user record when the client signs in with this token.
         const adminUid = "admin-jtothek319";
-        const customToken = await admin.auth().createCustomToken(adminUid, {
-          email: email,
-          admin: true
-        });
-        
-        console.log("Generated custom token for admin UID:", adminUid);
-        return res.json({ customToken, uid: adminUid });
+        try {
+          const customToken = await admin.auth().createCustomToken(adminUid, {
+            email: email,
+            admin: true
+          });
+          
+          console.log("Generated custom token for admin UID:", adminUid);
+          return res.json({ customToken, uid: adminUid });
+        } catch (tokenError: any) {
+          console.error("Token generation error:", tokenError);
+          const errorMessage = tokenError.message || String(tokenError);
+          if (errorMessage.includes("iamcredentials.googleapis.com")) {
+            return res.status(403).json({ 
+              error: "IAM_API_DISABLED", 
+              message: "The 'IAM Service Account Credentials API' is disabled in your Google Cloud project. This is required for custom admin login.",
+              link: `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseConfig.projectId}`
+            });
+          }
+          return res.status(500).json({ error: "TOKEN_GENERATION_FAILED", message: errorMessage });
+        }
       }
       
-      console.log(`Invalid credentials for: ${email}`);
-      res.status(401).json({ error: "Invalid credentials" });
+      console.log(`Invalid credentials for: ${trimmedEmail}`);
+      res.status(401).json({ error: "INVALID_CREDENTIALS", message: "Invalid email or password" });
     } catch (error: any) {
       console.error("Auth error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "SERVER_ERROR", message: error.message || String(error) });
     }
   });
 

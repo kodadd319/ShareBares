@@ -2519,7 +2519,8 @@ const AppContent: React.FC = () => {
     let toastId: string | number | undefined;
     try {
       const trimmedInput = emailOrUsername?.trim();
-      if (trimmedInput && password) {
+      const trimmedPassword = password?.trim();
+      if (trimmedInput && trimmedPassword) {
         toastId = toast.loading('Logging in...');
         let loginEmail = trimmedInput;
         
@@ -2547,11 +2548,13 @@ const AppContent: React.FC = () => {
             const response = await fetch('/api/auth/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: loginEmail, password })
+              body: JSON.stringify({ email: loginEmail, password: trimmedPassword })
             });
             
             console.log('Custom auth response status:', response.status);
-            if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            
+            if (response.ok && contentType?.includes('application/json')) {
               const { customToken } = await response.json();
               console.log('Custom token received, signing in...');
               await signInWithCustomToken(auth, customToken);
@@ -2559,8 +2562,42 @@ const AppContent: React.FC = () => {
               setActiveTab('feed');
               return;
             } else {
-              const errorData = await response.json();
+              let errorData: any = { error: 'Unknown error' };
+              if (contentType?.includes('application/json')) {
+                errorData = await response.json();
+              } else {
+                const text = await response.text();
+                console.error('Non-JSON error response:', text);
+                errorData = { error: 'SERVER_ERROR', message: 'The server returned an unexpected response format.' };
+              }
+              
               console.error('Custom auth failed with error:', errorData);
+              
+              if (errorData.error === 'IAM_API_DISABLED' || (errorData.message && errorData.message.includes('iamcredentials.googleapis.com'))) {
+                const link = errorData.link || `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseConfig.projectId}`;
+                toast.error(
+                  <div className="flex flex-col gap-2">
+                    <p className="font-bold">CRITICAL: Enable IAM API</p>
+                    <p className="text-sm">The "IAM Service Account Credentials API" is disabled in your Google Cloud project. This is required for administrator login.</p>
+                    <a 
+                      href={link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-white text-red-600 px-3 py-1 rounded font-bold text-center text-sm hover:bg-red-50 transition-colors"
+                    >
+                      ENABLE API NOW
+                    </a>
+                    <p className="text-[10px] opacity-70">After enabling, wait 2 minutes and try again.</p>
+                  </div>,
+                  { id: toastId, duration: 20000 }
+                );
+                return; // Stop here, don't try standard auth
+              }
+              
+              if (response.status === 401) {
+                toast.error('Invalid credentials for administrator profile.', { id: toastId });
+                return;
+              }
             }
           } catch (customAuthError) {
             console.error('Custom auth request failed:', customAuthError);
@@ -2568,15 +2605,15 @@ const AppContent: React.FC = () => {
         }
 
         try {
-          await signInWithEmailAndPassword(auth, loginEmail, password);
+          await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
         } catch (authError: any) {
           // Special case: If admin user doesn't exist yet, try to register them
           // Modern Firebase returns 'auth/invalid-credential' for both wrong password and user not found
           const isInvalidCredential = authError.code === 'auth/invalid-credential' || authError.code === 'auth/user-not-found';
-          if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && password === '#Caleb918') {
+          if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && trimmedPassword === '#Caleb918') {
             console.log('Admin user not found or invalid credentials, attempting auto-registration...');
             try {
-              await createUserWithEmailAndPassword(auth, loginEmail, password);
+              await createUserWithEmailAndPassword(auth, loginEmail, trimmedPassword);
             } catch (regError: any) {
               // If user already exists but password was wrong, this will fail with 'auth/email-already-in-use'
               // but we already tried signing in. So it's likely a wrong password if it gets here and fails reg.
