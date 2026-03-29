@@ -139,7 +139,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-         (request.auth.token.email == "jtothek319@gmail.com" && request.auth.token.email_verified == true));
+         request.auth.token.email == "jtothek319@gmail.com");
     }
 
     function hasRequiredFields(fields) {

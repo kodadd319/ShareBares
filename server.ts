@@ -6,8 +6,19 @@ import { fileURLToPath } from "node:url";
 import Stripe from "stripe";
 import multer from "multer";
 import fs from "node:fs";
+import admin from "firebase-admin";
 import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore } from "./games.ts";
 import { GameState, GameInvite } from "./types.ts";
+
+// Load Firebase config for admin initialization
+const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8"));
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: firebaseConfig.projectId,
+  });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -510,6 +521,36 @@ async function startServer() {
   // API routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Custom Auth Login for Admin (Bypasses need for Email/Password provider in console)
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      console.log(`Login attempt for: ${email}`);
+      
+      // Admin credentials check (hardcoded for bootstrap admin)
+      if (email === "jtothek319@gmail.com" && password === "#Caleb918") {
+        console.log("Admin credentials matched. Generating custom token...");
+        
+        // Use a fixed UID for the admin to avoid calling Identity Toolkit API (getUserByEmail/createUser)
+        // Firebase will automatically create the user record when the client signs in with this token.
+        const adminUid = "admin-jtothek319";
+        const customToken = await admin.auth().createCustomToken(adminUid, {
+          email: email,
+          admin: true
+        });
+        
+        console.log("Generated custom token for admin UID:", adminUid);
+        return res.json({ customToken, uid: adminUid });
+      }
+      
+      console.log(`Invalid credentials for: ${email}`);
+      res.status(401).json({ error: "Invalid credentials" });
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // File Upload API

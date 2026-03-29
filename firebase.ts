@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken
 } from 'firebase/auth';
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or } from 'firebase/firestore';
 
@@ -95,10 +95,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Connection test
 async function testConnection() {
   try {
+    // Attempt to get a document from a known collection to verify connectivity
     await getDocFromServer(doc(db, 'test', 'connection'));
+    console.log("Firestore connection test successful.");
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
+    const errMessage = error instanceof Error ? error.message : String(error);
+    if (errMessage.includes('the client is offline') || errMessage.includes('unavailable')) {
+      console.error("Firestore connection failed: The client is offline or the backend is unreachable. Please check your Firebase project configuration and ensure Firestore is enabled.");
+    } else {
+      console.warn("Firestore connection test (ignorable if app works):", errMessage);
     }
   }
 }
@@ -106,5 +111,5 @@ testConnection();
 
 export { 
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken
 };

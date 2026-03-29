@@ -1,7 +1,7 @@
 
 import { User, Post, PostVisibility, StoreItem, StableListing } from './types';
 
-export const CURRENT_USER_ID = 'admin-1';
+export const CURRENT_USER_ID = 'admin-jtothek319';
 
 export const APP_URL = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.sharebares.com');
 
@@ -124,7 +124,7 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
 
 export const MOCK_USERS: User[] = [
   {
-    id: 'admin-1',
+    id: 'admin-jtothek319',
     username: 'jameson319',
     displayName: 'Jameson Admin',
     email: 'jtothek319@gmail.com',

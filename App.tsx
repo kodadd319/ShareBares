@@ -37,7 +37,7 @@ import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, gene
 import { 
   auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
   onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
 } from './firebase';
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
@@ -558,6 +558,21 @@ const SettingsPage: React.FC<{
     </div>
   );
 
+  const SettingsAdBanner = () => (
+    <div className="mt-12 flex justify-center">
+      <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+        <img 
+          src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
+          width="300" 
+          height="250" 
+          referrerPolicy="no-referrer"
+          alt="Advertisement"
+          className="rounded-2xl shadow-2xl border border-white/10"
+        />
+      </a>
+    </div>
+  );
+
   if (activeView === 'account') {
     return (
       <div className="max-w-3xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-left-4 duration-300">
@@ -625,18 +640,7 @@ const SettingsPage: React.FC<{
           </div>
         </div>
 
-        <div className="mt-12 flex justify-center">
-          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-            <img 
-              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-              width="300" 
-              height="250" 
-              referrerPolicy="no-referrer"
-              alt="Advertisement"
-              className="rounded-2xl shadow-2xl border border-white/10"
-            />
-          </a>
-        </div>
+        <SettingsAdBanner />
       </div>
     );
   }
@@ -681,18 +685,7 @@ const SettingsPage: React.FC<{
           </div>
         </div>
 
-        <div className="mt-12 flex justify-center">
-          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-            <img 
-              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-              width="300" 
-              height="250" 
-              referrerPolicy="no-referrer"
-              alt="Advertisement"
-              className="rounded-2xl shadow-2xl border border-white/10"
-            />
-          </a>
-        </div>
+        <SettingsAdBanner />
       </div>
     );
   }
@@ -728,18 +721,7 @@ const SettingsPage: React.FC<{
           </div>
         </div>
 
-        <div className="mt-12 flex justify-center">
-          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-            <img 
-              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-              width="300" 
-              height="250" 
-              referrerPolicy="no-referrer"
-              alt="Advertisement"
-              className="rounded-2xl shadow-2xl border border-white/10"
-            />
-          </a>
-        </div>
+        <SettingsAdBanner />
       </div>
     );
   }
@@ -765,18 +747,7 @@ const SettingsPage: React.FC<{
           </div>
         </div>
 
-        <div className="mt-12 flex justify-center">
-          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-            <img 
-              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-              width="300" 
-              height="250" 
-              referrerPolicy="no-referrer"
-              alt="Advertisement"
-              className="rounded-2xl shadow-2xl border border-white/10"
-            />
-          </a>
-        </div>
+        <SettingsAdBanner />
       </div>
     );
   }
@@ -794,18 +765,7 @@ const SettingsPage: React.FC<{
           ))}
         </div>
 
-        <div className="mt-12 flex justify-center">
-          <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-            <img 
-              src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-              width="300" 
-              height="250" 
-              referrerPolicy="no-referrer"
-              alt="Advertisement"
-              className="rounded-2xl shadow-2xl border border-white/10"
-            />
-          </a>
-        </div>
+        <SettingsAdBanner />
       </div>
     );
   }
@@ -895,21 +855,11 @@ const SettingsPage: React.FC<{
         </button>
       </div>
 
-      <div className="mt-12 flex justify-center">
-        <a href="https://t.mbjms.com/408699/3785/0?bo=Array&target=banners&file_id=554083&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
-          <img 
-            src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
-            width="300" 
-            height="250" 
-            referrerPolicy="no-referrer"
-            alt="Advertisement"
-            className="rounded-2xl shadow-2xl border border-white/10"
-          />
-        </a>
-      </div>
+      <SettingsAdBanner />
     </div>
   );
 };
+
 
 const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile: Partial<User>) => void }> = ({ initialEmail, onComplete }) => {
   const [displayName, setDisplayName] = useState('');
@@ -1901,7 +1851,7 @@ const AppContent: React.FC = () => {
   }, []);
   
   const meRaw = users.find(u => u.id === currentUserId);
-  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com';
+  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com' || currentUserId === 'admin-jtothek319';
   const me = meRaw ? { 
     ...meRaw, 
     isAdmin: isAdminUser,
@@ -1987,6 +1937,13 @@ const AppContent: React.FC = () => {
     audio.play().catch(e => console.warn('Calling sound failed', e));
     (window as any)._callingSound = audio;
     
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('MediaDevices API not available');
+      addNotification(NotificationType.SYSTEM, 'Call Failed', 'Your browser does not support camera/microphone access or you are not on a secure connection.');
+      setIsCalling(false);
+      return;
+    }
+
     navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true }).then((currentStream) => {
       setStream(currentStream);
       const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
@@ -2033,6 +1990,13 @@ const AppContent: React.FC = () => {
     if ((window as any)._ringtone) {
       (window as any)._ringtone.pause();
       (window as any)._ringtone = null;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error('MediaDevices API not available');
+      addNotification(NotificationType.SYSTEM, 'Call Failed', 'Your browser does not support camera/microphone access.');
+      setCallAccepted(false);
+      return;
     }
 
     navigator.mediaDevices.getUserMedia({ video: call?.type === 'video', audio: true }).then((currentStream) => {
@@ -2576,15 +2540,51 @@ const AppContent: React.FC = () => {
 
         if (loginEmail === 'jtothek319@gmail.com') {
           console.log('Admin login attempt with:', loginEmail);
+          
+          // Try custom auth first to bypass console config requirements
+          try {
+            console.log('Calling custom auth endpoint...');
+            const response = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: loginEmail, password })
+            });
+            
+            console.log('Custom auth response status:', response.status);
+            if (response.ok) {
+              const { customToken } = await response.json();
+              console.log('Custom token received, signing in...');
+              await signInWithCustomToken(auth, customToken);
+              toast.success('Welcome back, Admin!', { id: toastId });
+              setActiveTab('feed');
+              return;
+            } else {
+              const errorData = await response.json();
+              console.error('Custom auth failed with error:', errorData);
+            }
+          } catch (customAuthError) {
+            console.error('Custom auth request failed:', customAuthError);
+          }
         }
 
         try {
           await signInWithEmailAndPassword(auth, loginEmail, password);
         } catch (authError: any) {
           // Special case: If admin user doesn't exist yet, try to register them
-          if (authError.code === 'auth/user-not-found' && loginEmail === 'jtothek319@gmail.com' && password === '#Caleb918') {
-            console.log('Admin user not found, attempting auto-registration...');
-            await createUserWithEmailAndPassword(auth, loginEmail, password);
+          // Modern Firebase returns 'auth/invalid-credential' for both wrong password and user not found
+          const isInvalidCredential = authError.code === 'auth/invalid-credential' || authError.code === 'auth/user-not-found';
+          if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && password === '#Caleb918') {
+            console.log('Admin user not found or invalid credentials, attempting auto-registration...');
+            try {
+              await createUserWithEmailAndPassword(auth, loginEmail, password);
+            } catch (regError: any) {
+              // If user already exists but password was wrong, this will fail with 'auth/email-already-in-use'
+              // but we already tried signing in. So it's likely a wrong password if it gets here and fails reg.
+              if (regError.code !== 'auth/email-already-in-use') {
+                throw regError;
+              }
+              throw authError; // Re-throw original sign-in error (likely wrong password)
+            }
           } else {
             throw authError;
           }

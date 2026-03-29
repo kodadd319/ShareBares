@@ -44,10 +44,21 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
             }
           }
         }
-      } catch (error) {
-        console.error('Error generating logo:', error);
-        // Fallback to a seeded picsum image if generation fails
-        setLogoUrl('https://picsum.photos/seed/sharebares_logo_v10/1024/1024');
+      } catch (error: any) {
+        // If it's a quota issue (429), log a cleaner message and use fallback
+        const isQuotaError = 
+          error?.message?.includes('429') || 
+          error?.message?.includes('quota') || 
+          error?.status === 'RESOURCE_EXHAUSTED' ||
+          (typeof error === 'object' && error?.error?.code === 429);
+
+        if (isQuotaError) {
+          console.warn('Gemini quota exceeded for logo generation, using fallback image.');
+        } else {
+          console.error('Error generating logo:', error);
+        }
+        // Fallback to a high-quality seeded image if generation fails
+        setLogoUrl('https://picsum.photos/seed/sharebares_mascot_v1/1024/1024');
       } finally {
         setLoading(false);
       }
