@@ -38,6 +38,7 @@ import {
   auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
   onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
+  firebaseConfig
 } from './firebase';
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
@@ -816,6 +817,20 @@ const SettingsPage: React.FC<{
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 animate-in fade-in duration-500">
+      <div className="mb-12 flex justify-center">
+        <a href="https://t.amyfc.link/408699/779/18234?aff_sub=Top+banner+%22the+game+room+page&aff_sub2=Top+banner+%22settings+page%22&bo=2779,2778,2777,2776,2775&source=sharebares&file_id=415548&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+          <img 
+            src="https://www.imglnkx.com/779/006611AX_FCAM_18_ALL_EN_71_L.jpg" 
+            width="300" 
+            height="250" 
+            style={{ border: 0 }} 
+            referrerPolicy="no-referrer"
+            alt="Banner"
+            className="rounded-2xl shadow-2xl border border-white/10"
+          />
+        </a>
+      </div>
+
       <div className="mb-10">
         <h1 className="text-4xl font-black text-white tracking-tighter chrome-text uppercase">Settings</h1>
         <p className="text-slate-500 mt-2">Manage your account preferences and privacy.</p>
@@ -1755,6 +1770,7 @@ const AppContent: React.FC = () => {
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isFirestoreOnline, setIsFirestoreOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
@@ -2032,6 +2048,25 @@ const AppContent: React.FC = () => {
 
   // Authentication and Real-time Listeners
   useEffect(() => {
+    const testConnection = async () => {
+      try {
+        const { getDocFromServer, doc } = await import('firebase/firestore');
+        await getDocFromServer(doc(db, 'test', 'connection'));
+        setIsFirestoreOnline(true);
+      } catch (error: any) {
+        const errMessage = error.message || String(error);
+        if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('network')) {
+          setIsFirestoreOnline(false);
+          console.error("Firestore connection failed: The client is offline or the backend is unreachable.");
+        }
+      }
+    };
+    testConnection();
+    const interval = setInterval(testConnection, 10000); // Check every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
@@ -2081,7 +2116,8 @@ const AppContent: React.FC = () => {
               await setDoc(doc(db, 'profiles', user.uid), profileData);
             } else {
               // Create new user profile if it doesn't exist
-              const mockUser = MOCK_USERS.find(u => u.email === user.email);
+              const isAdminEmail = user.email === 'jtothek319@gmail.com';
+              const mockUser = MOCK_USERS.find(u => u.email === user.email) || (isAdminEmail ? MOCK_USERS[0] : null);
               const newUser: User = {
                 id: user.uid,
                 username: mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`,
@@ -2090,8 +2126,8 @@ const AppContent: React.FC = () => {
                 avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
                 coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
                 bio: mockUser?.bio || 'Welcome to my profile!',
-                isCreator: mockUser?.isCreator || false,
-                isAdmin: user.email === 'jtothek319@gmail.com' || mockUser?.isAdmin || false,
+                isCreator: isAdminEmail || mockUser?.isCreator || false,
+                isAdmin: isAdminEmail || mockUser?.isAdmin || false,
                 subscribersCount: mockUser?.subscribersCount || 0,
                 followingCount: mockUser?.followingCount || 0,
                 friendIds: mockUser?.friendIds || [],
@@ -2520,134 +2556,121 @@ const AppContent: React.FC = () => {
     try {
       const trimmedInput = emailOrUsername?.trim();
       const trimmedPassword = password?.trim();
-      if (trimmedInput && trimmedPassword) {
-        toastId = toast.loading('Logging in...');
-        let loginEmail = trimmedInput;
-        
-        // Admin fallback for username
-        if (trimmedInput === 'jameson319') {
-          loginEmail = 'jtothek319@gmail.com';
-        } else if (!trimmedInput.includes('@')) {
-          // Try to find user by username
+      
+      if (!trimmedInput || !trimmedPassword) {
+        toast.error('Please enter both email/username and password.');
+        return;
+      }
+
+      toastId = toast.loading('Logging in...');
+      let loginEmail = trimmedInput;
+      
+      // Admin fallback for username
+      if (trimmedInput === 'jameson319') {
+        loginEmail = 'jtothek319@gmail.com';
+      } else if (!trimmedInput.includes('@')) {
+        // Try to find user by username
+        try {
           const usersRef = collection(db, 'users');
           const q = query(usersRef, where('username', '==', trimmedInput), limit(1));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
             loginEmail = querySnapshot.docs[0].data().email;
           } else {
-            throw { code: 'auth/user-not-found' };
+            // If not found in real DB, check MOCK_USERS for legacy support
+            const mockUser = MOCK_USERS.find(u => u.username === trimmedInput);
+            if (mockUser) {
+              loginEmail = mockUser.email;
+            } else {
+              throw { code: 'auth/user-not-found' };
+            }
           }
+        } catch (e) {
+          console.warn('Username lookup failed, trying as email:', e);
         }
+      }
 
-        if (loginEmail === 'jtothek319@gmail.com') {
-          console.log('Admin login attempt with:', loginEmail);
-          
-          // Try custom auth first to bypass console config requirements
+      // 1. Try standard Firebase Auth first (most reliable)
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
+        toast.success('Welcome back!', { id: toastId });
+        setActiveTab('feed');
+        return;
+      } catch (authError: any) {
+        console.log('Standard auth failed:', authError.code);
+        
+        // 2. If standard auth fails because provider is disabled, and it's the admin, try custom flow
+        if (authError.code === 'auth/operation-not-allowed' && loginEmail === 'jtothek319@gmail.com') {
+          console.log('Standard login disabled, attempting custom admin auth...');
           try {
-            console.log('Calling custom auth endpoint...');
             const response = await fetch('/api/auth/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: loginEmail, password: trimmedPassword })
             });
             
-            console.log('Custom auth response status:', response.status);
-            const contentType = response.headers.get('content-type');
-            
-            if (response.ok && contentType?.includes('application/json')) {
-              const { customToken } = await response.json();
-              console.log('Custom token received, signing in...');
-              await signInWithCustomToken(auth, customToken);
-              toast.success('Welcome back, Admin!', { id: toastId });
-              setActiveTab('feed');
-              return;
-            } else {
-              let errorData: any = { error: 'Unknown error' };
-              if (contentType?.includes('application/json')) {
-                errorData = await response.json();
-              } else {
-                const text = await response.text();
-                console.error('Non-JSON error response:', text);
-                errorData = { error: 'SERVER_ERROR', message: 'The server returned an unexpected response format.' };
-              }
-              
-              console.error('Custom auth failed with error:', errorData);
-              
-              if (errorData.error === 'IAM_API_DISABLED' || (errorData.message && errorData.message.includes('iamcredentials.googleapis.com'))) {
-                const link = errorData.link || `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseConfig.projectId}`;
-                toast.error(
-                  <div className="flex flex-col gap-2">
-                    <p className="font-bold">CRITICAL: Enable IAM API</p>
-                    <p className="text-sm">The "IAM Service Account Credentials API" is disabled in your Google Cloud project. This is required for administrator login.</p>
-                    <a 
-                      href={link} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="bg-white text-red-600 px-3 py-1 rounded font-bold text-center text-sm hover:bg-red-50 transition-colors"
-                    >
-                      ENABLE API NOW
-                    </a>
-                    <p className="text-[10px] opacity-70">After enabling, wait 2 minutes and try again.</p>
-                  </div>,
-                  { id: toastId, duration: 20000 }
-                );
-                return; // Stop here, don't try standard auth
-              }
-              
-              if (response.status === 401) {
-                toast.error('Invalid credentials for administrator profile.', { id: toastId });
+            if (response.ok) {
+              const data = await response.json();
+              if (data.customToken) {
+                await signInWithCustomToken(auth, data.customToken);
+                toast.success('Welcome back, Admin!', { id: toastId });
+                setActiveTab('feed');
                 return;
               }
             }
-          } catch (customAuthError) {
-            console.error('Custom auth request failed:', customAuthError);
+          } catch (customErr) {
+            console.error('Custom auth fallback failed:', customErr);
           }
         }
 
-        try {
-          await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
-        } catch (authError: any) {
-          // Special case: If admin user doesn't exist yet, try to register them
-          // Modern Firebase returns 'auth/invalid-credential' for both wrong password and user not found
-          const isInvalidCredential = authError.code === 'auth/invalid-credential' || authError.code === 'auth/user-not-found';
-          if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && trimmedPassword === '#Caleb918') {
-            console.log('Admin user not found or invalid credentials, attempting auto-registration...');
-            try {
-              await createUserWithEmailAndPassword(auth, loginEmail, trimmedPassword);
-            } catch (regError: any) {
-              // If user already exists but password was wrong, this will fail with 'auth/email-already-in-use'
-              // but we already tried signing in. So it's likely a wrong password if it gets here and fails reg.
-              if (regError.code !== 'auth/email-already-in-use') {
-                throw regError;
-              }
-              throw authError; // Re-throw original sign-in error (likely wrong password)
-            }
-          } else {
+        // 3. Special case: If admin user doesn't exist yet in Firebase Auth, try to register them
+        const isInvalidCredential = authError.code === 'auth/invalid-credential' || authError.code === 'auth/user-not-found';
+        if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && trimmedPassword === '#Caleb918') {
+          console.log('Admin user not found, attempting auto-registration...');
+          try {
+            await createUserWithEmailAndPassword(auth, loginEmail, trimmedPassword);
+            toast.success('Admin account created and logged in!', { id: toastId });
+            setActiveTab('feed');
+            return;
+          } catch (regError: any) {
+            if (regError.code !== 'auth/email-already-in-use') throw regError;
+            // If already in use, it means password was wrong
             throw authError;
           }
         }
-        
-        toast.success('Welcome back!', { id: toastId });
-      } else {
-        await handleSocialLogin('google');
+
+        // 4. If all else fails, throw the original error for the catch block to handle
+        throw authError;
       }
-      setActiveTab('feed');
     } catch (error: any) {
       console.error('Login failed:', error);
       if (error.code === 'auth/operation-not-allowed') {
-        const helpMsg = 'Email/Password login is currently disabled in your Firebase Console. As the project owner, you must enable it to allow this login method.';
-        addNotification(NotificationType.SYSTEM, 'Action Required', helpMsg);
-        setConfirmAction({
-          message: helpMsg + '\n\nWould you like to open your Firebase Console to enable "Email/Password" now?',
-          onConfirm: () => window.open('https://console.firebase.google.com/project/gen-lang-client-0036974014/authentication/providers', '_blank')
-        });
-        toast.error('Login method disabled.', { id: toastId });
-      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-email') {
-        addNotification(NotificationType.SYSTEM, 'Login Failed', 'Invalid email or password. Please check your credentials and try again.');
-        toast.error('Invalid credentials. Please try again.', { id: toastId });
+        const helpMsg = 'Email/Password login is disabled in your Firebase Console. Please enable it or use "Sign in with Google".';
+        toast.error(
+          <div className="flex flex-col gap-2">
+            <p className="font-bold">Login Method Disabled</p>
+            <p className="text-xs">{helpMsg}</p>
+            <div className="flex gap-2 mt-2">
+              <button 
+                onClick={() => window.open(`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/providers`, '_blank')}
+                className="bg-[#967bb6] text-white px-3 py-1 rounded text-[10px] font-bold"
+              >
+                Enable in Console
+              </button>
+              <button 
+                onClick={() => handleSocialLogin('google')}
+                className="bg-white text-black px-3 py-1 rounded text-[10px] font-bold"
+              >
+                Use Google Login
+              </button>
+            </div>
+          </div>,
+          { id: toastId, duration: 10000 }
+        );
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        toast.error('Invalid email or password. Please try again.', { id: toastId });
       } else {
-        addNotification(NotificationType.SYSTEM, 'Login Failed', 'Please try again or use Google Login.');
-        toast.error('Login failed. Please check your credentials.', { id: toastId });
+        toast.error('Login failed. Please try again or use Google Login.', { id: toastId });
       }
     }
   };
@@ -2894,8 +2917,10 @@ const AppContent: React.FC = () => {
       setNewPostMedia(null);
       setNewPostMediaPreview(null);
       setIsCreating(false);
+      toast.success('Post created successfully!');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
+      toast.error('Failed to create post. Please try again.');
     }
   };
 
@@ -2967,8 +2992,13 @@ const AppContent: React.FC = () => {
           }, 2000);
         }
       }
+      
+      if (likerId === currentUserId) {
+        toast.success(isLiked ? 'Unliked post' : 'Liked post');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${post.id}`);
+      toast.error('Failed to update like');
     }
   };
 
@@ -3000,6 +3030,10 @@ const AppContent: React.FC = () => {
       const commenter = users.find(u => u.id === commenterId);
       const author = users.find(u => u.id === post.userId);
       
+      if (commenterId === currentUserId) {
+        toast.success('Comment added!');
+      }
+
       if (author && author.id !== commenterId) {
         addNotification(
           NotificationType.COMMENT,
@@ -3017,6 +3051,7 @@ const AppContent: React.FC = () => {
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `posts/${post.id}`);
+      toast.error('Failed to add comment');
     }
   };
 
@@ -4063,6 +4098,7 @@ const AppContent: React.FC = () => {
                       key={post.id} 
                       post={post} 
                       author={user} 
+                      currentUserId={currentUserId}
                       isMe={isOwnProfile} 
                       isAdmin={me.isAdmin} 
                       isFan={user.fanIds?.includes(currentUserId)}
@@ -4190,6 +4226,18 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-slate-300">
+      {/* Offline Banner */}
+      {!isFirestoreOnline && (
+        <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-1 px-4 text-center animate-pulse sticky top-0 z-[100] flex items-center justify-center gap-4">
+          <span>Firestore is offline. Some features may be unavailable.</span>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-white text-red-600 px-2 py-0.5 rounded font-black hover:bg-slate-100 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
       <TopNav 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 

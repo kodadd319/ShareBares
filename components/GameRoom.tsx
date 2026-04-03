@@ -20,8 +20,68 @@ interface GameRoomProps {
   setActiveTab: (tab: string) => void;
 }
 
+const JadeCommentary = ({ game, user }: { game: any, user: any }) => {
+  const [comment, setComment] = useState<string | null>(null);
+  const lastTurnRef = useRef(game.turn);
+
+  useEffect(() => {
+    if (game.turn !== lastTurnRef.current) {
+      lastTurnRef.current = game.turn;
+      // Random chance to show a comment
+      if (Math.random() > 0.7) {
+        const comments = [
+          "Ooh, that was a bold move, darling.",
+          "Are you trying to impress me? It's working.",
+          "I've seen better, but you've got potential.",
+          "Careful now, don't want to lose your shirt.",
+          "This is getting interesting...",
+          "I'm rooting for you, don't let me down.",
+          "Smooth. Very smooth.",
+          "Is that your best? I hope not.",
+          "The tension in here is delicious.",
+          "You play like a man who knows what he wants.",
+          "I love a good strategist. Keep it up.",
+          "Don't get too cocky, the night is young.",
+          "I'm watching your every move. No pressure.",
+          "You've got a certain... flair. I like it.",
+          "I've got my eye on you. Don't disappoint me.",
+          "That was... unexpected. I like surprises."
+        ];
+        setComment(comments[Math.floor(Math.random() * comments.length)]);
+        setTimeout(() => setComment(null), 5000);
+      }
+    }
+  }, [game.turn]);
+
+  if (!comment) return null;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="absolute bottom-24 left-8 z-50 max-w-xs"
+    >
+      <div className="bg-black/80 backdrop-blur-xl border border-[#967bb6]/30 p-4 rounded-2xl shadow-2xl relative">
+        <div className="absolute -top-2 -left-2 w-8 h-8 rounded-full bg-[#967bb6] flex items-center justify-center border border-white/20">
+          <Logo className="w-5 h-5" />
+        </div>
+        <p className="text-[11px] font-bold text-white italic leading-relaxed">
+          "{comment}"
+        </p>
+        <p className="text-[9px] font-black text-[#967bb6] uppercase tracking-widest mt-2">
+          — Jade Vixen
+        </p>
+      </div>
+    </motion.div>
+  );
+};
+
 const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }) => {
   const [activeGame, setActiveGame] = useState<GameState | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [showChat, setShowChat] = useState(false);
   const [invites, setInvites] = useState<GameInvite[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedGameType, setSelectedGameType] = useState<GameType | null>(null);
@@ -50,6 +110,10 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
     socket.on('game:updated', (game: GameState) => {
       setActiveGame(game);
+    });
+
+    socket.on('game:message', (message: any) => {
+      setMessages(prev => [...prev, message]);
     });
 
     socket.on('game:ended', (data: { gameId: string, winner: string }) => {
@@ -101,6 +165,18 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
     socket.emit('game:ready', { gameId: activeGame.id });
   };
 
+  const sendChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!socket || !activeGame || !chatInput.trim()) return;
+    socket.emit('game:message', { 
+      gameId: activeGame.id, 
+      userId: user.id, 
+      text: chatInput.trim(),
+      displayName: user.displayName
+    });
+    setChatInput('');
+  };
+
   const makeMove = (move: any) => {
     if (!socket || !activeGame) return;
     socket.emit('game:move', { gameId: activeGame.id, userId: user.id, move });
@@ -114,6 +190,20 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
   const renderGameSelection = () => (
     <div className="max-w-4xl mx-auto p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-12 flex justify-center">
+        <a href="https://t.amyfc.link/408699/779/18234?aff_sub=Top+banner+%22the+game+room+page&aff_sub2=Top+banner+%22settings+page%22&bo=2779,2778,2777,2776,2775&source=sharebares&file_id=415548&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noreferrer">
+          <img 
+            src="https://www.imglnkx.com/779/006611AX_FCAM_18_ALL_EN_71_L.jpg" 
+            width="300" 
+            height="250" 
+            style={{ border: 0 }} 
+            referrerPolicy="no-referrer"
+            alt="Banner"
+            className="rounded-2xl shadow-2xl border border-white/10"
+          />
+        </a>
+      </div>
+
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-black text-white tracking-tighter uppercase chrome-text">The Game Room</h1>
         <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Choose your game, choose your partner, enjoy the stakes.</p>
@@ -123,9 +213,9 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
         {[
           { id: 'checkers', label: 'Checkers', icon: Square, color: 'from-red-500/20 to-black', desc: 'Jump and capture. Winner takes all.' },
           { id: '10000', label: '10,000', icon: Dices, color: 'from-amber-500/20 to-black', desc: 'Roll the dice. Push your luck.' },
-          { id: 'rummy', label: 'Rummy', icon: Layers, color: 'from-blue-500/20 to-black', desc: 'Melts and sets. A game of skill.' },
           { id: 'blackjack', label: 'Blackjack', icon: Spade, color: 'from-emerald-500/20 to-black', desc: 'Get to 21. Don\'t bust.' },
-          { id: 'billiards', label: 'Billiards', icon: Target, color: 'from-purple-500/20 to-black', desc: 'Sink the balls. Master the angles.' }
+          { id: 'billiards', label: 'Billiards', icon: Target, color: 'from-purple-500/20 to-black', desc: 'Sink the balls. Master the angles.' },
+          { id: 'rummy', label: 'Rummy', icon: Layers, color: 'from-blue-500/20 to-black', desc: 'Form sets and runs. Knock to win.' }
         ].map((game) => (
           <motion.div
             key={game.id}
@@ -301,8 +391,8 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
       case 'checkers': return "Move diagonally forward. Jump opponent pieces to capture. Reach the other side to become a King and move backwards.";
       case '10000': return "Roll 6 dice. 1s=100, 5s=50. Three of a kind = 100 * value (1s=1000). If no scoring dice, you Farkle and lose your turn points. First to 10,000 wins.";
       case 'blackjack': return "Get closer to 21 than the dealer without going over. Aces are 1 or 11. Face cards are 10. Dealer hits until 17.";
-      case 'rummy': return "Form sets (3+ of same rank) or runs (3+ of same suit in sequence). Draw from deck or discard. Discard one card to end turn. Empty hand to win.";
       case 'billiards': return "8-Ball Rules: First pot determines Solids or Stripes. Sink all your balls, then the 8-ball to win. Potting the 8-ball early is a loss.";
+      case 'rummy': return "Gin Rummy Rules: Draw a card from the stock or discard pile. Discard a card to end your turn. Form sets (3-4 of a kind) or runs (3+ in sequence). Knock when your unmatched cards (deadwood) total 10 or less. Gin is 0 deadwood.";
       default: return "";
     }
   };
@@ -411,7 +501,78 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
         </AnimatePresence>
 
         {/* Game Area */}
-        <div className="flex-grow flex items-center justify-center">
+        <div className="flex-grow flex items-center justify-center relative">
+          <JadeCommentary game={activeGame} user={user} />
+          
+          {/* Chat Toggle */}
+          <button 
+            onClick={() => setShowChat(!showChat)}
+            className={`absolute bottom-4 right-4 z-[110] p-4 rounded-2xl transition-all shadow-2xl flex items-center space-x-2 ${showChat ? 'bg-[#967bb6] text-white' : 'bg-black/60 text-[#967bb6] border border-white/10 hover:bg-white/5'}`}
+          >
+            <MessageSquare size={24} />
+            {messages.length > 0 && !showChat && (
+              <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-black">
+                {messages.length}
+              </span>
+            )}
+          </button>
+
+          {/* Chat Panel */}
+          <AnimatePresence>
+            {showChat && (
+              <motion.div 
+                initial={{ opacity: 0, x: 20, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                className="absolute bottom-20 right-4 z-[100] w-80 h-[400px] glass-panel flex flex-col overflow-hidden border-[#967bb6]/30 shadow-2xl bg-black/90 backdrop-blur-2xl rounded-3xl"
+              >
+                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
+                    <MessageSquare size={14} className="mr-2 text-[#967bb6]" />
+                    Game Chat
+                  </h3>
+                  <button onClick={() => setShowChat(false)} className="text-slate-500 hover:text-white">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="flex-grow overflow-y-auto p-4 space-y-4 scrollbar-hide">
+                  {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-2 opacity-30">
+                      <MessageSquare size={32} />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">No messages yet</p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div key={msg.id} className={`flex flex-col ${msg.userId === user.id ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{msg.displayName}</span>
+                        <div className={`px-3 py-2 rounded-2xl text-xs font-medium max-w-[80%] ${msg.userId === user.id ? 'bg-[#967bb6] text-white rounded-tr-none' : 'bg-white/10 text-slate-200 rounded-tl-none'}`}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <form onSubmit={sendChatMessage} className="p-4 border-t border-white/10 bg-white/5 flex space-x-2">
+                  <input 
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-grow bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-[#967bb6]/50 transition-all"
+                  />
+                  <button 
+                    type="submit"
+                    className="p-2 bg-[#967bb6] text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[#967bb6]/20"
+                  >
+                    <Send size={18} />
+                  </button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {activeGame.status === 'waiting' ? (
             <div className="text-center space-y-8 animate-in fade-in zoom-in duration-500">
               <div className="relative">
@@ -515,9 +676,9 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   {/* Game Specific Rendering */}
                   {activeGame.type === 'checkers' && <CheckersGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
                   {activeGame.type === '10000' && <DiceGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
-                  {activeGame.type === 'rummy' && <RummyGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
                   {activeGame.type === 'blackjack' && <BlackjackGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
                   {activeGame.type === 'billiards' && <BilliardsGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
+                  {activeGame.type === 'rummy' && <RummyGame game={activeGame} onMove={makeMove} isMyTurn={isMyTurn} myId={user.id} />}
                 </div>
               </div>
             </div>
@@ -672,8 +833,8 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
     <div className="h-full flex flex-col items-center justify-center p-4 space-y-4">
       <div className="flex items-center space-x-4 mb-2">
         <div className="flex items-center space-x-2">
-          <div className={`w-4 h-4 rounded-full ${myColor === 1 ? 'bg-red-500' : 'bg-slate-300'}`}></div>
-          <span className="text-[10px] font-black text-white uppercase tracking-widest">You are {myColor === 1 ? 'Red' : 'White'}</span>
+          <div className={`w-4 h-4 rounded-full ${myColor === 1 ? 'bg-[#967bb6]' : 'bg-slate-300'}`}></div>
+          <span className="text-[10px] font-black text-white uppercase tracking-widest">You are {myColor === 1 ? 'Purple' : 'White'}</span>
         </div>
         {isMyTurn && (
           <div className="flex items-center space-x-2 animate-pulse">
@@ -683,10 +844,10 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
         )}
       </div>
 
-      <div className="relative p-4 rounded-2xl bg-[#3d2b1f] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-8 border-[#2a1d15]">
-        <div className="absolute inset-0 opacity-20 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')] rounded-lg"></div>
+      <div className="relative p-4 rounded-2xl bg-[#1a0b2e] shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-8 border-[#0a0a0a]">
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] rounded-lg"></div>
         
-        <div className="grid grid-cols-8 gap-0 border-4 border-[#1a110a] shadow-inner">
+        <div className="grid grid-cols-8 gap-0 border-4 border-[#000] shadow-inner">
           {board.map((row: any[], r: number) => row.map((cell: number, c: number) => {
             const isDark = (r + c) % 2 === 1;
             const isSelected = selected?.[0] === r && selected?.[1] === c;
@@ -697,12 +858,12 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
                 key={`${r}-${c}`}
                 onClick={() => handleClick(r, c)}
                 className={`w-10 h-10 lg:w-14 lg:h-14 flex items-center justify-center transition-all cursor-pointer relative ${
-                  isDark ? 'bg-[#5d4037]' : 'bg-[#d7ccc8]'
+                  isDark ? 'bg-[#0a0a0a]' : 'bg-[#1a0b2e]'
                 } ${isSelected ? 'ring-4 ring-inset ring-[#967bb6] z-10' : ''}`}
               >
                 {isValidMove && (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-[#967bb6]/40 border-2 border-[#967bb6]"></div>
+                    <div className="w-3 h-3 lg:w-4 lg:h-4 rounded-full bg-[#967bb6]/40 border-2 border-[#967bb6] shadow-[0_0_10px_rgba(150,123,182,0.5)]"></div>
                   </div>
                 )}
 
@@ -711,15 +872,15 @@ const CheckersGame: React.FC<{ game: GameState, onMove: (data: any) => void, isM
                     layoutId={`piece-${r}-${c}`}
                     initial={{ scale: 0, y: -20 }}
                     animate={{ scale: 1, y: 0 }}
-                    className={`w-8 h-8 lg:w-11 lg:h-11 rounded-full shadow-[0_4px_0_rgba(0,0,0,0.4)] flex items-center justify-center relative overflow-hidden transition-transform z-10 ${
+                    className={`w-8 h-8 lg:w-11 lg:h-11 rounded-full shadow-[0_6px_0_rgba(0,0,0,0.6)] flex items-center justify-center relative overflow-hidden transition-transform z-10 ${
                       Math.floor(cell) === 1 
-                      ? 'bg-gradient-to-br from-red-500 to-red-800 border-2 border-red-400/30' 
-                      : 'bg-gradient-to-br from-slate-100 to-slate-400 border-2 border-white/40'
-                    } ${isSelected ? '-translate-y-2 scale-110 shadow-[0_10px_20px_rgba(0,0,0,0.4)]' : ''}`}
+                      ? 'bg-gradient-to-br from-[#967bb6] to-[#4b3b5e] border-2 border-[#967bb6]/50 shadow-[0_0_15px_rgba(150,123,182,0.3)]' 
+                      : 'bg-gradient-to-br from-slate-200 to-slate-500 border-2 border-white/40 shadow-[0_0_15px_rgba(255,255,255,0.1)]'
+                    } ${isSelected ? '-translate-y-2 scale-110 shadow-[0_15px_30px_rgba(0,0,0,0.6)]' : ''}`}
                   >
-                    <div className="absolute inset-1 rounded-full border border-black/10"></div>
-                    <div className="absolute inset-2 rounded-full border border-black/10"></div>
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none"></div>
+                    <div className="absolute inset-1 rounded-full border border-white/10"></div>
+                    <div className="absolute inset-2 rounded-full border border-white/5"></div>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
                     
                     {cell > 2 && (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -798,19 +959,19 @@ const Die: React.FC<{ value: number; isSelected: boolean; isSaved: boolean; onCl
       whileHover={!disabled && !isSaved ? { scale: 1.1, rotate: 5 } : {}}
       whileTap={!disabled && !isSaved ? { scale: 0.9 } : {}}
       onClick={!disabled && !isSaved ? onClick : undefined}
-      className={`w-16 h-16 md:w-20 md:h-20 rounded-xl flex items-center justify-center shadow-2xl transition-all relative ${
+      className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.4)] transition-all relative ${
         isSaved
-        ? 'bg-slate-800 border-2 border-slate-700 opacity-60 cursor-default'
+        ? 'bg-[#1a0b2e] border-2 border-[#967bb6]/30 opacity-60 cursor-default'
         : isSelected 
-        ? 'bg-[#967bb6] border-4 border-white/40 -translate-y-4 cursor-pointer' 
-        : 'bg-white border-2 border-slate-200 cursor-pointer'
+        ? 'bg-[#967bb6] border-4 border-white/40 -translate-y-4 cursor-pointer shadow-[0_20px_40px_rgba(150,123,182,0.4)]' 
+        : 'bg-black border-2 border-[#967bb6]/20 cursor-pointer hover:border-[#967bb6]/50'
       }`}
     >
       <div className="grid grid-cols-3 grid-rows-3 gap-1 w-3/4 h-3/4">
         {[...Array(9)].map((_, i) => (
           <div key={i} className="flex items-center justify-center">
             {dotPositions[value].includes(i) && (
-              <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isSelected || isSaved ? 'bg-white' : 'bg-black'}`} />
+              <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${isSelected || isSaved ? 'bg-white' : 'bg-[#967bb6] shadow-[0_0_8px_rgba(150,123,182,0.8)]'}`} />
             )}
           </div>
         ))}
@@ -856,19 +1017,21 @@ const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTur
   const isValidSelection = selectedDice.length > 0 && usedCount === selectedDice.length;
   
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center py-8 relative">
-      <div className="glass-panel p-8 rounded-[2rem] border-white/10 bg-black/60 backdrop-blur-2xl shadow-2xl max-w-md w-full">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-2">🎲 10,000 Dice Game</h2>
-          <div className="flex justify-center items-center space-x-4 text-sm font-bold">
-            <div className={`px-4 py-2 rounded-xl transition-all ${isMyTurn ? 'bg-[#967bb6] text-white' : 'bg-white/5 text-white/40'}`}>
-              Player 1: {myScore} {isMyTurn && "⬅️"}
-            </div>
-            <div className={`px-4 py-2 rounded-xl transition-all ${!isMyTurn ? 'bg-[#967bb6] text-white' : 'bg-white/5 text-white/40'}`}>
-              Player 2: {opponentScore} {!isMyTurn && "⬅️"}
+    <div className="h-full w-full flex flex-col items-center justify-center py-8 relative bg-[#050505]">
+      <div className="glass-panel p-8 rounded-[2.5rem] border-[#967bb6]/20 bg-black/60 backdrop-blur-2xl shadow-2xl max-w-md w-full relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#967bb6_0%,_transparent_70%)] pointer-events-none"></div>
+        <div className="relative z-10">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-2 chrome-text">🎲 10,000 Dice Game</h2>
+            <div className="flex justify-center items-center space-x-4 text-sm font-bold">
+              <div className={`px-4 py-2 rounded-xl transition-all ${isMyTurn ? 'bg-[#967bb6] text-white shadow-[0_0_15px_rgba(150,123,182,0.4)]' : 'bg-white/5 text-white/40'}`}>
+                You: {myScore} {isMyTurn && "⬅️"}
+              </div>
+              <div className={`px-4 py-2 rounded-xl transition-all ${!isMyTurn ? 'bg-[#967bb6] text-white shadow-[0_0_15px_rgba(150,123,182,0.4)]' : 'bg-white/5 text-white/40'}`}>
+                {opponent?.displayName || 'Opponent'}: {opponentScore} {!isMyTurn && "⬅️"}
+              </div>
             </div>
           </div>
-        </div>
 
         {/* Saved Dice Display */}
         {savedDice.length > 0 && (
@@ -902,7 +1065,7 @@ const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTur
         <div className="text-center mb-8">
           <div className="flex flex-col items-center justify-center">
             <p className="text-xs font-black text-white/40 uppercase tracking-widest mb-1">Turn Score</p>
-            <p className="text-4xl font-black text-[#967bb6] tracking-tighter">
+            <p className="text-4xl font-black text-[#967bb6] tracking-tighter chrome-text">
               {currentTurnScore + potentialScore}
             </p>
             {potentialScore > 0 && (
@@ -970,6 +1133,7 @@ const DiceGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTur
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
@@ -1031,20 +1195,20 @@ const Card: React.FC<{ suit: string, value: string, hidden?: boolean, index?: nu
       initial={{ rotateY: 90, opacity: 0 }}
       animate={{ rotateY: 0, opacity: 1 }}
       transition={{ delay: index * 0.05 }}
-      className="w-16 h-24 lg:w-20 lg:h-28 bg-white rounded-xl border-2 border-slate-200 shadow-2xl p-2 flex flex-col justify-between relative overflow-hidden"
+      className="w-16 h-24 lg:w-20 lg:h-28 bg-gradient-to-br from-white to-slate-100 rounded-xl border-2 border-slate-300 shadow-2xl p-2 flex flex-col justify-between relative overflow-hidden"
     >
-      <div className={`flex flex-col items-start ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
+      <div className={`flex flex-col items-start ${isRed ? 'text-red-600' : 'text-slate-900'}`}>
         <span className="text-sm lg:text-base font-black leading-none tracking-tighter">{value}</span>
-        <SuitIcon size={12} strokeWidth={3} />
+        <SuitIcon size={14} strokeWidth={3} />
       </div>
       
-      <div className={`absolute inset-0 flex items-center justify-center opacity-[0.05] ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
+      <div className={`absolute inset-0 flex items-center justify-center opacity-[0.08] ${isRed ? 'text-red-600' : 'text-slate-900'}`}>
         <SuitIcon size={48} strokeWidth={1} />
       </div>
 
-      <div className={`flex flex-col items-end rotate-180 ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
+      <div className={`flex flex-col items-end rotate-180 ${isRed ? 'text-red-600' : 'text-slate-900'}`}>
         <span className="text-sm lg:text-base font-black leading-none tracking-tighter">{value}</span>
-        <SuitIcon size={12} strokeWidth={3} />
+        <SuitIcon size={14} strokeWidth={3} />
       </div>
       
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]"></div>
@@ -1060,7 +1224,8 @@ const BlackjackGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const isMyActualTurn = isMyTurn && status === 'playing' && currentPlayer?.id === myId;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center py-8 bg-[#0b1a12] text-white font-sans overflow-auto relative">
+    <div className="h-full w-full flex flex-col items-center justify-center py-8 bg-[#050505] text-white font-sans overflow-auto relative">
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_#967bb6_0%,_transparent_70%)] pointer-events-none"></div>
       {/* Instructions Overlay */}
       <AnimatePresence>
         {showInstructions && (
@@ -1254,418 +1419,134 @@ const BlackjackCard: React.FC<{
   return <Card suit={suit} value={value} hidden={hidden} index={index} />;
 };
 
-const RummyCard: React.FC<{ 
-  suit: string, 
-  value: string, 
-  hidden?: boolean, 
-  selected?: boolean, 
-  onClick?: () => void,
-  className?: string,
-  isSmall?: boolean,
-  index?: number
-}> = ({ suit, value, hidden, selected, onClick, className = "", isSmall, index = 0 }) => {
-  if (hidden) {
-    return (
-      <motion.div 
-        layout
-        initial={{ scale: 0.8, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.05 }}
-        className={`${isSmall ? 'w-10 h-14' : 'w-16 h-24 lg:w-20 lg:h-28'} bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-xl border-2 border-[#967bb6]/30 shadow-2xl flex items-center justify-center relative overflow-hidden group ${className}`}
-      >
-        <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#967bb6]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div className="relative">
-          <Logo size="sm" className="opacity-20 grayscale brightness-200 scale-50" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[#967bb6] font-black text-xl opacity-40">?</span>
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  const isRed = suit === 'heart' || suit === 'diamond';
-  const SuitIcon = suit === 'spade' ? Spade : suit === 'club' ? Club : suit === 'heart' ? Heart : Diamond;
-
-  return (
-    <motion.div 
-      layout
-      initial={{ y: 50, opacity: 0, rotate: -5 }}
-      animate={{ 
-        y: selected ? -20 : 0, 
-        opacity: 1, 
-        rotate: 0,
-        scale: selected ? 1.05 : 1
-      }}
-      whileHover={onClick ? { y: selected ? -25 : -10, scale: 1.05, zIndex: 50 } : {}}
-      whileTap={onClick ? { scale: 0.95 } : {}}
-      onClick={onClick}
-      className={`${isSmall ? 'w-10 h-14 p-1' : 'w-16 h-24 lg:w-20 lg:h-28 p-2'} bg-white rounded-xl border-2 shadow-2xl flex flex-col justify-between relative overflow-hidden cursor-pointer transition-all duration-300 ${selected ? 'border-[#967bb6] ring-4 ring-[#967bb6]/30 z-50 shadow-[#967bb6]/40' : 'border-slate-200'} ${className}`}
-    >
-      <div className={`flex flex-col items-start ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
-        <span className={`${isSmall ? 'text-[10px]' : 'text-sm lg:text-base'} font-black leading-none tracking-tighter`}>{value}</span>
-        <SuitIcon size={isSmall ? 8 : 12} strokeWidth={3} />
-      </div>
-      
-      <div className={`absolute inset-0 flex items-center justify-center opacity-[0.05] ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
-        <SuitIcon size={isSmall ? 24 : 56} strokeWidth={1} />
-      </div>
-
-      <div className={`flex flex-col items-end rotate-180 ${isRed ? 'text-red-500' : 'text-slate-900'}`}>
-        <span className={`${isSmall ? 'text-[10px]' : 'text-sm lg:text-base'} font-black leading-none tracking-tighter`}>{value}</span>
-        <SuitIcon size={isSmall ? 8 : 12} strokeWidth={3} />
-      </div>
-
-      {/* Subtle texture */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/paper-fibers.png')]"></div>
-    </motion.div>
-  );
-};
-
 const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTurn: boolean, myId: string }> = ({ game, onMove, isMyTurn, myId }) => {
-  const { hands = {}, discardPile = [], melds = [], hasDrawn = false, score = {}, deckCount = 52 } = game.data;
-  const hand = hands[myId] || [];
-  const [selectedCards, setSelectedCards] = useState<number[]>([]);
-  const [showInstructions, setShowInstructions] = useState(false);
-  const [lastAction, setLastAction] = useState<string | null>(null);
+  const { players = [], discardPile = [], turnPhase = 'draw' } = game.data;
+  const me = players.find((p: any) => p.id === myId);
+  const opponent = players.find((p: any) => p.id !== myId);
 
-  // Clear selection when hand changes (e.g., after a successful meld or discard)
-  useEffect(() => {
-    setSelectedCards([]);
-  }, [hand.length]);
+  if (!me || !opponent) return null;
 
-  const handleMove = (move: any) => {
-    onMove(move);
-    setSelectedCards([]);
-    setLastAction(move.type);
-    setTimeout(() => setLastAction(null), 2000);
+  const handleDraw = (fromDiscard: boolean) => {
+    if (!isMyTurn || turnPhase !== 'draw') return;
+    onMove({ type: 'draw', fromDiscard });
   };
 
-  const toggleCard = (index: number) => {
-    setSelectedCards(prev => 
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    );
+  const handleDiscard = (cardIndex: number) => {
+    if (!isMyTurn || turnPhase !== 'discard') return;
+    onMove({ type: 'discard', cardIndex });
   };
 
-  const opponent = game.players.find(p => p.id !== myId);
-  const opponentId = opponent?.id || 'bot';
-  const opponentHand = hands[opponentId] || [];
-  const opponentHandCount = opponentHand.length;
-  const opponentScore = score[opponentId] || 0;
-  const myScore = score[myId] || 0;
-
-  const isGameOver = game.status === 'finished';
+  const handleKnock = (cardIndex: number) => {
+    if (!isMyTurn || turnPhase !== 'discard') return;
+    onMove({ type: 'discard', cardIndex, knock: true });
+  };
 
   return (
-    <div className="h-full flex flex-col items-center justify-between py-6 relative overflow-hidden w-full select-none">
-      {/* Table Felt Background */}
-      <div className="absolute inset-0 bg-[#0a3d1a] pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.5)_100%)]"></div>
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-        {/* Table Border */}
-        <div className="absolute inset-4 border-8 border-black/20 rounded-[3rem] pointer-events-none"></div>
-      </div>
-
-      {/* Header: Scores & Status */}
-      <div className="relative z-10 w-full px-10 flex justify-between items-start">
-        <div className="flex space-x-4">
-          <motion.div 
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className={`glass-panel px-6 py-3 rounded-2xl border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl flex items-center space-x-4 ${isMyTurn ? 'ring-2 ring-[#967bb6]/50' : ''}`}
-          >
-            <div className="w-10 h-10 rounded-full border-2 border-[#967bb6] overflow-hidden">
-              <img src={game.players.find(p => p.id === myId)?.avatar || ''} className="w-full h-full object-cover" alt="" />
-            </div>
-            <div>
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.4em] mb-0.5">Your Score</p>
-              <p className="text-2xl font-black text-white tracking-tighter leading-none">{myScore}</p>
-            </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className={`glass-panel px-6 py-3 rounded-2xl border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl flex items-center space-x-4 ${!isMyTurn ? 'ring-2 ring-[#967bb6]/50' : ''}`}
-          >
-            <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden">
-              <img src={opponent?.avatar || ''} className="w-full h-full object-cover" alt="" />
-            </div>
-            <div>
-              <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.4em] mb-0.5">{opponent?.displayName || 'Opponent'}</p>
-              <p className="text-2xl font-black text-white tracking-tighter leading-none">{opponentScore}</p>
-            </div>
-          </motion.div>
-        </div>
-        
-        <div className="flex space-x-3">
-          <button 
-            onClick={() => handleMove({ type: 'sort' })}
-            className="p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all shadow-xl group"
-            title="Sort Hand"
-          >
-            <RotateCcw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
-          </button>
-          <button 
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="p-3 rounded-2xl bg-white/5 border border-white/10 text-[#967bb6] hover:bg-[#967bb6] hover:text-white transition-all shadow-xl"
-            title="How to Play"
-          >
-            <Info size={20} />
-          </button>
-        </div>
-      </div>
-
-      {/* Instructions Overlay */}
-      <AnimatePresence>
-        {showInstructions && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md"
-            onClick={() => setShowInstructions(false)}
-          >
-            <motion.div 
-              className="max-w-md w-full glass-panel p-8 rounded-[2.5rem] border-[#967bb6]/30 bg-black/90 backdrop-blur-2xl shadow-2xl relative"
-              onClick={e => e.stopPropagation()}
-            >
-              <button 
-                onClick={() => setShowInstructions(false)}
-                className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors"
-              >
-                <X size={24} />
-              </button>
-              <h4 className="text-2xl font-black text-white uppercase tracking-tighter mb-6 flex items-center chrome-text">
-                <Spade size={24} className="mr-3 text-[#967bb6]" />
-                Rummy Rules
-              </h4>
-              <div className="space-y-4 text-sm text-slate-300 font-medium leading-relaxed">
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-[#967bb6]/20 flex items-center justify-center text-[#967bb6] font-black text-[10px] shrink-0 mt-0.5">1</div>
-                  <p><strong className="text-white">Draw:</strong> Start your turn by drawing from the Stock or Discard pile.</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-[#967bb6]/20 flex items-center justify-center text-[#967bb6] font-black text-[10px] shrink-0 mt-0.5">2</div>
-                  <p><strong className="text-white">Melds:</strong> Create sets (3+ cards of same rank) or runs (3+ cards of same suit in sequence).</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-[#967bb6]/20 flex items-center justify-center text-[#967bb6] font-black text-[10px] shrink-0 mt-0.5">3</div>
-                  <p><strong className="text-white">Discard:</strong> End your turn by placing one card on the discard pile.</p>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full bg-[#967bb6]/20 flex items-center justify-center text-[#967bb6] font-black text-[10px] shrink-0 mt-0.5">4</div>
-                  <p><strong className="text-white">Win:</strong> Empty your hand to win the round and collect points from your opponent's hand.</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowInstructions(false)}
-                className="w-full mt-8 py-4 bg-[#967bb6] text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-[#967bb6]/20 hover:scale-[1.02] transition-all"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Opponent Area */}
-      <div className="relative z-10 w-full flex flex-col items-center">
-        <div className="flex -space-x-12 lg:-space-x-14 opacity-40 hover:opacity-100 transition-opacity duration-500">
-          {isGameOver ? (
-            opponentHand.map((card: any, i: number) => (
-              <RummyCard key={i} suit={card.suit} value={card.value} isSmall className="scale-75" index={i} />
-            ))
-          ) : (
-            Array.from({ length: opponentHandCount }).map((_, i) => (
-              <RummyCard key={i} suit="" value="" hidden isSmall className="scale-75" index={i} />
-            ))
-          )}
-        </div>
-        <div className="mt-2 px-4 py-1 bg-black/40 rounded-full border border-white/5 backdrop-blur-md">
-          <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">
-            {opponent?.displayName || 'Opponent'}'s Hand ({opponentHandCount})
-          </p>
-        </div>
-      </div>
+    <div className="h-full w-full flex flex-col items-center justify-between py-8 bg-[#0a0a0a] relative overflow-hidden">
+      <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
       
-      {/* Table Melds Area */}
-      <div className="relative z-10 w-full flex flex-col items-center space-y-4 px-10">
-        <div className="w-full flex flex-wrap justify-center gap-6 overflow-y-auto max-h-[180px] p-8 bg-black/20 rounded-[3rem] border border-white/5 shadow-inner backdrop-blur-sm custom-scrollbar">
-          {melds.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 opacity-20">
-              <Layers size={32} className="mb-2" />
-              <p className="text-[10px] font-black uppercase tracking-widest">No melds on table</p>
+      {/* Opponent Section */}
+      <div className="relative z-10 flex flex-col items-center space-y-4">
+        <div className="flex -space-x-8 lg:-space-x-12 opacity-60 scale-75 lg:scale-90">
+          {(opponent.hand || []).map((_: any, i: number) => (
+            <div key={i} className="w-16 h-24 lg:w-20 lg:h-28 bg-gradient-to-br from-[#1a1a1a] to-[#0a0a0a] rounded-xl border-2 border-[#967bb6]/30 shadow-2xl flex items-center justify-center relative overflow-hidden">
+              <Logo size="sm" className="opacity-10 grayscale brightness-200 scale-50" />
             </div>
-          ) : (
-            melds.map((meld: any[], i: number) => (
-              <motion.div 
-                key={i} 
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex -space-x-12 p-3 bg-white/5 rounded-2xl border border-white/10 scale-90 hover:scale-100 transition-transform shadow-2xl group relative"
-              >
-                <div className="absolute -top-2 -right-2 bg-[#967bb6] text-white text-[8px] font-black px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                  MELD
-                </div>
-                {meld.map((card, j) => <RummyCard key={j} suit={card.suit} value={card.value} isSmall />)}
-              </motion.div>
-            ))
+          ))}
+        </div>
+        <div className="px-4 py-1 bg-white/5 rounded-full border border-white/10">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{opponent.hand?.length} Cards</span>
+        </div>
+      </div>
+
+      {/* Center Piles */}
+      <div className="relative z-10 flex items-center space-x-12 lg:space-x-24">
+        {/* Stock Pile */}
+        <div className="relative group">
+          <motion.div 
+            whileHover={isMyTurn && turnPhase === 'draw' ? { scale: 1.05, translateY: -5 } : {}}
+            whileTap={isMyTurn && turnPhase === 'draw' ? { scale: 0.95 } : {}}
+            onClick={() => handleDraw(false)}
+            className={`w-24 h-36 lg:w-32 lg:h-48 bg-gradient-to-br from-[#1a0b2e] to-black border-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center cursor-pointer transition-all relative overflow-hidden ${
+              isMyTurn && turnPhase === 'draw' 
+              ? 'border-[#967bb6] ring-4 ring-[#967bb6]/20 animate-pulse' 
+              : 'border-[#967bb6]/20'
+            }`}
+          >
+            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+            <Logo className="w-12 h-12 lg:w-16 lg:h-16 opacity-20 mb-2 grayscale brightness-200" />
+            <span className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest relative z-10">Stock</span>
+          </motion.div>
+          {isMyTurn && turnPhase === 'draw' && (
+            <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
+              <span className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest animate-bounce block">Draw Here</span>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Center: Stock & Discard */}
-      <div className="relative z-10 flex items-center space-x-24">
-        <div className="text-center space-y-4">
-          <motion.button 
-            whileHover={isMyTurn && !hasDrawn ? { scale: 1.05, y: -8 } : {}}
-            whileTap={isMyTurn && !hasDrawn ? { scale: 0.95 } : {}}
-            disabled={!isMyTurn || hasDrawn || isGameOver}
-            onClick={() => handleMove({ type: 'draw' })}
-            className={`relative group transition-all ${(!isMyTurn || hasDrawn || isGameOver) ? 'opacity-40 grayscale' : ''}`}
-          >
-            <div className="absolute -inset-8 bg-[#967bb6]/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <RummyCard suit="" value="" hidden />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-12 h-12 rounded-full bg-black/60 border border-white/20 flex items-center justify-center backdrop-blur-md shadow-2xl group-hover:scale-110 transition-transform">
-                <Plus className="text-[#967bb6]" size={28} />
-              </div>
-            </div>
-            {deckCount > 0 && (
-              <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-[#967bb6] rounded-full border-2 border-white flex items-center justify-center text-xs font-black text-white shadow-2xl">
-                {deckCount}
-              </div>
-            )}
-          </motion.button>
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Stock Pile</p>
-        </div>
-
-        <div className="text-center space-y-4">
-          <motion.button 
-            whileHover={isMyTurn && !hasDrawn ? { scale: 1.05, y: -8 } : {}}
-            whileTap={isMyTurn && !hasDrawn ? { scale: 0.95 } : {}}
-            disabled={!isMyTurn || hasDrawn || isGameOver}
-            onClick={() => handleMove({ type: 'draw_discard' })}
-            className={`relative group transition-all ${(!isMyTurn || hasDrawn || isGameOver) ? 'opacity-40 grayscale' : ''}`}
-          >
-            <div className="absolute -inset-8 bg-[#967bb6]/20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            {discardPile.length > 0 ? (
-              <RummyCard suit={discardPile[discardPile.length-1].suit} value={discardPile[discardPile.length-1].value} />
-            ) : (
-              <div className="w-16 h-24 lg:w-20 lg:h-28 rounded-xl border-2 border-dashed border-white/10 flex items-center justify-center bg-black/20">
-                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10" />
-              </div>
-            )}
-            {discardPile.length > 0 && (
-              <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-black/60 rounded-full border-2 border-white/20 flex items-center justify-center text-[10px] font-black text-white backdrop-blur-md">
-                {discardPile.length}
-              </div>
-            )}
-          </motion.button>
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Discard Pile</p>
-        </div>
-      </div>
-
-      {/* Player Hand & Controls */}
-      <div className="relative z-10 w-full flex flex-col items-center space-y-10 pb-6">
+        {/* Discard Pile */}
         <div className="relative group">
-          <div className="flex -space-x-12 lg:-space-x-14 hover:-space-x-4 lg:hover:-space-x-6 transition-all duration-700 p-10 bg-black/30 rounded-[3.5rem] border border-white/10 backdrop-blur-xl max-w-full overflow-x-auto custom-scrollbar shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-            {hand.length === 0 ? (
-              <div className="w-64 h-28 flex items-center justify-center">
-                <p className="text-xs font-black text-white/20 uppercase tracking-widest">Empty Hand</p>
-              </div>
+          <motion.div 
+            whileHover={isMyTurn && turnPhase === 'draw' ? { scale: 1.05, translateY: -5 } : {}}
+            whileTap={isMyTurn && turnPhase === 'draw' ? { scale: 0.95 } : {}}
+            onClick={() => handleDraw(true)}
+            className={`w-24 h-36 lg:w-32 lg:h-48 bg-white/5 border-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer transition-all relative ${
+              isMyTurn && turnPhase === 'draw' && discardPile.length > 0
+              ? 'border-emerald-500 ring-4 ring-emerald-500/20' 
+              : 'border-white/10'
+            }`}
+          >
+            {discardPile.length > 0 ? (
+              <Card suit={discardPile[discardPile.length - 1].suit} value={discardPile[discardPile.length - 1].value} />
             ) : (
-              hand.map((card: any, i: number) => (
-                <RummyCard 
-                  key={i} 
-                  suit={card.suit} 
-                  value={card.value} 
-                  selected={selectedCards.includes(i)}
-                  onClick={() => toggleCard(i)}
-                  index={i}
-                />
-              ))
+              <div className="flex flex-col items-center opacity-20">
+                <RotateCcw size={32} className="text-slate-500 mb-2" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Empty</span>
+              </div>
             )}
-          </div>
-          
-          {/* Hand Info Badge */}
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-[#967bb6] rounded-full border-2 border-white shadow-xl z-50">
-            <p className="text-[10px] font-black text-white uppercase tracking-widest">
-              Your Hand ({hand.length})
-            </p>
+          </motion.div>
+          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Discard Pile</span>
           </div>
         </div>
+      </div>
 
-        {isMyTurn && !isGameOver && (
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="flex flex-col items-center space-y-6"
-          >
-            <div className="flex space-x-4">
-              <button 
-                disabled={selectedCards.length === 0}
-                onClick={() => setSelectedCards([])}
-                className="px-8 py-4 bg-white/5 border border-white/10 text-slate-400 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all disabled:opacity-30 flex items-center space-x-2"
-              >
-                <X size={14} />
-                <span>Clear Selection</span>
-              </button>
-              
-              <button 
-                disabled={!hasDrawn || selectedCards.length < 3}
-                onClick={() => handleMove({ type: 'meld', indices: selectedCards })}
-                className="px-12 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100 flex items-center space-x-2"
-              >
-                <Layers size={18} />
-                <span>Meld Selected</span>
-              </button>
-              
-              <button 
-                disabled={!hasDrawn || selectedCards.length !== 1}
-                onClick={() => handleMove({ type: 'discard', index: selectedCards[0] })}
-                className="px-12 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-red-500/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100 flex items-center space-x-2"
-              >
-                <Send size={18} />
-                <span>Discard</span>
-              </button>
-            </div>
-            
-            <div className="px-8 py-3 bg-black/60 rounded-full border border-[#967bb6]/30 backdrop-blur-xl shadow-2xl">
-              <p className="text-xs font-black text-[#967bb6] uppercase tracking-[0.3em] animate-pulse">
-                {hasDrawn ? 'Select 1 card to discard or meld' : 'Draw from Stock or Discard Pile'}
-              </p>
-            </div>
-          </motion.div>
-        )}
+      {/* My Section */}
+      <div className="relative z-10 w-full max-w-5xl px-4">
+        <div className="flex flex-wrap justify-center gap-2 lg:gap-4 mb-8">
+          {(me.hand || []).map((card: any, i: number) => (
+            <motion.div 
+              key={i}
+              whileHover={{ translateY: -20, scale: 1.05 }}
+              onClick={() => handleDiscard(i)}
+              onContextMenu={(e) => { e.preventDefault(); handleKnock(i); }}
+              className={`relative cursor-pointer transition-all ${
+                isMyTurn && turnPhase === 'discard' 
+                ? 'hover:ring-4 hover:ring-[#967bb6] rounded-xl' 
+                : ''
+              }`}
+            >
+              <Card suit={card.suit} value={card.value} />
+              {isMyTurn && turnPhase === 'discard' && (
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-[8px] font-black text-[#967bb6] uppercase whitespace-nowrap">Discard</span>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
 
-        {!isMyTurn && !isGameOver && (
-          <div className="px-10 py-4 bg-white/5 rounded-full border border-white/5 backdrop-blur-md">
-            <p className="text-xs font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse">
-              Waiting for {opponent?.displayName || 'Opponent'}...
-            </p>
+        {isMyTurn && turnPhase === 'discard' && (
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center space-x-2 px-6 py-2 bg-[#967bb6]/10 border border-[#967bb6]/30 rounded-full">
+              <Sparkles size={14} className="text-[#967bb6] animate-pulse" />
+              <span className="text-[10px] font-black text-[#967bb6] uppercase tracking-[0.2em]">
+                Select a card to discard • Right click to Knock
+              </span>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Action Feedback */}
-      <AnimatePresence>
-        {lastAction && (
-          <motion.div 
-            initial={{ scale: 0.5, opacity: 0, y: 0 }}
-            animate={{ scale: 1.5, opacity: 1, y: -100 }}
-            exit={{ opacity: 0 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] pointer-events-none"
-          >
-            <span className="text-4xl font-black text-white uppercase tracking-tighter chrome-text drop-shadow-2xl">
-              {lastAction === 'draw' ? 'DRAW!' : lastAction === 'meld' ? 'MELD!' : lastAction === 'discard' ? 'DISCARD!' : 'SORTED!'}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
@@ -1942,13 +1823,13 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
 
       // Table Felt
       const feltGradient = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 0, WIDTH/2, HEIGHT/2, WIDTH);
-      feltGradient.addColorStop(0, '#27ae60');
-      feltGradient.addColorStop(1, '#1e8449');
+      feltGradient.addColorStop(0, '#1a0b2e');
+      feltGradient.addColorStop(1, '#050505');
       ctx.fillStyle = feltGradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Table Markings
-      ctx.strokeStyle = "rgba(255,255,255,0.15)";
+      ctx.strokeStyle = "rgba(150,123,182,0.2)";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(WIDTH * 0.25, 0);
@@ -1958,6 +1839,16 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       ctx.beginPath();
       ctx.arc(WIDTH * 0.25, HEIGHT/2, 40, -Math.PI/2, Math.PI/2);
       ctx.stroke();
+
+      // Jade Vixen Logo
+      ctx.save();
+      ctx.translate(WIDTH / 2, HEIGHT / 2);
+      ctx.globalAlpha = 0.05;
+      ctx.fillStyle = "#967bb6";
+      ctx.font = "bold 60px 'Playfair Display'";
+      ctx.textAlign = "center";
+      ctx.fillText("JADE VIXEN", 0, 20);
+      ctx.restore();
 
       // Draw pockets
       pockets.forEach(p => {
@@ -2056,7 +1947,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const myType = game.data.playerTypes[myId];
 
   return (
-    <div className="h-full flex flex-col items-center justify-between py-4 relative overflow-hidden bg-[#0a2e1a]">
+    <div className="h-full flex flex-col items-center justify-between py-4 relative overflow-hidden bg-[#050505]">
       {/* Header */}
       <div className="relative z-10 w-full px-8 flex justify-between items-center">
         <div className="flex items-center space-x-3">
@@ -2170,7 +2061,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
             ref={canvasRef}
             width={WIDTH}
             height={HEIGHT}
-            className="w-full bg-[#27ae60] rounded-[2rem] cursor-crosshair shadow-inner"
+            className="w-full bg-[#1a0b2e] rounded-[2rem] cursor-crosshair shadow-inner"
           />
           
           <div className="absolute inset-6 pointer-events-none rounded-[2rem] shadow-[inset_0_0_60px_rgba(0,0,0,0.7)]"></div>

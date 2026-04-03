@@ -150,11 +150,12 @@ const HomePage: React.FC<HomePageProps> = ({
                     <PostCard 
                       post={post} 
                       author={author} 
-                      isMe={false} 
+                      currentUserId={me.id}
+                      isMe={post.userId === me.id} 
                       isAdmin={me.isAdmin}
                       isFan={author.fanIds?.includes(me.id)}
                       onLike={() => onLikePost?.(post)}
-                      onComment={() => onCommentPost?.(post)}
+                      onComment={(text) => onCommentPost?.(post, me.id, text)}
                       onProfileClick={onProfileClick}
                       comments={comments}
                       users={users}

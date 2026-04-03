@@ -396,96 +396,43 @@ async function startServer() {
                 if (val < 17) botMove = { type: 'hit' };
                 else botMove = { type: 'stand' };
               }
-            } else if (updatedGame.type === 'rummy') {
-              const hand = data.hands['bot'];
-              if (!data.hasDrawn) {
-                // Check if top discard is useful
-                const topDiscard = data.discardPile[data.discardPile.length - 1];
-                if (topDiscard) {
-                  const potentialHand = [...hand, topDiscard];
-                  // Check for sets
-                  const counts: Record<string, number> = {};
-                  potentialHand.forEach((c: any) => counts[c.value] = (counts[c.value] || 0) + 1);
-                  const hasSet = Object.values(counts).some(v => v >= 3);
-                  
-                  // Check for runs
-                  const suits: Record<string, string[]> = {};
-                  potentialHand.forEach((c: any) => suits[c.suit] = [...(suits[c.suit] || []), c.value]);
-                  const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-                  const hasRun = Object.values(suits).some(sValues => {
-                    const indices = sValues.map(v => values.indexOf(v)).sort((a, b) => a - b);
-                    let streak = 1;
-                    for (let i = 0; i < indices.length - 1; i++) {
-                      if (indices[i + 1] === indices[i] + 1) streak++;
-                      else streak = 1;
-                      if (streak >= 3) return true;
-                    }
-                    return false;
-                  });
-
-                  if (hasSet || hasRun) {
-                    botMove = { type: 'draw_discard' };
-                  } else {
-                    botMove = { type: 'draw' };
-                  }
-                } else {
-                  botMove = { type: 'draw' };
-                }
-              } else {
-                // Try to meld first
-                const counts: Record<string, number[]> = {};
-                hand.forEach((c: any, i: number) => {
-                  counts[c.value] = [...(counts[c.value] || []), i];
-                });
-                const setIndices = Object.values(counts).find(indices => indices.length >= 3);
-                
-                if (setIndices) {
-                  botMove = { type: 'meld', indices: setIndices };
-                } else {
-                  // Check for runs
-                  const suits: Record<string, number[]> = {};
-                  hand.forEach((c: any, i: number) => {
-                    suits[c.suit] = [...(suits[c.suit] || []), i];
-                  });
-                  const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-                  let runIndices: number[] | null = null;
-                  for (const sIndices of Object.values(suits)) {
-                    const sorted = sIndices.map(i => ({ i, v: values.indexOf(hand[i].value) })).sort((a, b) => a.v - b.v);
-                    let currentRun = [sorted[0].i];
-                    for (let i = 0; i < sorted.length - 1; i++) {
-                      if (sorted[i + 1].v === sorted[i].v + 1) {
-                        currentRun.push(sorted[i + 1].i);
-                      } else {
-                        if (currentRun.length >= 3) break;
-                        currentRun = [sorted[i + 1].i];
-                      }
-                    }
-                    if (currentRun.length >= 3) {
-                      runIndices = currentRun;
-                      break;
-                    }
-                  }
-
-                  if (runIndices) {
-                    botMove = { type: 'meld', indices: runIndices };
-                  } else {
-                    // Discard a card that isn't part of a pair
-                    const discardIndex = hand.findIndex((c: any) => counts[c.value].length === 1);
-                    botMove = { type: 'discard', index: discardIndex === -1 ? 0 : discardIndex };
-                  }
-                }
-              }
             } else if (updatedGame.type === 'billiards') {
               // Bot logic for Billiards:
-              // Find a random active ball and shoot towards it
-              const activeBalls = data.balls.filter((b: any) => b.active);
-              if (activeBalls.length > 0) {
-                const target = activeBalls[Math.floor(Math.random() * activeBalls.length)];
+              const myType = data.playerTypes['bot'];
+              let targets = data.balls.filter((b: any) => b.active);
+              
+              if (myType) {
+                const myBalls = targets.filter((b: any) => b.type === myType);
+                if (myBalls.length > 0) {
+                  targets = myBalls;
+                } else {
+                  targets = targets.filter((b: any) => b.id === 8);
+                }
+              } else {
+                // If type not assigned, don't target 8-ball
+                targets = targets.filter((b: any) => b.id !== 8);
+              }
+
+              if (targets.length > 0) {
+                const target = targets[Math.floor(Math.random() * targets.length)];
                 const dx = target.x - data.cueBall.x;
                 const dy = target.y - data.cueBall.y;
-                botMove = { type: 'shoot', dx: dx * 0.5, dy: dy * 0.5 };
+                
+                // Calculate distance to adjust power
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const power = Math.min(Math.max(dist * 0.05, 2), 10);
+                
+                // Add some "human" error
+                const error = (Math.random() - 0.5) * 0.05;
+                const angle = Math.atan2(dy, dx) + error;
+                
+                botMove = { 
+                  type: 'shoot', 
+                  dx: Math.cos(angle) * power * 10, 
+                  dy: Math.sin(angle) * power * 10 
+                };
               } else {
-                botMove = { type: 'shoot', dx: Math.random() * 10 - 5, dy: Math.random() * 10 - 5 };
+                botMove = { type: 'shoot', dx: Math.random() * 20 - 10, dy: Math.random() * 20 - 10 };
               }
             }
 
@@ -493,8 +440,53 @@ async function startServer() {
               const botUpdatedGame = handleMove(updatedGame, 'bot', botMove);
               activeGames.set(data.gameId, botUpdatedGame);
               io.to(game.players[0].id).emit("game:updated", botUpdatedGame);
+
+              // Bot chat message for personality
+              if (Math.random() > 0.7) {
+                const botMessages = [
+                  "Nice try, but I'm just getting started.",
+                  "Is that all you've got?",
+                  "I've played with better, but you're fun.",
+                  "Don't cry when I win, darling.",
+                  "You're making this too easy.",
+                  "I like your style, even if you're losing.",
+                  "Let's see how you handle this.",
+                  "Checkmate? Not yet, but soon.",
+                  "I've got a special prize for you if you win... but you won't.",
+                  "You're cute when you're concentrating.",
+                  "I'm starting to think you're letting me win.",
+                  "Don't look at me like that, focus on the game.",
+                  "I've seen more skill in a beginner's room, but you've got spirit.",
+                  "You're playing with fire, darling. Don't get burned."
+                ];
+                const message = {
+                  id: Math.random().toString(36).substr(2, 9),
+                  userId: 'bot',
+                  displayName: 'Jade Vixen',
+                  text: botMessages[Math.floor(Math.random() * botMessages.length)],
+                  timestamp: Date.now()
+                };
+                io.to(game.players[0].id).emit("game:message", message);
+              }
             }
           }, 1500);
+        }
+      }
+    });
+
+    socket.on("game:message", (data: { gameId: string, userId: string, text: string, displayName: string }) => {
+      const game = activeGames.get(data.gameId);
+      if (game) {
+        const message = {
+          id: Math.random().toString(36).substr(2, 9),
+          userId: data.userId,
+          displayName: data.displayName,
+          text: data.text,
+          timestamp: Date.now()
+        };
+        io.to(game.players[0].id).emit("game:message", message);
+        if (game.players[1].id !== 'bot') {
+          io.to(game.players[1].id).emit("game:message", message);
         }
       }
     });
@@ -540,6 +532,7 @@ async function startServer() {
         // Firebase will automatically create the user record when the client signs in with this token.
         const adminUid = "admin-jtothek319";
         try {
+          console.log("Attempting to create custom token for:", adminUid);
           const customToken = await admin.auth().createCustomToken(adminUid, {
             email: email,
             admin: true
@@ -548,12 +541,18 @@ async function startServer() {
           console.log("Generated custom token for admin UID:", adminUid);
           return res.json({ customToken, uid: adminUid });
         } catch (tokenError: any) {
-          console.error("Token generation error:", tokenError);
+          console.error("Token generation error details:", {
+            message: tokenError.message,
+            code: tokenError.code,
+            stack: tokenError.stack
+          });
+          
           const errorMessage = tokenError.message || String(tokenError);
-          if (errorMessage.includes("iamcredentials.googleapis.com")) {
-            return res.status(403).json({ 
+          if (errorMessage.includes("iamcredentials.googleapis.com") || errorMessage.includes("permission denied") || errorMessage.includes("403")) {
+            return res.status(200).json({ 
               error: "IAM_API_DISABLED", 
-              message: "The 'IAM Service Account Credentials API' is disabled in your Google Cloud project. This is required for custom admin login.",
+              message: "The 'IAM Service Account Credentials API' is disabled OR the service account lacks permissions.",
+              details: errorMessage,
               link: `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseConfig.projectId}`
             });
           }

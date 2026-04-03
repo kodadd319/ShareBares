@@ -7,6 +7,7 @@ import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, dele
 
 // Import the Firebase configuration
 import firebaseConfig from './firebase-applet-config.json';
+export { firebaseConfig };
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);

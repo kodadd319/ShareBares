@@ -174,7 +174,7 @@ export interface StableListing {
   createdAt: string;
 }
 
-export type GameType = 'checkers' | '10000' | 'rummy' | 'blackjack' | 'billiards';
+export type GameType = 'checkers' | '10000' | 'blackjack' | 'billiards' | 'rummy';
 
 export interface GameState {
   id: string;

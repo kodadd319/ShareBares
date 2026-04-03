@@ -229,7 +229,11 @@ service cloud.firestore {
       // PII Protection: Only owner or admin can read full user doc
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == false || isAdmin());
-      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == resource.data.isAdmin || isAdmin());
+      // Allow others to update specific fields for social interactions
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == resource.data.isAdmin || isAdmin())) ||
+        (hasOnlyAllowedFields(resource.data.keys().concat(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds'])))
+      );
       allow delete: if isAdmin();
     }
 
@@ -244,7 +248,11 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data);
+      // Allow others to update likes and commentsCount
+      allow update: if isAuthenticated() && (
+        (resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data) ||
+        (hasOnlyAllowedFields(resource.data.keys().concat(['likes', 'likedBy', 'commentsCount'])))
+      );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 

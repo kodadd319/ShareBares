@@ -32,19 +32,6 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     data.pot = 0;
     data.currentPlayerIndex = 0;
     data.status = 'waiting';
-  } else if (type === 'rummy') {
-    data.deck = createDeck();
-    data.hands = {};
-    players.forEach(p => {
-      data.hands[p.id] = [];
-      for (let i = 0; i < 10; i++) data.hands[p.id].push(drawCard(data.deck));
-    });
-    data.discardPile = [drawCard(data.deck)];
-    data.melds = [];
-    data.hasDrawn = false;
-    data.score = {};
-    players.forEach(p => data.score[p.id] = 0);
-    data.deckCount = data.deck.length;
   } else if (type === 'billiards') {
     const balls: any[] = [];
     const BALL_RADIUS = 12;
@@ -118,6 +105,18 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     data.height = TABLE_HEIGHT;
     data.pottedThisTurn = [];
     data.playerTypes = {}; // { userId: 'solid' | 'stripe' }
+  } else if (type === 'rummy') {
+    const deck = createDeck();
+    data.deck = deck;
+    data.players = players.map(p => ({
+      id: p.id,
+      hand: Array(10).fill(0).map(() => drawCard(data.deck)),
+      melds: [],
+      score: 0
+    }));
+    data.discardPile = [drawCard(data.deck)];
+    data.status = 'playing';
+    data.turnPhase = 'draw'; // 'draw' or 'discard'
   }
 
   return {
@@ -278,27 +277,20 @@ export const getScoringIndices = (dice: number[]) => {
   return indices;
 };
 
-const isValidMeld = (cards: any[]) => {
-  if (cards.length < 3) return false;
-
-  // Check for Set (same rank)
-  const allSameRank = cards.every(c => c.value === cards[0].value);
-  if (allSameRank) return true;
-
-  // Check for Run (same suit, sequential rank)
-  const allSameSuit = cards.every(c => c.suit === cards[0].suit);
-  if (allSameSuit) {
-    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const indices = cards.map(c => values.indexOf(c.value)).sort((a, b) => a - b);
-    
-    // Check for sequential indices
-    for (let i = 0; i < indices.length - 1; i++) {
-      if (indices[i + 1] !== indices[i] + 1) return false;
+export const calculateRummyScore = (hand: any[]) => {
+  // Simplified: face cards 10, Ace 1, others face value
+  // In real rummy, melds don't count towards score
+  let score = 0;
+  for (const card of hand) {
+    if (['K', 'Q', 'J', '10'].includes(card.value)) {
+      score += 10;
+    } else if (card.value === 'A') {
+      score += 1;
+    } else {
+      score += parseInt(card.value);
     }
-    return true;
   }
-
-  return false;
+  return score;
 };
 
 export const handleMove = (game: GameState, userId: string, moveData: any): GameState => {
@@ -541,66 +533,6 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         status = 'finished';
       }
     }
-  }
-  else if (game.type === 'rummy') {
-    const hand = newData.hands[userId];
-    const opponentHand = newData.hands[opponentId];
-
-    if (moveData.type === 'draw' && !newData.hasDrawn) {
-      hand.push(drawCard(newData.deck));
-      newData.hasDrawn = true;
-      newData.deckCount = newData.deck.length;
-    } else if (moveData.type === 'draw_discard' && !newData.hasDrawn) {
-      if (newData.discardPile.length > 0) {
-        hand.push(newData.discardPile.pop());
-        newData.hasDrawn = true;
-      }
-    } else if (moveData.type === 'discard' && newData.hasDrawn) {
-      const card = hand.splice(moveData.index, 1)[0];
-      newData.discardPile.push(card);
-      newData.hasDrawn = false;
-      
-      if (hand.length === 0) {
-        status = 'finished';
-        winner = userId;
-        // Winner gets points based on opponent's hand
-        // Face cards = 10, Aces = 1, others = value
-        const calculatePoints = (h: any[]) => h.reduce((sum, c) => {
-          if (['J', 'Q', 'K'].includes(c.value)) return sum + 10;
-          if (c.value === 'A') return sum + 1;
-          return sum + parseInt(c.value);
-        }, 0);
-        const points = calculatePoints(opponentHand);
-        newData.score[userId] = (newData.score[userId] || 0) + points;
-      } else {
-        nextTurn = opponentId;
-      }
-    } else if (moveData.type === 'meld' && newData.hasDrawn) {
-      const meldCards = moveData.indices.map((i: number) => hand[i]);
-      if (isValidMeld(meldCards)) {
-        newData.melds.push(meldCards);
-        // Remove from hand (sort indices descending to avoid shift issues)
-        moveData.indices.sort((a: number, b: number) => b - a).forEach((i: number) => hand.splice(i, 1));
-        
-        if (hand.length === 0) {
-          status = 'finished';
-          winner = userId;
-          const calculatePoints = (h: any[]) => h.reduce((sum, c) => {
-            if (['J', 'Q', 'K'].includes(c.value)) return sum + 10;
-            if (c.value === 'A') return sum + 1;
-            return sum + parseInt(c.value);
-          }, 0);
-          const points = calculatePoints(opponentHand);
-          newData.score[userId] = (newData.score[userId] || 0) + points;
-        }
-      }
-    } else if (moveData.type === 'sort') {
-      const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-      hand.sort((a: any, b: any) => {
-        if (a.suit !== b.suit) return a.suit.localeCompare(b.suit);
-        return values.indexOf(a.value) - values.indexOf(b.value);
-      });
-    }
   } else if (game.type === 'billiards') {
     if (moveData.type === 'shoot') {
       const { dx, dy } = moveData;
@@ -752,6 +684,51 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
       }
 
       if (switchTurn || scratch) {
+        nextTurn = opponentId;
+      }
+    }
+  } else if (game.type === 'rummy') {
+    const { type: moveType, cardIndex, fromDiscard } = moveData;
+    const player = newData.players.find((p: any) => p.id === userId);
+    
+    if (moveType === 'draw') {
+      if (newData.turnPhase !== 'draw') return game;
+      
+      let drawnCard;
+      if (fromDiscard) {
+        drawnCard = newData.discardPile.pop();
+      } else {
+        drawnCard = drawCard(newData.deck);
+      }
+      
+      if (drawnCard) {
+        player.hand.push(drawnCard);
+        newData.turnPhase = 'discard';
+      }
+    } else if (moveType === 'discard') {
+      if (newData.turnPhase !== 'discard') return game;
+      
+      const discardedCard = player.hand.splice(cardIndex, 1)[0];
+      newData.discardPile.push(discardedCard);
+      
+      // Check for win (simplified: if hand is empty or all melded)
+      // For now, just check if they have 0 cards (which shouldn't happen in standard rummy but good for testing)
+      // or if they "knock"
+      if (moveData.knock) {
+        // Calculate scores
+        const myScore = calculateRummyScore(player.hand);
+        const opponent = newData.players.find((p: any) => p.id !== userId);
+        const oppScore = calculateRummyScore(opponent.hand);
+        
+        if (myScore < oppScore) {
+          status = 'finished';
+          winner = userId;
+        } else {
+          status = 'finished';
+          winner = opponentId;
+        }
+      } else {
+        newData.turnPhase = 'draw';
         nextTurn = opponentId;
       }
     }

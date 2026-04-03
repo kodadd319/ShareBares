@@ -8,10 +8,11 @@ import { APP_URL } from '../constants';
 interface PostCardProps {
   post: Post;
   author: User;
+  currentUserId: string;
   isMe: boolean;
   isAdmin?: boolean;
   onLike?: () => void;
-  onComment?: () => void;
+  onComment?: (text: string) => void;
   onDelete?: () => void;
   onProfileClick?: (userId: string) => void;
   isFan?: boolean;
@@ -20,17 +21,27 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ 
-  post, author, isMe, isAdmin, isFan, onLike, onComment, onDelete, onProfileClick,
+  post, author, currentUserId, isMe, isAdmin, isFan, onLike, onComment, onDelete, onProfileClick,
   comments = [], users = []
 }) => {
-  const [liked, setLiked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
   const { showMascot } = useBareBear();
   
+  const liked = post.likedBy?.includes(currentUserId);
+  
   const handleLike = () => {
-    if (!liked && onLike) onLike();
-    setLiked(!liked);
+    if (onLike) onLike();
+  };
+
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    if (onComment) {
+      onComment(commentText);
+      setCommentText('');
+    }
   };
 
   const handleShare = () => {
@@ -167,13 +178,32 @@ const PostCard: React.FC<PostCardProps> = ({
         <div className="p-4 border-t border-white/5 bg-black/20">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-xs font-black uppercase tracking-widest text-[#967bb6]">Comments</h4>
-            <button 
-              onClick={onComment}
-              className="text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white transition-colors"
-            >
-              Add Comment
-            </button>
           </div>
+          
+          {/* Add Comment Input */}
+          <form onSubmit={handleCommentSubmit} className="mb-6 flex items-center space-x-3">
+            <img 
+              src={users.find(u => u.id === currentUserId)?.avatar || 'https://picsum.photos/seed/user/100/100'} 
+              className="w-8 h-8 rounded-full border border-white/10"
+              alt="Me"
+            />
+            <div className="flex-grow relative">
+              <input 
+                type="text"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Write a comment..."
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-slate-200 focus:ring-1 focus:ring-[#967bb6] outline-none"
+              />
+              <button 
+                type="submit"
+                disabled={!commentText.trim()}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#967bb6] disabled:opacity-50"
+              >
+                <MessageCircle size={16} />
+              </button>
+            </div>
+          </form>
           
           <div className="space-y-4">
             {postComments.length > 0 ? (
