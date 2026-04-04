@@ -11,6 +11,7 @@ export { firebaseConfig };
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
+console.log('Initializing Firestore with databaseId:', firebaseConfig.firestoreDatabaseId || '(default)');
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

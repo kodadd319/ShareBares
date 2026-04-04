@@ -13,7 +13,7 @@ interface HomePageProps {
   searchQuery: string;
   onSelectUser: (userId: string) => void;
   onLikePost?: (post: Post) => void;
-  onCommentPost?: (post: Post) => void;
+  onCommentPost?: (post: Post, commenterId: string, text: string) => void;
   onProfileClick?: (userId: string) => void;
   onCreatePost?: () => void;
 }

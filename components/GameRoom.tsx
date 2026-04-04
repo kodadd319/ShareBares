@@ -6,7 +6,7 @@ import {
   Circle, Square, Layers, Spade, Club, Heart, Diamond,
   Target, Zap, Flame, Sparkles, Info, Plus,
   ArrowRight, History, RotateCcw, Eye, EyeOff,
-  ZoomIn, ZoomOut
+  ZoomIn, ZoomOut, HelpCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Logo from './Logo';
@@ -1552,25 +1552,26 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
 };
 
 const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTurn: boolean, myId: string }> = ({ game, onMove, isMyTurn, myId }) => {
+  // New implementation
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [aiming, setAiming] = useState(false);
   const [aimAngle, setAimAngle] = useState(0);
-  const [power, setPower] = useState(50);
+  const [power, setPower] = useState(20);
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
   
   // Physics state in refs for smooth animation
   const ballsRef = useRef<any[]>([]);
   const cueBallRef = useRef<any>(null);
-  const [isSimulating, setIsSimulating] = useState(false);
   const isSimulatingRef = useRef(false);
   const animationRef = useRef<number | null>(null);
 
-  const FRICTION = 0.985;
-  const WALL_BOUNCE = 0.6;
-  const BALL_BOUNCE = 0.95;
+  const FRICTION = 0.988;
+  const WALL_BOUNCE = 0.7;
+  const BALL_BOUNCE = 0.96;
   const BALL_RADIUS = 12;
-  const POCKET_RADIUS = 22;
+  const POCKET_RADIUS = 24;
   const WIDTH = 800;
   const HEIGHT = 400;
 
@@ -1585,11 +1586,11 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
 
   // Sync with game state from server
   useEffect(() => {
-    if (!isSimulating) {
+    if (!isSimulatingRef.current) {
       ballsRef.current = JSON.parse(JSON.stringify(game.data.balls));
       cueBallRef.current = JSON.parse(JSON.stringify(game.data.cueBall));
     }
-  }, [game.data.balls, game.data.cueBall, isSimulating]);
+  }, [game.data.balls, game.data.cueBall]);
 
   const getMouse = (e: React.MouseEvent | MouseEvent | React.TouchEvent | TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
@@ -1614,21 +1615,16 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const handleShoot = () => {
     if (!isMyTurn || isSimulatingRef.current || !cueBallRef.current) return;
     
-    // Calculate velocity based on aim angle and power
-    const powerScale = power * 0.15; // Adjusted for better feel
+    const powerScale = power * 0.18;
     const dx = Math.cos(aimAngle) * powerScale;
     const dy = Math.sin(aimAngle) * powerScale;
 
-    // Start local simulation
     cueBallRef.current.vx = dx;
     cueBallRef.current.vy = dy;
     isSimulatingRef.current = true;
     setIsSimulating(true);
 
-    // Send move to server
-    onMove({ type: 'shoot', dx: dx * 10, dy: dy * 10 }); // Multiply back for server compatibility
-    
-    // Reset power after shot
+    onMove({ type: 'shoot', dx: dx * 10, dy: dy * 10 });
     setPower(20);
   };
 
@@ -1639,26 +1635,32 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     const dy = mouse.y - cueBallRef.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    // If tapping near cue ball, shoot
-    if (dist < BALL_RADIUS * 3) {
+    if (dist < BALL_RADIUS * 4) {
       handleShoot();
     } else {
-      // Otherwise, start aiming
       setAiming(true);
       setLastMousePos(mouse);
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!aiming || !canvasRef.current || !lastMousePos) return;
+    if (!canvasRef.current || !cueBallRef.current) return;
     const mouse = getMouse(e, canvasRef.current);
-    
-    // Aiming logic: horizontal movement rotates the aim
-    // We use a sensitivity factor to make it feel smooth
-    const sensitivity = 0.005;
-    const deltaX = mouse.x - lastMousePos.x;
-    setAimAngle(prev => prev + deltaX * sensitivity);
-    setLastMousePos(mouse);
+
+    if (aiming && lastMousePos) {
+      const sensitivity = 0.006;
+      const deltaX = mouse.x - lastMousePos.x;
+      setAimAngle(prev => prev + deltaX * sensitivity);
+      setLastMousePos(mouse);
+    } else if (!isSimulatingRef.current && isMyTurn) {
+      // Auto-aim towards mouse if not dragging
+      const dx = mouse.x - cueBallRef.current.x;
+      const dy = mouse.y - cueBallRef.current.y;
+      // Only update if mouse is far enough
+      if (Math.sqrt(dx * dx + dy * dy) > 50) {
+        setAimAngle(Math.atan2(dy, dx));
+      }
+    }
   };
 
   const handleMouseUp = () => {
@@ -1672,52 +1674,57 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const drawTable = () => {
+      // Table Felt
+      const gradient = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 50, WIDTH/2, HEIGHT/2, WIDTH/2);
+      gradient.addColorStop(0, '#1a4a1a');
+      gradient.addColorStop(1, '#0d2b0d');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      // Table markings
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(WIDTH * 0.25, 0);
+      ctx.lineTo(WIDTH * 0.25, HEIGHT);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.arc(WIDTH * 0.25, HEIGHT/2, 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fill();
+
+      // Rails
+      ctx.fillStyle = '#3d2b1f';
+      ctx.fillRect(-20, -20, WIDTH + 40, 20); // Top
+      ctx.fillRect(-20, HEIGHT, WIDTH + 40, 20); // Bottom
+      ctx.fillRect(-20, -20, 20, HEIGHT + 40); // Left
+      ctx.fillRect(WIDTH, -20, 20, HEIGHT + 40); // Right
+
+      // Pockets
+      pockets.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    };
+
     const drawBall = (ball: any) => {
       if (!ball.active) return;
       
       // Shadow
       ctx.beginPath();
-      ctx.arc(ball.x + 2, ball.y + 2, BALL_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.arc(ball.x + 3, ball.y + 3, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.fill();
 
       // Ball body
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
-      ctx.fillStyle = ball.color;
-      ctx.fill();
-
-      // Number/Stripe for non-cue balls
-      if (ball.type !== 'cue') {
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, BALL_RADIUS * 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = 'white';
-        ctx.fill();
-        
-        if (ball.type === 'stripe') {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.fillStyle = 'white';
-          ctx.fillRect(ball.x - BALL_RADIUS, ball.y - BALL_RADIUS * 0.4, BALL_RADIUS * 2, BALL_RADIUS * 0.8);
-          ctx.restore();
-          
-          ctx.beginPath();
-          ctx.arc(ball.x, ball.y, BALL_RADIUS * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = 'white';
-          ctx.fill();
-        }
-
-        ctx.fillStyle = 'black';
-        ctx.font = `bold ${BALL_RADIUS * 0.6}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(ball.id.toString(), ball.x, ball.y);
-      }
-
-      // Highlight
-      const gradient = ctx.createRadialGradient(
+      const ballGrad = ctx.createRadialGradient(
         ball.x - BALL_RADIUS * 0.3, 
         ball.y - BALL_RADIUS * 0.3, 
         BALL_RADIUS * 0.1,
@@ -1725,42 +1732,107 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
         ball.y, 
         BALL_RADIUS
       );
-      gradient.addColorStop(0, 'rgba(255,255,255,0.4)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0.1)');
-      ctx.fillStyle = gradient;
-      ctx.fill();
+      ballGrad.addColorStop(0, '#fff');
+      ballGrad.addColorStop(0.2, ball.color);
+      ballGrad.addColorStop(1, '#000');
       
-      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = ballGrad;
+      ctx.fill();
+
+      // Number/Stripe
+      if (ball.type !== 'cue') {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, BALL_RADIUS * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(ball.id.toString(), ball.x, ball.y);
+
+        if (ball.type === 'stripe') {
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(ball.x, ball.y, BALL_RADIUS * 0.8, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    };
+
+    const drawCue = () => {
+      if (isSimulatingRef.current || !isMyTurn || !cueBallRef.current) return;
+
+      const dist = 40 + power * 0.5;
+      const cueLen = 250;
+      const startX = cueBallRef.current.x - Math.cos(aimAngle) * dist;
+      const startY = cueBallRef.current.y - Math.sin(aimAngle) * dist;
+      const endX = cueBallRef.current.x - Math.cos(aimAngle) * (dist + cueLen);
+      const endY = cueBallRef.current.y - Math.sin(aimAngle) * (dist + cueLen);
+
+      // Aim Line
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.moveTo(cueBallRef.current.x, cueBallRef.current.y);
+      ctx.lineTo(
+        cueBallRef.current.x + Math.cos(aimAngle) * 400,
+        cueBallRef.current.y + Math.sin(aimAngle) * 400
+      );
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Cue Stick
+      ctx.lineWidth = 6;
+      const cueGrad = ctx.createLinearGradient(startX, startY, endX, endY);
+      cueGrad.addColorStop(0, '#d2b48c');
+      cueGrad.addColorStop(0.8, '#3d2b1f');
+      cueGrad.addColorStop(1, '#000');
+      
+      ctx.strokeStyle = cueGrad;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      
+      // Cue Tip
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(startX - Math.cos(aimAngle) * 5, startY - Math.sin(aimAngle) * 5);
       ctx.stroke();
     };
 
-    const updatePhysics = () => {
-      if (!isSimulatingRef.current) return false;
+    const update = () => {
+      if (!isSimulatingRef.current) return;
 
-      const allBalls = [cueBallRef.current, ...ballsRef.current];
       let moving = false;
+      const allBalls = [cueBallRef.current, ...ballsRef.current];
 
       allBalls.forEach(ball => {
         if (!ball.active) return;
-        
         ball.x += ball.vx;
         ball.y += ball.vy;
         ball.vx *= FRICTION;
         ball.vy *= FRICTION;
 
-        if (Math.abs(ball.vx) < 0.05 && Math.abs(ball.vy) < 0.05) {
-          ball.vx = 0;
-          ball.vy = 0;
-        }
-
+        if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
+        if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
         if (ball.vx !== 0 || ball.vy !== 0) moving = true;
 
+        // Wall collisions
         if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
         if (ball.x > WIDTH - BALL_RADIUS) { ball.x = WIDTH - BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
         if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
         if (ball.y > HEIGHT - BALL_RADIUS) { ball.y = HEIGHT - BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
 
+        // Pockets
         pockets.forEach(p => {
           const dx = ball.x - p.x;
           const dy = ball.y - p.y;
@@ -1772,6 +1844,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
         });
       });
 
+      // Ball collisions
       for (let i = 0; i < allBalls.length; i++) {
         for (let j = i + 1; j < allBalls.length; j++) {
           const b1 = allBalls[i];
@@ -1793,7 +1866,6 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
               const impulse = -(1 + BALL_BOUNCE) * velAlongNormal / 2;
               const impulseX = impulse * nx;
               const impulseY = impulse * ny;
-              
               b1.vx += impulseX;
               b1.vy += impulseY;
               b2.vx -= impulseX;
@@ -1805,7 +1877,6 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
             b1.y -= ny * overlap / 2;
             b2.x += nx * overlap / 2;
             b2.y += ny * overlap / 2;
-            
             moving = true;
           }
         }
@@ -1815,284 +1886,115 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
         isSimulatingRef.current = false;
         setIsSimulating(false);
       }
-      return moving;
     };
 
-    const draw = () => {
-      updatePhysics();
-
-      // Table Felt
-      const feltGradient = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 0, WIDTH/2, HEIGHT/2, WIDTH);
-      feltGradient.addColorStop(0, '#1a0b2e');
-      feltGradient.addColorStop(1, '#050505');
-      ctx.fillStyle = feltGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Table Markings
-      ctx.strokeStyle = "rgba(150,123,182,0.2)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(WIDTH * 0.25, 0);
-      ctx.lineTo(WIDTH * 0.25, HEIGHT);
-      ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.arc(WIDTH * 0.25, HEIGHT/2, 40, -Math.PI/2, Math.PI/2);
-      ctx.stroke();
-
-      // Jade Vixen Logo
-      ctx.save();
-      ctx.translate(WIDTH / 2, HEIGHT / 2);
-      ctx.globalAlpha = 0.05;
-      ctx.fillStyle = "#967bb6";
-      ctx.font = "bold 60px 'Playfair Display'";
-      ctx.textAlign = "center";
-      ctx.fillText("JADE VIXEN", 0, 20);
-      ctx.restore();
-
-      // Draw pockets
-      pockets.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, POCKET_RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = '#111';
-        ctx.fill();
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        
-        const grad = ctx.createRadialGradient(p.x, p.y, POCKET_RADIUS * 0.7, p.x, p.y, POCKET_RADIUS);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.5)');
-        ctx.fillStyle = grad;
-        ctx.fill();
-      });
-
-      // Draw balls
-      if (cueBallRef.current) drawBall(cueBallRef.current);
+    const render = () => {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+      drawTable();
       ballsRef.current.forEach(drawBall);
-
-      // Draw aiming line
-      if (isMyTurn && cueBallRef.current && !isSimulatingRef.current) {
-        // Aim line
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.moveTo(cueBallRef.current.x, cueBallRef.current.y);
-        
-        let aimX = cueBallRef.current.x;
-        let aimY = cueBallRef.current.y;
-        const stepX = Math.cos(aimAngle) * 2;
-        const stepY = Math.sin(aimAngle) * 2;
-        
-        for (let i = 0; i < 600; i++) {
-          aimX += stepX;
-          aimY += stepY;
-          if (aimX < BALL_RADIUS || aimX > WIDTH - BALL_RADIUS || aimY < BALL_RADIUS || aimY > HEIGHT - BALL_RADIUS) break;
-          let hitBall = false;
-          for (const ball of ballsRef.current) {
-            if (!ball.active) continue;
-            const bdx = ball.x - aimX;
-            const bdy = ball.y - aimY;
-            if (Math.sqrt(bdx * bdx + bdy * bdy) < BALL_RADIUS * 2) {
-              hitBall = true;
-              break;
-            }
-          }
-          if (hitBall) break;
-        }
-        
-        ctx.lineTo(aimX, aimY);
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Ghost ball
-        ctx.beginPath();
-        ctx.arc(aimX, aimY, BALL_RADIUS, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255,255,255,0.3)";
-        ctx.stroke();
-
-        // Cue stick
-        const cueLen = 300;
-        const cueOffset = 25 + (power * 0.5);
-        const cueX = cueBallRef.current.x - Math.cos(aimAngle) * cueOffset;
-        const cueY = cueBallRef.current.y - Math.sin(aimAngle) * cueOffset;
-        const cueEndX = cueBallRef.current.x - Math.cos(aimAngle) * (cueOffset + cueLen);
-        const cueEndY = cueBallRef.current.y - Math.sin(aimAngle) * (cueOffset + cueLen);
-
-        const cueGrad = ctx.createLinearGradient(cueX, cueY, cueEndX, cueEndY);
-        cueGrad.addColorStop(0, '#f3e5ab');
-        cueGrad.addColorStop(0.1, '#d4a017');
-        cueGrad.addColorStop(0.8, '#5a3e1b');
-        cueGrad.addColorStop(1, '#3d2b1f');
-
-        ctx.beginPath();
-        ctx.moveTo(cueX, cueY);
-        ctx.lineTo(cueEndX, cueEndY);
-        ctx.strokeStyle = cueGrad;
-        ctx.lineWidth = 6;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-      }
-
-      animationRef.current = requestAnimationFrame(draw);
+      if (cueBallRef.current) drawBall(cueBallRef.current);
+      drawCue();
+      update();
+      animationRef.current = requestAnimationFrame(render);
     };
 
-    draw();
+    render();
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isMyTurn, aimAngle, power, pockets]);
-
-  const myType = game.data.playerTypes[myId];
+  }, [aimAngle, power, isMyTurn, pockets]);
 
   return (
-    <div className="h-full flex flex-col items-center justify-between py-4 relative overflow-hidden bg-[#050505]">
-      {/* Header */}
-      <div className="relative z-10 w-full px-8 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-            <Target className="text-emerald-400" size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter">Pro 8-Ball</h2>
-            <p className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest">Master Series</p>
-          </div>
-        </div>
+    <div className="flex flex-col items-center gap-6 p-4">
+      <div className="relative group">
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleMouseDown}
+          onTouchMove={handleMouseMove}
+          onTouchEnd={handleMouseUp}
+          className="rounded-xl shadow-2xl cursor-crosshair border-8 border-[#3d2b1f] max-w-full"
+        />
         
-        <div className="flex space-x-4">
-          <div className="flex items-center space-x-2 bg-black/40 px-4 py-2 rounded-xl border border-white/10">
-            <div className={`w-3 h-3 rounded-full ${myType === 'solid' ? 'bg-[#e74c3c]' : myType === 'stripe' ? 'bg-[#f1c40f]' : 'bg-slate-600'}`}></div>
-            <span className="text-[10px] font-black text-white uppercase tracking-widest">
-              {myType ? `${myType}s` : 'Unassigned'}
-            </span>
+        {isMyTurn && !isSimulating && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-white text-xs font-bold animate-pulse">
+            YOUR TURN - AIM & SHOOT
+          </div>
+        )}
+      </div>
+
+      <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`w-3 h-3 rounded-full ${isMyTurn ? 'bg-green-500 animate-ping' : 'bg-red-500'}`} />
+            <span className="text-white font-bold">{isMyTurn ? 'Your Turn' : "Opponent's Turn"}</span>
           </div>
           <button 
             onClick={() => setShowInstructions(!showInstructions)}
-            className="p-3 rounded-2xl bg-white/5 border border-white/10 text-emerald-400 hover:bg-white/10 transition-all shadow-xl"
+            className="text-white/60 hover:text-white transition-colors"
           >
-            <Info size={20} />
+            <HelpCircle size={20} />
           </button>
         </div>
-      </div>
 
-      {/* Instructions Overlay */}
-      <AnimatePresence>
+        {isMyTurn && !isSimulating && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white/60 font-medium uppercase tracking-wider">Shot Power</span>
+              <span className="text-white font-mono">{power}%</span>
+            </div>
+            <input
+              type="range"
+              min="5"
+              max="100"
+              value={power}
+              onChange={(e) => setPower(parseInt(e.target.value))}
+              className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#967bb6]"
+            />
+            <button
+              onClick={handleShoot}
+              className="w-full py-4 bg-gradient-to-r from-[#967bb6] to-[#6a5acd] text-white font-bold rounded-xl shadow-lg hover:shadow-[#967bb6]/20 transition-all active:scale-95 uppercase tracking-widest"
+            >
+              Take Shot
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          {game.players.map(p => (
+            <div key={p.id} className={`p-4 rounded-xl border transition-all ${game.turn === p.id ? 'bg-[#967bb6]/20 border-[#967bb6]' : 'bg-white/5 border-white/10'}`}>
+              <div className="flex items-center gap-3 mb-2">
+                <img src={p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.id}`} className="w-8 h-8 rounded-full" />
+                <span className="text-white font-bold truncate">{p.displayName}</span>
+              </div>
+              <div className="text-xs text-white/40 uppercase font-bold">
+                {game.data.playerTypes[p.id] || 'Unassigned'}
+              </div>
+            </div>
+          ))}
+        </div>
+
         {showInstructions && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute top-24 right-8 z-50 w-72 glass-panel p-6 rounded-2xl border-emerald-500/30 bg-black/90 backdrop-blur-xl shadow-2xl"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="text-sm text-white/60 space-y-2 border-t border-white/10 pt-4"
           >
-            <h4 className="text-sm font-black text-white uppercase tracking-widest mb-4 flex items-center">
-              <Sparkles size={16} className="mr-2 text-emerald-400" />
-              8-Ball Rules
-            </h4>
-            <ul className="text-[11px] text-slate-300 space-y-3 font-medium leading-relaxed">
-              <li>• <span className="text-emerald-400 font-bold">Aim:</span> Drag anywhere on the table to rotate the aim line.</li>
-              <li>• <span className="text-emerald-400 font-bold">Power:</span> Use the slider on the right to set shot strength.</li>
-              <li>• <span className="text-emerald-400 font-bold">Shoot:</span> Tap the white cue ball to strike.</li>
-              <li>• <span className="text-emerald-400 font-bold">Goal:</span> Pot all your balls then the 8-ball to win.</li>
-            </ul>
+            <p>• Drag mouse horizontally to aim</p>
+            <p>• Use slider to adjust shot power</p>
+            <p>• Click cue ball or "Take Shot" button to fire</p>
+            <p>• Sink all your balls (Solids or Stripes) then the 8-ball to win</p>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      <div className="relative w-full max-w-[950px] flex items-center justify-center px-12">
-        {/* Power Meter (Left Side) */}
-        {isMyTurn && !isSimulating && (
-          <div className="absolute left-0 h-80 flex flex-col items-center space-y-4">
-            <div className="h-full w-12 bg-black/60 rounded-3xl border-2 border-white/10 relative overflow-hidden flex flex-col-reverse shadow-2xl">
-              <motion.div 
-                initial={{ height: 0 }}
-                animate={{ height: `${power}%` }}
-                className="w-full bg-gradient-to-t from-red-600 via-yellow-500 to-emerald-500 transition-all duration-100"
-              ></motion.div>
-              
-              {/* Power Marks */}
-              <div className="absolute inset-0 flex flex-col justify-between py-4 pointer-events-none opacity-20">
-                {[...Array(10)].map((_, i) => (
-                  <div key={i} className="w-full h-[1px] bg-white"></div>
-                ))}
-              </div>
-
-              <input 
-                type="range"
-                min="5"
-                max="100"
-                step="1"
-                value={power}
-                onChange={(e) => setPower(parseInt(e.target.value))}
-                className="absolute inset-0 opacity-0 cursor-pointer [writing-mode:bt-lr] appearance-slider-vertical w-full h-full"
-                style={{ transform: 'rotate(-90deg)', width: '320px', height: '48px', position: 'absolute', top: '136px', left: '-136px' }}
-              />
-            </div>
-            <div className="flex flex-col items-center">
-              <Zap className="text-yellow-400 mb-1" size={16} />
-              <span className="text-[10px] font-black text-white uppercase tracking-[0.2em]">Power</span>
-              <span className="text-lg font-black text-white leading-none mt-1">{power}%</span>
-            </div>
-          </div>
-        )}
-
-        <div 
-          className="relative group p-6 bg-[#3d2b1f] rounded-[3rem] shadow-[0_40px_80px_rgba(0,0,0,0.7)] border-b-8 border-[#2c1e15]"
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-          onTouchStart={handleMouseDown}
-          onTouchEnd={handleMouseUp}
-          onTouchMove={handleMouseMove}
-        >
-          {/* Table Frame Details */}
-          <div className="absolute inset-0 border-[20px] border-[#4e3629] rounded-[3rem] pointer-events-none"></div>
-          <div className="absolute inset-5 border-2 border-[#2c1e15] rounded-[2.5rem] pointer-events-none"></div>
-          
-          {/* Diamond Markings on rails */}
-          <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-20 opacity-30">
-            {[1, 2, 3].map(i => <div key={i} className="w-2 h-2 bg-white rotate-45"></div>)}
-          </div>
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-20 opacity-30">
-            {[1, 2, 3].map(i => <div key={i} className="w-2 h-2 bg-white rotate-45"></div>)}
-          </div>
-          
-          <canvas
-            ref={canvasRef}
-            width={WIDTH}
-            height={HEIGHT}
-            className="w-full bg-[#1a0b2e] rounded-[2rem] cursor-crosshair shadow-inner"
-          />
-          
-          <div className="absolute inset-6 pointer-events-none rounded-[2rem] shadow-[inset_0_0_60px_rgba(0,0,0,0.7)]"></div>
-
-          {/* Aiming Hint */}
-          {isMyTurn && !isSimulating && !aiming && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-            >
-              <div className="px-6 py-3 bg-black/60 backdrop-blur-md rounded-full border border-white/20 text-white text-[10px] font-black uppercase tracking-widest animate-pulse">
-                Drag to Aim • Tap Ball to Shoot
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-      
-      <div className="relative z-10 flex flex-col items-center space-y-4">
-        <div className="glass-panel px-10 py-4 rounded-[2rem] border-white/10 bg-black/40 backdrop-blur-md text-center shadow-2xl">
-          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-1">
-            {isMyTurn ? "Your Shot" : "Opponent's Turn"}
-          </p>
-          <p className={`text-sm font-black uppercase tracking-widest transition-colors ${isMyTurn ? 'text-emerald-400' : 'text-slate-400'}`}>
-            {isMyTurn ? (isSimulating ? "Ball in Motion" : "Tap Cue Ball to Shoot") : "Waiting for move..."}
-          </p>
-        </div>
       </div>
     </div>
   );
 };
+
 
 export default GameRoom;
