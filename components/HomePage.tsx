@@ -48,9 +48,12 @@ const HomePage: React.FC<HomePageProps> = ({
             src="https://www.imglnkx.com/7106/009227A_EXTZ_18_ALL_EN_71_L.jpg" 
             width="300" 
             height="250" 
+            referrerPolicy="no-referrer"
             className="rounded-2xl shadow-2xl border border-white/10" 
             alt="Promotional Banner" 
-            referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/banner_fallback/300/250';
+            }}
           />
         </a>
       </div>
@@ -86,7 +89,15 @@ const HomePage: React.FC<HomePageProps> = ({
           onClick={onCreatePost}
           className="glass-panel rounded-3xl p-4 flex items-center space-x-4 cursor-pointer hover:border-[#967bb6]/30 transition-all chrome-border"
         >
-          <img src={me.avatar} className="w-10 h-10 rounded-xl border border-white/10" alt="" />
+          <img 
+            src={me.avatar} 
+            referrerPolicy="no-referrer" 
+            className="w-10 h-10 rounded-xl border border-white/10" 
+            alt="" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${me.id}/200`;
+            }}
+          />
           <div className="flex-grow bg-white/5 rounded-xl px-4 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-widest">
             What's on your mind, {me.displayName.split(' ')[0]}?
           </div>
@@ -115,7 +126,15 @@ const HomePage: React.FC<HomePageProps> = ({
               >
                 <div className="relative mb-3">
                   <div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-black shadow-xl group-hover:scale-105 transition-transform">
-                    <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                    <img 
+                      src={user.avatar} 
+                      referrerPolicy="no-referrer" 
+                      className="w-full h-full object-cover" 
+                      alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                      }}
+                    />
                   </div>
                   {user.isCreator && (
                     <div className="absolute -bottom-1 -right-1 bg-[#967bb6] text-white p-1 rounded-lg shadow-lg">
@@ -165,9 +184,12 @@ const HomePage: React.FC<HomePageProps> = ({
                         <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
                           <img 
                             src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+                            referrerPolicy="no-referrer"
                             className="w-full h-auto object-cover" 
                             alt="Featured Content"
-                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/featured_fallback/800/600';
+                            }}
                           />
                         </a>
                       </div>
@@ -197,7 +219,15 @@ const HomePage: React.FC<HomePageProps> = ({
             {suggestedFollows.map(user => (
               <div key={user.id} className="flex items-center justify-between group">
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onProfileClick?.(user.id)}>
-                  <img src={user.avatar} className="w-10 h-10 rounded-xl border border-white/10" alt="" />
+                  <img 
+                    src={user.avatar} 
+                    referrerPolicy="no-referrer" 
+                    className="w-10 h-10 rounded-xl border border-white/10" 
+                    alt="" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                    }}
+                  />
                   <div className="min-w-0">
                     <p className="text-xs font-black text-white truncate group-hover:text-[#967bb6] transition-colors uppercase tracking-tighter">{user.displayName}</p>
                     <p className="text-[10px] text-slate-500">@{user.username}</p>
@@ -218,9 +248,12 @@ const HomePage: React.FC<HomePageProps> = ({
           <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
             <img 
               src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
+              referrerPolicy="no-referrer"
               className="w-full h-auto object-cover" 
               alt="Featured Content"
-              referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sidebar_fallback/800/600';
+              }}
             />
           </a>
         </div>

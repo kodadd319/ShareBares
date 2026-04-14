@@ -332,6 +332,9 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       src={listing.photos?.[0] || listing.avatarUrl} 
                       className="w-full h-full object-cover" 
                       alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}/200`;
+                      }}
                     />
                   </div>
                   <div className="flex-grow flex flex-col min-w-0">
@@ -552,6 +555,9 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
           className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
           alt={item.title} 
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/400/500`;
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
         
@@ -648,7 +654,15 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                 <video src={item.mediaUrls[0]} controls autoPlay className="max-w-full max-h-full object-contain" />
               ) : (
                 item.mediaUrls.map((url, idx) => (
-                  <img key={idx} src={url} className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" alt={`${item.title} ${idx + 1}`} />
+                  <img 
+                    key={idx} 
+                    src={url} 
+                    className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" 
+                    alt={`${item.title} ${idx + 1}`} 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}_${idx}/800/600`;
+                    }}
+                  />
                 ))
               )}
             </div>

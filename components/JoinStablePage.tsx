@@ -203,7 +203,14 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
               <div className="grid grid-cols-2 gap-4">
                 {photos.map((url, index) => (
                   <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
-                    <img src={url} className="w-full h-full object-cover" alt="" />
+                    <img 
+                      src={url} 
+                      className="w-full h-full object-cover" 
+                      alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/stable_upload_${index}/400`;
+                      }}
+                    />
                     <button 
                       type="button"
                       onClick={() => removePhoto(index)}

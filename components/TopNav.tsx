@@ -141,7 +141,15 @@ const TopNav: React.FC<TopNavProps> = ({
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                       >
-                        <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                        <img 
+                          src={u.avatar || undefined} 
+                          referrerPolicy="no-referrer" 
+                          className="w-8 h-8 rounded-lg object-cover" 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                          }}
+                        />
                         <div>
                           <p className="text-xs font-bold text-white">{u.displayName}</p>
                           <p className="text-[10px] text-slate-500">@{u.username}</p>
@@ -168,7 +176,15 @@ const TopNav: React.FC<TopNavProps> = ({
                       >
                         <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center overflow-hidden">
                           {item.thumbnailUrl ? (
-                            <img src={item.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                            <img 
+                              src={item.thumbnailUrl} 
+                              referrerPolicy="no-referrer" 
+                              className="w-full h-full object-cover" 
+                              alt="" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/100`;
+                              }}
+                            />
                           ) : (
                             <Briefcase size={14} className="text-emerald-500" />
                           )}
@@ -402,7 +418,15 @@ const TopNav: React.FC<TopNavProps> = ({
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className={`p-0.5 rounded-2xl border-2 transition-all shrink-0 flex items-center space-x-2 ${isProfileMenuOpen ? 'border-[#967bb6] shadow-lg shadow-[#967bb6]/20' : 'border-transparent hover:border-white/20'}`}
           >
-            <img src={userAvatar || undefined} className="w-8 h-8 rounded-[14px] object-cover" alt="Profile" />
+            <img 
+              src={userAvatar || undefined} 
+              referrerPolicy="no-referrer" 
+              className="w-8 h-8 rounded-[14px] object-cover" 
+              alt="Profile" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/user_avatar_fallback/100';
+              }}
+            />
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -519,7 +543,15 @@ const TopNav: React.FC<TopNavProps> = ({
                                 }}
                                 className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                               >
-                                <img src={u.avatar || undefined} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                                <img 
+                                  src={u.avatar || undefined} 
+                                  referrerPolicy="no-referrer" 
+                                  className="w-8 h-8 rounded-lg object-cover" 
+                                  alt="" 
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                                  }}
+                                />
                                 <div>
                                   <p className="text-xs font-bold text-white">{u.displayName}</p>
                                   <p className="text-[10px] text-slate-500">@{u.username}</p>
@@ -546,7 +578,15 @@ const TopNav: React.FC<TopNavProps> = ({
                               >
                                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center overflow-hidden">
                                   {item.thumbnailUrl ? (
-                                    <img src={item.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                                    <img 
+                                      src={item.thumbnailUrl} 
+                                      referrerPolicy="no-referrer" 
+                                      className="w-full h-full object-cover" 
+                                      alt="" 
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/100`;
+                                      }}
+                                    />
                                   ) : (
                                     <Briefcase size={14} className="text-emerald-500" />
                                   )}

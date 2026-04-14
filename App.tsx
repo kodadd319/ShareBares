@@ -65,7 +65,6 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
           </p>
           <div className="flex flex-col items-center justify-center space-y-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">
             <span>Powered by</span>
-            <span className="text-[#967bb6]">barebear</span>
             <span className="mt-2 text-slate-700">www.sharebares.com</span>
           </div>
         </div>
@@ -316,7 +315,15 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
             className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
             onClick={() => coverInputRef.current?.click()}
           >
-            <img src={cover || undefined} className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+            <img 
+              src={cover || undefined} 
+              referrerPolicy="no-referrer" 
+              className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
+              alt="Cover" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cover_fallback/800/200';
+              }}
+            />
             <input 
               type="file" 
               ref={coverInputRef} 
@@ -336,7 +343,15 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
               className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border cursor-pointer"
               onClick={() => avatarInputRef.current?.click()}
             >
-              <img src={avatar || undefined} className="w-full h-full object-cover" alt="Avatar" />
+              <img 
+                src={avatar || undefined} 
+                referrerPolicy="no-referrer" 
+                className="w-full h-full object-cover" 
+                alt="Avatar" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/avatar_fallback/200';
+                }}
+              />
               <input 
                 type="file" 
                 ref={avatarInputRef} 
@@ -569,6 +584,9 @@ const SettingsPage: React.FC<{
           referrerPolicy="no-referrer"
           alt="Advertisement"
           className="rounded-2xl shadow-2xl border border-white/10"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/settings_ad_fallback/300/250';
+          }}
         />
       </a>
     </div>
@@ -952,7 +970,15 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
               className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
               onClick={() => coverInputRef.current?.click()}
             >
-              <img src={cover || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" alt="Cover" />
+              <img 
+                src={cover || undefined} 
+                referrerPolicy="no-referrer" 
+                className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
+                alt="Cover" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sharebares_cover/1200/400';
+                }}
+              />
               <input 
                 type="file" 
                 ref={coverInputRef} 
@@ -972,7 +998,15 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
                 className="w-32 h-32 rounded-3xl border-4 border-black bg-black overflow-hidden relative shadow-2xl chrome-border cursor-pointer"
                 onClick={() => avatarInputRef.current?.click()}
               >
-                <img src={avatar || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Avatar" />
+                <img 
+                  src={avatar || undefined} 
+                  referrerPolicy="no-referrer" 
+                  className="w-full h-full object-cover" 
+                  alt="Avatar" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sharebares_user/200';
+                  }}
+                />
                 <input 
                   type="file" 
                   ref={avatarInputRef} 
@@ -2067,7 +2101,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
+    setPersistence(auth, browserLocalPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
     getGoogleRedirectResult().then((result) => {
@@ -3707,14 +3741,30 @@ const AppContent: React.FC = () => {
       {/* Header Section: Cover & Avatar Integration */}
       <div className="relative mb-24">
         <div className="h-[350px] md:h-[450px] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl">
-          <img src={user.coverImage || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" alt="" />
+          <img 
+            src={user.coverImage || undefined} 
+            referrerPolicy="no-referrer" 
+            className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" 
+            alt="" 
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/public_cover_fallback/800/400';
+            }}
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
           
           {/* Stats Overlay on Cover */}
           <div className="absolute bottom-8 left-8 right-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="flex items-end space-x-6">
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] border-4 border-black overflow-hidden shadow-2xl bg-black chrome-border shrink-0 relative z-10">
-                <img src={user.avatar || undefined} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="" />
+                <img 
+                  src={user.avatar || undefined} 
+                  referrerPolicy="no-referrer" 
+                  className="w-full h-full object-cover" 
+                  alt="" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                  }}
+                />
               </div>
               <div className="pb-2">
                 <div className="flex items-center space-x-3 mb-2">
@@ -4129,7 +4179,15 @@ const AppContent: React.FC = () => {
                 {user.photos.length > 0 ? (
                   user.photos.map(photo => (
                     <div key={photo.id} className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/5 group cursor-pointer relative chrome-border shadow-2xl">
-                      <img src={photo.url} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="" />
+                      <img 
+                        src={photo.url} 
+                        referrerPolicy="no-referrer" 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                        alt="" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${photo.id}/400/500`;
+                        }}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                         <div className="flex items-center space-x-2 text-white/60">
                           <ImageIcon size={16} />
@@ -4495,7 +4553,15 @@ const AppContent: React.FC = () => {
                   {newPostMedia?.type.startsWith('video') ? (
                     <video src={newPostMediaPreview} className="w-full h-full object-cover" controls />
                   ) : (
-                    <img src={newPostMediaPreview} referrerPolicy="no-referrer" className="w-full h-full object-cover" alt="Preview" />
+                    <img 
+                      src={newPostMediaPreview} 
+                      referrerPolicy="no-referrer" 
+                      className="w-full h-full object-cover" 
+                      alt="Preview" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/post_preview_fallback/400';
+                      }}
+                    />
                   )}
                   <button 
                     onClick={() => {

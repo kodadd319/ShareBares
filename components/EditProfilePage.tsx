@@ -74,7 +74,14 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 Profile Avatar URL
               </label>
               <div className="flex items-center space-x-4">
-                <img src={avatar} className="w-16 h-16 rounded-2xl object-cover border border-white/10" alt="Avatar Preview" />
+                <img 
+                  src={avatar} 
+                  className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
+                  alt="Avatar Preview" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                  }}
+                />
                 <input 
                   type="url" 
                   value={avatar || ''}
@@ -90,7 +97,14 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 Cover Image URL
               </label>
               <div className="flex items-center space-x-4">
-                <img src={coverImage} className="w-16 h-16 rounded-2xl object-cover border border-white/10" alt="Cover Preview" />
+                <img 
+                  src={coverImage} 
+                  className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
+                  alt="Cover Preview" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cover_fallback/400/200';
+                  }}
+                />
                 <input 
                   type="url" 
                   value={coverImage || ''}

@@ -124,7 +124,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {me.photos.map(photo => (
                 <div key={photo.id} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group chrome-border">
-                  <img src={photo.url} className="w-full h-full object-cover" alt="" />
+                  <img 
+                    src={photo.url} 
+                    referrerPolicy="no-referrer" 
+                    className="w-full h-full object-cover" 
+                    alt="" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${photo.id}/400`;
+                    }}
+                  />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button 
                       onClick={() => onDeletePhoto(photo.id)}
@@ -160,7 +168,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                   {pendingReceived.map(user => (
                     <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                       <div className="flex items-center space-x-3">
-                        <img src={user.avatar} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                        <img 
+                          src={user.avatar} 
+                          referrerPolicy="no-referrer" 
+                          className="w-12 h-12 rounded-xl object-cover" 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                          }}
+                        />
                         <div>
                           <h4 className="text-white font-bold text-sm">{user.displayName}</h4>
                           <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">@{user.username}</p>
@@ -196,7 +212,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                 {friends.map(user => (
                   <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5 group">
                     <div className="flex items-center space-x-3">
-                      <img src={user.avatar} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                      <img 
+                        src={user.avatar} 
+                        referrerPolicy="no-referrer" 
+                        className="w-12 h-12 rounded-xl object-cover" 
+                        alt="" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                        }}
+                      />
                       <div>
                         <h4 className="text-white font-bold text-sm">{user.displayName}</h4>
                         <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">@{user.username}</p>
@@ -263,7 +287,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     {potentialFwbUsers.map(user => (
                       <div key={user.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                         <div className="flex items-center space-x-3">
-                          <img src={user.avatar} className="w-10 h-10 rounded-lg object-cover" alt="" />
+                          <img 
+                            src={user.avatar} 
+                            referrerPolicy="no-referrer" 
+                            className="w-10 h-10 rounded-lg object-cover" 
+                            alt="" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                            }}
+                          />
                           <div>
                             <h4 className="text-white font-bold text-sm">{user.displayName}</h4>
                             <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">@{user.username}</p>
@@ -301,7 +333,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     {fwbPendingReceived.map(user => (
                       <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                         <div className="flex items-center space-x-3">
-                          <img src={user.avatar} className="w-10 h-10 rounded-lg object-cover" alt="" />
+                          <img 
+                            src={user.avatar} 
+                            referrerPolicy="no-referrer" 
+                            className="w-10 h-10 rounded-lg object-cover" 
+                            alt="" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                            }}
+                          />
                           <div>
                             <h4 className="text-white font-bold text-sm">{user.displayName}</h4>
                             <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">@{user.username}</p>
@@ -333,7 +373,15 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                   <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5 group">
                     <div className="flex items-center space-x-3">
                       <div className="relative">
-                        <img src={user.avatar} className="w-12 h-12 rounded-xl object-cover" alt="" />
+                        <img 
+                          src={user.avatar} 
+                          referrerPolicy="no-referrer" 
+                          className="w-12 h-12 rounded-xl object-cover" 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                          }}
+                        />
                         <div className="absolute -top-1 -right-1 bg-black text-[#967bb6] p-1 rounded-full shadow-lg border border-[#967bb6]/30">
                           <Flame size={10} className="text-[#967bb6]" fill="currentColor" />
                         </div>

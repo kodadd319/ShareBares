@@ -3,7 +3,10 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken
 } from 'firebase/auth';
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or } from 'firebase/firestore';
+import { 
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or,
+  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence
+} from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from './firebase-applet-config.json';
@@ -11,8 +14,28 @@ export { firebaseConfig };
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-console.log('Initializing Firestore with databaseId:', firebaseConfig.firestoreDatabaseId || '(default)');
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const databaseId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
+console.log('Initializing Firestore with databaseId:', databaseId);
+
+// Use the default database if no ID is provided, or the specific one if it is
+const configWithDb = firebaseConfig as any;
+export const db = configWithDb.firestoreDatabaseId 
+  ? getFirestore(app, configWithDb.firestoreDatabaseId)
+  : getFirestore(app);
+
+// Enable persistence
+if (typeof window !== 'undefined') {
+  enableMultiTabIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, persistence can only be enabled in one tab at a time.
+      console.warn('Firestore persistence failed-precondition: Multiple tabs open');
+    } else if (err.code === 'unimplemented') {
+      // The current browser does not support all of the features required to enable persistence
+      console.warn('Firestore persistence unimplemented');
+    }
+  });
+}
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -98,12 +121,22 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 async function testConnection() {
   try {
     // Attempt to get a document from a known collection to verify connectivity
-    await getDocFromServer(doc(db, 'test', 'connection'));
+    // We use getDocFromServer to force a network request
+    const testDoc = doc(db, '_connection_test_', 'ping');
+    await getDocFromServer(testDoc).catch(async (e) => {
+      // If server get fails, try a normal get which might use cache but also triggers connection
+      console.warn("Server-side ping failed, trying standard get:", e.message);
+      return await getDoc(testDoc);
+    });
     console.log("Firestore connection test successful.");
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : String(error);
-    if (errMessage.includes('the client is offline') || errMessage.includes('unavailable')) {
-      console.error("Firestore connection failed: The client is offline or the backend is unreachable. Please check your Firebase project configuration and ensure Firestore is enabled.");
+    if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('failed-precondition')) {
+      console.error("Firestore connection failed: The client is offline or the backend is unreachable. This often means the Firebase project is not fully provisioned or the database ID is incorrect.");
+      console.log("Current Config:", {
+        projectId: firebaseConfig.projectId,
+        databaseId: (firebaseConfig as any).firestoreDatabaseId || '(default)'
+      });
     } else {
       console.warn("Firestore connection test (ignorable if app works):", errMessage);
     }

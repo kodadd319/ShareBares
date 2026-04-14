@@ -83,7 +83,15 @@ const PostCard: React.FC<PostCardProps> = ({
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="relative cursor-pointer" onClick={() => onProfileClick?.(author.id)}>
-            <img src={author.avatar} alt={author.displayName} className="w-10 h-10 rounded-full border border-[#967bb6]/30" />
+            <img 
+              src={author.avatar} 
+              alt={author.displayName} 
+              referrerPolicy="no-referrer" 
+              className="w-10 h-10 rounded-full border border-[#967bb6]/30" 
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${author.id}/200`;
+              }}
+            />
             {author.isCreator && (
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#967bb6] border-2 border-black rounded-full flex items-center justify-center shadow-sm">
                 <div className="w-1 h-1 bg-white rounded-full"></div>
@@ -127,7 +135,11 @@ const PostCard: React.FC<PostCardProps> = ({
           <img 
             src={post.mediaUrl} 
             alt="Post content" 
+            referrerPolicy="no-referrer"
             className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${post.id}/800/600`;
+            }}
           />
           {isLocked && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -184,8 +196,12 @@ const PostCard: React.FC<PostCardProps> = ({
           <form onSubmit={handleCommentSubmit} className="mb-6 flex items-center space-x-3">
             <img 
               src={users.find(u => u.id === currentUserId)?.avatar || 'https://picsum.photos/seed/user/100/100'} 
+              referrerPolicy="no-referrer"
               className="w-8 h-8 rounded-full border border-white/10"
               alt="Me"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${currentUserId}/100`;
+              }}
             />
             <div className="flex-grow relative">
               <input 
@@ -214,7 +230,11 @@ const PostCard: React.FC<PostCardProps> = ({
                     <img 
                       src={commenter?.avatar || 'https://picsum.photos/seed/user/100/100'} 
                       alt={commenter?.displayName || 'User'} 
+                      referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full border border-white/10"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${comment.userId}/100`;
+                      }}
                     />
                     <div className="flex-grow bg-white/5 rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">

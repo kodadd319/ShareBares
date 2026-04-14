@@ -379,7 +379,14 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/20">
-                          <img src={editingItem.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                          <img 
+                            src={editingItem.thumbnailUrl} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${editingItem.id}/100`;
+                            }}
+                          />
                         </div>
                         <div>
                           <p className="text-white font-bold text-sm">{editingItem.title}</p>

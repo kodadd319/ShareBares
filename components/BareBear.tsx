@@ -13,7 +13,7 @@ interface BareBearProps {
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated female bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". She has vibrant blue fur, long eyelashes, and a mischievous, seductive expression with a wink. She wears a black leather harness and has a white heart with a blue flame on her belly. She is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). She is edgy, detailed, and vibrant.';
+const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated female bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". She has vibrant blue fur, long eyelashes, and a mischievous, seductive expression with a wink. She wears a black leather harness and has a white heart with a blue flame on her belly. She is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). She is edgy, detailed, and vibrant. The image should contain NO TEXT or words.';
 
 const ACTION_PROMPTS: Record<BareBearAction, string> = {
   dance: 'She is doing a silly, energetic dance with her arms up and a big mischievous grin.',
@@ -31,7 +31,7 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v11_${action}`));
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v12_${action}`));
   const [loading, setLoading] = useState(!imageUrl);
 
   useEffect(() => {
@@ -62,10 +62,10 @@ const BareBear: React.FC<BareBearProps> = ({
               setImageUrl(url);
               imageFound = true;
               try {
-                localStorage.setItem(`barebear_v11_${action}`, url);
+                localStorage.setItem(`barebear_v12_${action}`, url);
                 // Clear old mascot versions to save space
                 Object.keys(localStorage).forEach(key => {
-                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v11_')) {
+                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v12_')) {
                     localStorage.removeItem(key);
                   }
                 });
@@ -147,6 +147,9 @@ const BareBear: React.FC<BareBearProps> = ({
                   className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(150,123,182,0.4)]"
                   alt="Bare Bear Mascot"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/barebear_fallback/512/512';
+                  }}
                 />
               )}
             </div>

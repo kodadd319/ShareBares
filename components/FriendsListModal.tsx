@@ -53,7 +53,14 @@ const FriendsListModal: React.FC<FriendsListModalProps> = ({
                     onClose();
                   }}
                 >
-                  <img src={friend.avatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt="" />
+                  <img 
+                    src={friend.avatar} 
+                    className="w-12 h-12 rounded-xl object-cover border border-white/10" 
+                    alt="" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${friend.id}/100`;
+                    }}
+                  />
                   <div>
                     <h4 className="text-white font-bold text-sm group-hover:text-[#967bb6] transition-colors">{friend.displayName}</h4>
                     <p className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">@{friend.username}</p>

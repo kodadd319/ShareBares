@@ -99,6 +99,9 @@ const ChatPage: React.FC<ChatPageProps> = ({
             className="rounded-2xl shadow-2xl border border-white/10" 
             alt="Promotional Banner" 
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/chat_banner_fallback/300/250';
+            }}
           />
         </a>
       </div>
@@ -184,7 +187,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 )}
                 <div className="relative shrink-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); onProfileClick?.(user.id); }}>
                   <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${isActive ? 'border-[#967bb6]' : 'border-white/10 group-hover:border-white/30'}`}>
-                    <img src={user.avatar} className="w-full h-full object-cover" alt="" />
+                    <img 
+                      src={user.avatar} 
+                      className="w-full h-full object-cover" 
+                      alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                      }}
+                    />
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-black"></div>
                   {hasUnread && !isActive && (
@@ -232,7 +242,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 </button>
                 
                 <div className="relative cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
-                  <img src={selectedUser.avatar} className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" alt="" />
+                  <img 
+                    src={selectedUser.avatar} 
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" 
+                    alt="" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                    }}
+                  />
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
                 </div>
                 <div className="cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
@@ -279,7 +296,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                     {!isMe && (
                       <div className="w-8 h-8 shrink-0 mb-1 cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
                         {showAvatar ? (
-                          <img src={selectedUser.avatar} className="w-full h-full rounded-lg object-cover border border-white/10" alt="" />
+                          <img 
+                            src={selectedUser.avatar} 
+                            className="w-full h-full rounded-lg object-cover border border-white/10" 
+                            alt="" 
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                            }}
+                          />
                         ) : <div className="w-8" />}
                       </div>
                     )}
@@ -313,7 +337,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
               {isTyping && (
                 <div className="flex justify-start items-end space-x-2">
                   <div className="w-8 h-8 shrink-0 mb-1">
-                    <img src={selectedUser.avatar} className="w-full h-full rounded-lg object-cover border border-white/10" alt="" />
+                    <img 
+                      src={selectedUser.avatar} 
+                      className="w-full h-full rounded-lg object-cover border border-white/10" 
+                      alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                      }}
+                    />
                   </div>
                   <div className="bg-white/5 p-4 rounded-[2rem] rounded-bl-none border border-white/10 flex space-x-1">
                     <div className="w-1.5 h-1.5 bg-[#967bb6] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -370,6 +401,9 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   className="w-full h-auto object-cover" 
                   alt="Featured Content"
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/chat_empty_fallback/640/360';
+                  }}
                 />
               </a>
             </div>

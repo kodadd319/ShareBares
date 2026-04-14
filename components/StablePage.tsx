@@ -188,10 +188,20 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
                         src={photo} 
                         className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
                         alt="" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}_${idx}/400`;
+                        }}
                       />
                     ))
                   ) : (
-                    <img src={listing.avatarUrl} className="w-full h-full object-cover col-span-2" alt="" />
+                    <img 
+                      src={listing.avatarUrl} 
+                      className="w-full h-full object-cover col-span-2" 
+                      alt="" 
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}/400`;
+                      }}
+                    />
                   )}
                 </div>
               </div>

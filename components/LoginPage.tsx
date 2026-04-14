@@ -179,6 +179,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
               className="w-full h-auto object-cover" 
               alt="Featured Content"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/login_fallback/640/360';
+              }}
             />
           </a>
         </div>

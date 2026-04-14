@@ -200,6 +200,9 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             referrerPolicy="no-referrer"
             alt="Banner"
             className="rounded-2xl shadow-2xl border border-white/10"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/gameroom_banner_fallback/300/250';
+            }}
           />
         </a>
       </div>
@@ -266,6 +269,9 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             className="w-full h-auto object-cover" 
             alt="Featured Content"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/gameroom_featured_fallback/800/600';
+            }}
           />
         </a>
       </div>
@@ -339,7 +345,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                     className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-[#967bb6]/10 to-transparent border border-[#967bb6]/20 hover:border-[#967bb6] transition-all group"
                   >
                     <div className="flex items-center space-x-4">
-                      <img src={u.avatar || undefined} className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" alt="" />
+                      <img 
+                        src={u.avatar || undefined} 
+                        className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
+                        alt="" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                        }}
+                      />
                       <div className="text-left">
                         <p className="text-sm font-black text-white uppercase tracking-tight">{u.displayName}</p>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">@{u.username}</p>
@@ -367,7 +380,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                     className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all group"
                   >
                     <div className="flex items-center space-x-4">
-                      <img src={u.avatar || undefined} className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" alt="" />
+                      <img 
+                        src={u.avatar || undefined} 
+                        className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
+                        alt="" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                        }}
+                      />
                       <div className="text-left">
                         <p className="text-sm font-black text-white uppercase tracking-tight">{u.displayName}</p>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">@{u.username}</p>
@@ -430,7 +450,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
             <div className={`flex flex-col items-center space-y-2 ${activeGame.turn === me?.id ? 'scale-110' : 'opacity-50'}`}>
               <div className={`w-12 h-12 rounded-2xl border-2 p-0.5 transition-all ${activeGame.turn === me?.id ? 'border-[#967bb6] shadow-[0_0_15px_rgba(150,123,182,0.5)]' : 'border-transparent'}`}>
-                <img src={me?.avatar || undefined} className="w-full h-full rounded-xl object-cover" alt="" />
+                <img 
+                  src={me?.avatar || undefined} 
+                  className="w-full h-full rounded-xl object-cover" 
+                  alt="" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${me?.id}/100`;
+                  }}
+                />
               </div>
               <div className="text-center">
                 <span className="text-[10px] font-black text-white uppercase tracking-widest block">You</span>
@@ -445,7 +472,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
             <div className={`flex flex-col items-center space-y-2 ${activeGame.turn === opponent?.id ? 'scale-110' : 'opacity-50'}`}>
               <div className={`w-12 h-12 rounded-2xl border-2 p-0.5 transition-all ${activeGame.turn === opponent?.id ? 'border-[#967bb6] shadow-[0_0_15px_rgba(150,123,182,0.5)]' : 'border-transparent'}`}>
-                <img src={opponent?.avatar || undefined} className="w-full h-full rounded-xl object-cover" alt="" />
+                <img 
+                  src={opponent?.avatar || undefined} 
+                  className="w-full h-full rounded-xl object-cover" 
+                  alt="" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${opponent?.id}/100`;
+                  }}
+                />
               </div>
               <div className="text-center">
                 <span className="text-[10px] font-black text-white uppercase tracking-widest block">{opponent?.displayName}</span>
