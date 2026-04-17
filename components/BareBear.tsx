@@ -89,7 +89,7 @@ const BareBear: React.FC<BareBearProps> = ({
         } else {
           console.error('Error generating Bare Bear:', error);
         }
-        setImageUrl('https://picsum.photos/seed/barebear_fallback/512/512');
+        setImageUrl('/bare-bear-logo.png');
       } finally {
         setLoading(false);
       }
@@ -148,7 +148,7 @@ const BareBear: React.FC<BareBearProps> = ({
                   alt="Bare Bear Mascot"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/barebear_fallback/512/512';
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
               )}

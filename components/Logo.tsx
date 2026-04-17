@@ -40,8 +40,8 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
           }
         } catch (error) {
           console.error('Error generating logo:', error);
-          // Fallback to a better picsum seed if generation fails
-          setLogoUrl('https://picsum.photos/seed/sharebares_mascot_final/512/512');
+          // Fallback to stable mascot if generation fails
+          setLogoUrl(APP_LOGO_URL);
         } finally {
           setIsGenerating(false);
         }
