@@ -460,13 +460,15 @@ async function startServer() {
                   "You're playing with fire, darling. Don't get burned."
                 ];
                 const message = {
-                  id: Math.random().toString(36).substr(2, 9),
+                  id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                   userId: 'bot',
                   displayName: 'Jade Vixen',
                   text: botMessages[Math.floor(Math.random() * botMessages.length)],
                   timestamp: Date.now()
                 };
-                io.to(game.players[0].id).emit("game:message", message);
+                if (game && game.players && game.players[0]) {
+                  io.to(game.players[0].id).emit("game:message", message);
+                }
               }
             }
           }, 1500);
@@ -478,16 +480,18 @@ async function startServer() {
       const game = activeGames.get(data.gameId);
       if (game) {
         const message = {
-          id: Math.random().toString(36).substr(2, 9),
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           userId: data.userId,
           displayName: data.displayName,
           text: data.text,
           timestamp: Date.now()
         };
-        io.to(game.players[0].id).emit("game:message", message);
-        if (game.players[1].id !== 'bot') {
-          io.to(game.players[1].id).emit("game:message", message);
-        }
+        
+        // Send to all players in the game, but avoid duplicates if player plays against themselves
+        const playerIds = new Set(game.players.map(p => p.id).filter(id => id !== 'bot'));
+        playerIds.forEach(id => {
+          io.to(id).emit("game:message", message);
+        });
       }
     });
 

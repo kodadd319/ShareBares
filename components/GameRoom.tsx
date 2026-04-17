@@ -113,7 +113,10 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
     });
 
     socket.on('game:message', (message: any) => {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        if (prev.find(m => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
     });
 
     socket.on('game:ended', (data: { gameId: string, winner: string }) => {
