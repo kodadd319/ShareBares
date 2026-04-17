@@ -1901,13 +1901,14 @@ const AppContent: React.FC = () => {
   }, []);
   
   const meRaw = users.find(u => u.id === currentUserId);
-  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com' || currentUserId === 'admin-jtothek319';
+  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com' || meRaw?.username === 'jameson319' || currentUserId === 'admin-jtothek319';
   const me = meRaw ? { 
     ...meRaw, 
     isAdmin: isAdminUser,
-    hasPaidStoreFee: meRaw.hasPaidStoreFee || isAdminUser,
-    hasPaidStableFee: meRaw.hasPaidStableFee || isAdminUser,
-    hasPaidStableBundle: meRaw.hasPaidStableBundle || isAdminUser,
+    isCreator: isAdminUser ? true : (meRaw.isCreator || false),
+    hasPaidStoreFee: isAdminUser ? true : (meRaw.hasPaidStoreFee || false),
+    hasPaidStableFee: isAdminUser ? true : (meRaw.hasPaidStableFee || false),
+    hasPaidStableBundle: isAdminUser ? true : (meRaw.hasPaidStableBundle || false),
     friendIds: meRaw.friendIds || [],
     pendingFriendRequestsSent: meRaw.pendingFriendRequestsSent || [],
     pendingFriendRequestsReceived: meRaw.pendingFriendRequestsReceived || [],
@@ -2130,10 +2131,18 @@ const AppContent: React.FC = () => {
             if (userDoc.exists()) {
               setHasCreatedProfile(true);
               const userData = userDoc.data() as User;
-              // Ensure admin flag is set for the admin user
-              if (user.email === 'jtothek319@gmail.com' && !userData.isAdmin) {
-                userData.isAdmin = true;
-                await updateDoc(doc(db, 'users', user.uid), { isAdmin: true });
+              // Ensure admin flag and privileges are set for the admin user
+              if ((user.email === 'jtothek319@gmail.com' || userData.username === 'jameson319') && (!userData.isAdmin || !userData.isCreator)) {
+                console.log('Restoring admin privileges for:', user.email);
+                const adminUpdates = {
+                  isAdmin: true,
+                  isCreator: true,
+                  hasPaidStoreFee: true,
+                  hasPaidStableFee: true,
+                  hasPaidStableBundle: true
+                };
+                Object.assign(userData, adminUpdates);
+                await updateDoc(doc(db, 'users', user.uid), adminUpdates);
               }
               // Sync public profile
               const profileData = {
@@ -2154,14 +2163,17 @@ const AppContent: React.FC = () => {
               const mockUser = MOCK_USERS.find(u => u.email === user.email) || (isAdminEmail ? MOCK_USERS[0] : null);
               const newUser: User = {
                 id: user.uid,
-                username: mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`,
-                displayName: mockUser?.displayName || user.displayName || 'New User',
+                username: isAdminEmail ? 'jameson319' : (mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`),
+                displayName: isAdminEmail ? 'Jameson Admin' : (mockUser?.displayName || user.displayName || 'New User'),
                 email: user.email || '',
                 avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
                 coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
-                bio: mockUser?.bio || 'Welcome to my profile!',
+                bio: mockUser?.bio || (isAdminEmail ? 'System Administrator. Full access enabled.' : 'Welcome to my profile!'),
                 isCreator: isAdminEmail || mockUser?.isCreator || false,
                 isAdmin: isAdminEmail || mockUser?.isAdmin || false,
+                hasPaidStoreFee: isAdminEmail || mockUser?.hasPaidStoreFee || false,
+                hasPaidStableFee: isAdminEmail || mockUser?.hasPaidStableFee || false,
+                hasPaidStableBundle: isAdminEmail || mockUser?.hasPaidStableBundle || false,
                 subscribersCount: mockUser?.subscribersCount || 0,
                 followingCount: mockUser?.followingCount || 0,
                 friendIds: mockUser?.friendIds || [],

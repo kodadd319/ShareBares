@@ -525,7 +525,7 @@ async function startServer() {
       console.log(`Login attempt for: ${trimmedEmail}`);
       
       // Admin credentials check (hardcoded for bootstrap admin)
-      if (trimmedEmail === "jtothek319@gmail.com" && trimmedPassword === "#Caleb918") {
+      if ((trimmedEmail === "jtothek319@gmail.com" || trimmedEmail === "jameson319") && trimmedPassword === "#Caleb918") {
         console.log("Admin credentials matched. Generating custom token...");
         
         // Use a fixed UID for the admin to avoid calling Identity Toolkit API (getUserByEmail/createUser)
@@ -534,7 +534,7 @@ async function startServer() {
         try {
           console.log("Attempting to create custom token for:", adminUid);
           const customToken = await admin.auth().createCustomToken(adminUid, {
-            email: email,
+            email: "jtothek319@gmail.com",
             admin: true
           });
           
