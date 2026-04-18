@@ -66,7 +66,7 @@ async function startServer() {
       id: 'post-1',
       userId: 'creator-1',
       content: 'Check out my new masterpiece! This took 40 hours to complete.',
-      mediaUrl: 'https://picsum.photos/seed/art1/800/600',
+      mediaUrl: '/bare-bear-logo.png',
       mediaType: 'image',
       createdAt: new Date().toISOString(),
       likes: 450,
@@ -78,7 +78,7 @@ async function startServer() {
       id: 'post-2',
       userId: 'creator-1',
       content: 'Secret technique I used for the shading in my last piece.',
-      mediaUrl: 'https://picsum.photos/seed/art2/800/600',
+      mediaUrl: '/bare-bear-logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
       likes: 120,
@@ -90,7 +90,7 @@ async function startServer() {
       id: 'post-3',
       userId: 'creator-2',
       content: 'Unboxing the latest Gemini 3 Developer Kit!',
-      mediaUrl: 'https://picsum.photos/seed/tech1/800/600',
+      mediaUrl: '/bare-bear-logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 890,
@@ -102,7 +102,7 @@ async function startServer() {
       id: 'jade-post-1',
       userId: 'ai-jade',
       content: 'The ink tells the story that words can\'t. 🖤 New set showing off the full chest piece details. Who\'s ready to see the close-ups?',
-      mediaUrl: 'https://picsum.photos/seed/jade_ink_post1/800/1000',
+      mediaUrl: '/bare-bear-logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 1800000).toISOString(),
       likes: 1240,
@@ -114,7 +114,7 @@ async function startServer() {
       id: 'jade-post-2',
       userId: 'ai-jade',
       content: 'ShareBares sessions. The contrast of the black ink against the neon lights is everything. 🔥😈 Full gallery now in the store.',
-      mediaUrl: 'https://picsum.photos/seed/jade_ink_post2/800/1000',
+      mediaUrl: '/bare-bear-logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 3500,
@@ -275,7 +275,7 @@ async function startServer() {
       const gameId = `game-bot-${Date.now()}`;
       const players = [
         { id: data.user.id, displayName: data.user.displayName, avatar: data.user.avatar, isReady: true, isBot: false }, 
-        { id: 'bot', displayName: 'BareBear', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=BareBear', isReady: true, isBot: true }
+        { id: 'bot', displayName: 'BareBear', avatar: '/bare-bear-logo.png', isReady: true, isBot: true }
       ];
       const initialGameState = createInitialGameState(gameId, data.gameType, players);
       initialGameState.status = 'playing'; // Start immediately for bot games

@@ -59,7 +59,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
       contactInfo,
       importantInfo,
       photos,
-      avatarUrl: photos[0] || 'https://picsum.photos/seed/default/200'
+      avatarUrl: photos[0] || '/bare-bear-logo.png'
     }, postToStore);
   };
 
@@ -208,7 +208,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/stable_upload_${index}/400`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                     <button 

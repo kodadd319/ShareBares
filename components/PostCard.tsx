@@ -89,7 +89,7 @@ const PostCard: React.FC<PostCardProps> = ({
               referrerPolicy="no-referrer" 
               className="w-10 h-10 rounded-full border border-[#967bb6]/30" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${author.id}/200`;
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
             {author.isCreator && (
@@ -122,7 +122,7 @@ const PostCard: React.FC<PostCardProps> = ({
       {/* Content */}
       {post.content && (
         <div className={`px-4 pb-3 ${isLocked ? 'blur-md select-none pointer-events-none' : ''}`}>
-          <p className="text-slate-200 leading-relaxed">{post.content}</p>
+          <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
         </div>
       )}
 
@@ -132,15 +132,29 @@ const PostCard: React.FC<PostCardProps> = ({
           className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
           onClick={isLocked ? handleLockedClick : undefined}
         >
-          <img 
-            src={post.mediaUrl} 
-            alt="Post content" 
-            referrerPolicy="no-referrer"
-            className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${post.id}/800/600`;
-            }}
-          />
+          {post.mediaType === 'video' ? (
+            <video 
+              src={post.mediaUrl}
+              className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`}
+              controls={!isLocked}
+              playsInline
+              loop
+              muted
+            />
+          ) : (
+            <img 
+              src={post.mediaUrl} 
+              alt="Post content" 
+              referrerPolicy="no-referrer"
+              className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('bare-bear-logo.png')) {
+                  target.src = '/bare-bear-logo.png';
+                }
+              }}
+            />
+          )}
           {isLocked && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
               <Lock size={48} className="text-[#967bb6] mb-4 animate-pulse" fill="#967bb6" />
@@ -195,12 +209,12 @@ const PostCard: React.FC<PostCardProps> = ({
           {/* Add Comment Input */}
           <form onSubmit={handleCommentSubmit} className="mb-6 flex items-center space-x-3">
             <img 
-              src={users.find(u => u.id === currentUserId)?.avatar || 'https://picsum.photos/seed/user/100/100'} 
+              src={users.find(u => u.id === currentUserId)?.avatar || '/bare-bear-logo.png'} 
               referrerPolicy="no-referrer"
               className="w-8 h-8 rounded-full border border-white/10"
               alt="Me"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${currentUserId}/100`;
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
             <div className="flex-grow relative">
@@ -228,12 +242,12 @@ const PostCard: React.FC<PostCardProps> = ({
                 return (
                   <div key={comment.id} className="flex space-x-3">
                     <img 
-                      src={commenter?.avatar || 'https://picsum.photos/seed/user/100/100'} 
+                      src={commenter?.avatar || '/bare-bear-logo.png'} 
                       alt={commenter?.displayName || 'User'} 
                       referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full border border-white/10"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${comment.userId}/100`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                     <div className="flex-grow bg-white/5 rounded-xl p-3">

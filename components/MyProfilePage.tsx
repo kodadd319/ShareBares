@@ -130,7 +130,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     className="w-full h-full object-cover" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${photo.id}/400`;
+                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                     }}
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -174,7 +174,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                           }}
                         />
                         <div>
@@ -218,7 +218,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                         className="w-12 h-12 rounded-xl object-cover" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                         }}
                       />
                       <div>
@@ -293,7 +293,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                             }}
                           />
                           <div>
@@ -339,7 +339,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                             }}
                           />
                           <div>
@@ -379,7 +379,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                           }}
                         />
                         <div className="absolute -top-1 -right-1 bg-black text-[#967bb6] p-1 rounded-full shadow-lg border border-[#967bb6]/30">

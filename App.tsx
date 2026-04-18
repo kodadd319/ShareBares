@@ -321,7 +321,7 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
               className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
               alt="Cover" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cover_fallback/800/200';
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
             <input 
@@ -349,7 +349,7 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
                 className="w-full h-full object-cover" 
                 alt="Avatar" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/avatar_fallback/200';
+                  (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                 }}
               />
               <input 
@@ -585,7 +585,7 @@ const SettingsPage: React.FC<{
           alt="Advertisement"
           className="rounded-2xl shadow-2xl border border-white/10"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/settings_ad_fallback/300/250';
+            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
           }}
         />
       </a>
@@ -898,8 +898,8 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [avatar, setAvatar] = useState('https://picsum.photos/seed/sharebares_user/200');
-  const [cover, setCover] = useState('https://picsum.photos/seed/sharebares_cover/1200/400');
+  const [avatar, setAvatar] = useState('/bare-bear-logo.png');
+  const [cover, setCover] = useState('/bare-bear-logo.png');
   const [isCreator, setIsCreator] = useState(false);
   const [location, setLocation] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -976,7 +976,7 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
                 className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
                 alt="Cover" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sharebares_cover/1200/400';
+                  (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                 }}
               />
               <input 
@@ -1004,7 +1004,7 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
                   className="w-full h-full object-cover" 
                   alt="Avatar" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sharebares_user/200';
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
                 <input 
@@ -2166,8 +2166,8 @@ const AppContent: React.FC = () => {
                 username: isAdminEmail ? 'jameson319' : (mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`),
                 displayName: isAdminEmail ? 'Jameson Admin' : (mockUser?.displayName || user.displayName || 'New User'),
                 email: user.email || '',
-                avatar: mockUser?.avatar || user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
-                coverImage: mockUser?.coverImage || `https://picsum.photos/seed/${user.uid}_cover/800/300`,
+                avatar: mockUser?.avatar || user.photoURL || '/bare-bear-logo.png',
+                coverImage: mockUser?.coverImage || '/bare-bear-logo.png',
                 bio: mockUser?.bio || (isAdminEmail ? 'System Administrator. Full access enabled.' : 'Welcome to my profile!'),
                 isCreator: isAdminEmail || mockUser?.isCreator || false,
                 isAdmin: isAdminEmail || mockUser?.isAdmin || false,
@@ -2416,7 +2416,7 @@ const AppContent: React.FC = () => {
           commentsCount: 0,
           visibility: PostVisibility.PUBLIC,
           category: 'Jade',
-          mediaUrl: `https://picsum.photos/seed/jade_${Date.now()}/800/1000`,
+          mediaUrl: '/bare-bear-logo.png',
           mediaType: 'image',
         };
         try {
@@ -2742,8 +2742,8 @@ const AppContent: React.FC = () => {
             username: username,
             displayName: displayName,
             email: email,
-            avatar: `https://picsum.photos/seed/${result.user.uid}/200`,
-            coverImage: `https://picsum.photos/seed/${result.user.uid}_cover/800/300`,
+            avatar: '/bare-bear-logo.png',
+            coverImage: '/bare-bear-logo.png',
             bio: 'Welcome to my profile!',
             isCreator: false,
             isAdmin: email === 'jtothek319@gmail.com',
@@ -2946,7 +2946,7 @@ const AppContent: React.FC = () => {
     const newPost: Post = {
       id: postId,
       userId: currentUserId,
-      content: newPostContent.trim(),
+      content: newPostContent,
       createdAt: new Date().toISOString(),
       likes: 0,
       likedBy: [],
@@ -3759,7 +3759,7 @@ const AppContent: React.FC = () => {
             className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" 
             alt="" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/public_cover_fallback/800/400';
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
@@ -3774,7 +3774,7 @@ const AppContent: React.FC = () => {
                   className="w-full h-full object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
               </div>
@@ -4197,7 +4197,7 @@ const AppContent: React.FC = () => {
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${photo.id}/400/500`;
+                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
@@ -4571,7 +4571,7 @@ const AppContent: React.FC = () => {
                       className="w-full h-full object-cover" 
                       alt="Preview" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/post_preview_fallback/400';
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   )}

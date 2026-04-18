@@ -384,7 +384,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                             alt="" 
                             className="w-full h-full object-cover" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${editingItem.id}/100`;
+                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                             }}
                           />
                         </div>

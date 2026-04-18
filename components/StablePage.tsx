@@ -189,7 +189,7 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
                         className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}_${idx}/400`;
+                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                         }}
                       />
                     ))
@@ -199,7 +199,7 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
                       className="w-full h-full object-cover col-span-2" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}/400`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   )}

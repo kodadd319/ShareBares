@@ -100,7 +100,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
             alt="Promotional Banner" 
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/chat_banner_fallback/300/250';
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
         </a>
@@ -192,7 +192,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   </div>
@@ -247,7 +247,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                     className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                     }}
                   />
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
@@ -301,7 +301,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                             className="w-full h-full rounded-lg object-cover border border-white/10" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                             }}
                           />
                         ) : <div className="w-8" />}
@@ -342,7 +342,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                       className="w-full h-full rounded-lg object-cover border border-white/10" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${selectedUser.id}/100`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   </div>
@@ -402,7 +402,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   alt="Featured Content"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/chat_empty_fallback/640/360';
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
               </a>

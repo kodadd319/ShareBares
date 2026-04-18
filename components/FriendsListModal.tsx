@@ -58,7 +58,7 @@ const FriendsListModal: React.FC<FriendsListModalProps> = ({
                     className="w-12 h-12 rounded-xl object-cover border border-white/10" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${friend.id}/100`;
+                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                     }}
                   />
                   <div>

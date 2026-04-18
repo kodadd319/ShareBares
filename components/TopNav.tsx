@@ -147,7 +147,7 @@ const TopNav: React.FC<TopNavProps> = ({
                           className="w-8 h-8 rounded-lg object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                           }}
                         />
                         <div>
@@ -182,7 +182,7 @@ const TopNav: React.FC<TopNavProps> = ({
                               className="w-full h-full object-cover" 
                               alt="" 
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/100`;
+                                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                               }}
                             />
                           ) : (
@@ -424,7 +424,7 @@ const TopNav: React.FC<TopNavProps> = ({
               className="w-8 h-8 rounded-[14px] object-cover" 
               alt="Profile" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/user_avatar_fallback/100';
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -549,7 +549,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                   className="w-8 h-8 rounded-lg object-cover" 
                                   alt="" 
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                                   }}
                                 />
                                 <div>
@@ -584,7 +584,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                       className="w-full h-full object-cover" 
                                       alt="" 
                                       onError={(e) => {
-                                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/100`;
+                                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                                       }}
                                     />
                                   ) : (

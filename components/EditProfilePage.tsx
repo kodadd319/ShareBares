@@ -79,7 +79,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
                   alt="Avatar Preview" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/100`;
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
                 <input 
@@ -102,7 +102,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
                   alt="Cover Preview" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/cover_fallback/400/200';
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
                 <input 

@@ -180,7 +180,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
               alt="Featured Content"
               referrerPolicy="no-referrer"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/login_fallback/640/360';
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
           </a>

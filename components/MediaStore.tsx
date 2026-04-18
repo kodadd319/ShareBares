@@ -333,7 +333,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${listing.id}/200`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   </div>
@@ -556,7 +556,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
           alt={item.title} 
           onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}/400/500`;
+            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
@@ -660,7 +660,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                     className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" 
                     alt={`${item.title} ${idx + 1}`} 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${item.id}_${idx}/800/600`;
+                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                     }}
                   />
                 ))

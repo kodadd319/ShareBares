@@ -204,7 +204,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             alt="Banner"
             className="rounded-2xl shadow-2xl border border-white/10"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/gameroom_banner_fallback/300/250';
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
         </a>
@@ -273,7 +273,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             alt="Featured Content"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/gameroom_featured_fallback/800/600';
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
         </a>
@@ -353,7 +353,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                         className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                         }}
                       />
                       <div className="text-left">
@@ -388,7 +388,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                         className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${u.id}/100`;
+                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                         }}
                       />
                       <div className="text-left">
@@ -458,7 +458,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   className="w-full h-full rounded-xl object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${me?.id}/100`;
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
               </div>
@@ -480,7 +480,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   className="w-full h-full rounded-xl object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${opponent?.id}/100`;
+                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                   }}
                 />
               </div>

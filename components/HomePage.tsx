@@ -52,7 +52,7 @@ const HomePage: React.FC<HomePageProps> = ({
             className="rounded-2xl shadow-2xl border border-white/10" 
             alt="Promotional Banner" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/banner_fallback/300/250';
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
         </a>
@@ -95,7 +95,7 @@ const HomePage: React.FC<HomePageProps> = ({
             className="w-10 h-10 rounded-xl border border-white/10" 
             alt="" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${me.id}/200`;
+              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
             }}
           />
           <div className="flex-grow bg-white/5 rounded-xl px-4 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-widest">
@@ -132,7 +132,7 @@ const HomePage: React.FC<HomePageProps> = ({
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                       }}
                     />
                   </div>
@@ -188,7 +188,7 @@ const HomePage: React.FC<HomePageProps> = ({
                             className="w-full h-auto object-cover" 
                             alt="Featured Content"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/featured_fallback/800/600';
+                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                             }}
                           />
                         </a>
@@ -225,7 +225,7 @@ const HomePage: React.FC<HomePageProps> = ({
                     className="w-10 h-10 rounded-xl border border-white/10" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${user.id}/200`;
+                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
                     }}
                   />
                   <div className="min-w-0">
@@ -252,7 +252,7 @@ const HomePage: React.FC<HomePageProps> = ({
               className="w-full h-auto object-cover" 
               alt="Featured Content"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/sidebar_fallback/800/600';
+                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
               }}
             />
           </a>
