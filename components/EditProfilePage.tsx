@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag, CreditCard } from 'lucide-react';
 import { User } from '../types';
+import { APP_LOGO_URL } from '../constants';
 
 interface EditProfilePageProps {
   user: User;
@@ -79,7 +80,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
                   alt="Avatar Preview" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
                   }}
                 />
                 <input 
@@ -102,7 +103,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
                   alt="Cover Preview" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
                   }}
                 />
                 <input 

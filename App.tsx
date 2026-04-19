@@ -1804,6 +1804,7 @@ const AppContent: React.FC = () => {
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [isFirestoreOnline, setIsFirestoreOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
@@ -2123,9 +2124,9 @@ const AppContent: React.FC = () => {
       try {
         if (user) {
           setCurrentUserId(user.uid);
-          setIsLoggedIn(true);
-
+          
           // Check if user profile exists in Firestore
+          setIsProfileLoading(true);
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
             if (userDoc.exists()) {
@@ -2158,72 +2159,18 @@ const AppContent: React.FC = () => {
               };
               await setDoc(doc(db, 'profiles', user.uid), profileData);
             } else {
-              // Create new user profile if it doesn't exist
-              const isAdminEmail = user.email === 'jtothek319@gmail.com';
-              const mockUser = MOCK_USERS.find(u => u.email === user.email) || (isAdminEmail ? MOCK_USERS[0] : null);
-              const newUser: User = {
-                id: user.uid,
-                username: isAdminEmail ? 'jameson319' : (mockUser?.username || user.email?.split('@')[0] || `user_${user.uid.substring(0, 5)}`),
-                displayName: isAdminEmail ? 'Jameson Admin' : (mockUser?.displayName || user.displayName || 'New User'),
-                email: user.email || '',
-                avatar: mockUser?.avatar || user.photoURL || '/bare-bear-logo.png',
-                coverImage: mockUser?.coverImage || '/bare-bear-logo.png',
-                bio: mockUser?.bio || (isAdminEmail ? 'System Administrator. Full access enabled.' : 'Welcome to my profile!'),
-                isCreator: isAdminEmail || mockUser?.isCreator || false,
-                isAdmin: isAdminEmail || mockUser?.isAdmin || false,
-                hasPaidStoreFee: isAdminEmail || mockUser?.hasPaidStoreFee || false,
-                hasPaidStableFee: isAdminEmail || mockUser?.hasPaidStableFee || false,
-                hasPaidStableBundle: isAdminEmail || mockUser?.hasPaidStableBundle || false,
-                subscribersCount: mockUser?.subscribersCount || 0,
-                followingCount: mockUser?.followingCount || 0,
-                friendIds: mockUser?.friendIds || [],
-                pendingFriendRequestsSent: [],
-                pendingFriendRequestsReceived: [],
-                likedPostIds: [],
-                fwbIds: [],
-                pendingFwbRequestsSent: [],
-                pendingFwbRequestsReceived: [],
-                fwbRequestsResetDate: new Date().toISOString(),
-                fwbRequestsSentCount: 0,
-                fanIds: [],
-                profileCustomization: mockUser?.profileCustomization || {},
-                photos: mockUser?.photos || [],
-                storeUploads: mockUser?.storeUploads || [],
-                blockedUserIds: [],
-                settings: mockUser?.settings || {
-                  pushNotifications: true,
-                  emailNotifications: true,
-                  profileVisibility: 'public',
-                  messagingPrivacy: 'everyone'
-                },
-                stripeConnectId: '',
-                purchasedItemIds: []
-              };
-              await setDoc(doc(db, 'users', user.uid), newUser);
-              
-              // Create public profile
-              const profileData = {
-                id: newUser.id,
-                username: newUser.username,
-                displayName: newUser.displayName,
-                avatar: newUser.avatar || null,
-                coverImage: newUser.coverImage || null,
-                bio: newUser.bio || null,
-                isCreator: newUser.isCreator || false,
-                subscribersCount: newUser.subscribersCount || 0,
-                followingCount: newUser.followingCount || 0
-              };
-              await setDoc(doc(db, 'profiles', user.uid), profileData);
-              
-              setHasCreatedProfile(true);
+              setHasCreatedProfile(false);
+              // Create default profile if completely missing and not seeding
             }
           } catch (profileError) {
             console.error('Error checking/creating user profile:', profileError);
-            handleFirestoreError(profileError, OperationType.GET, `users/${user.uid}`);
             setHasCreatedProfile(false);
+          } finally {
+            setIsProfileLoading(false);
+            setIsLoggedIn(true);
           }
 
-          // Seed other mock data if database is empty (non-blocking)
+          // Seed other mock data if database is empty (non-blocking)database is empty (non-blocking)
           const seedData = async () => {
             try {
               // Ensure Jade exists
@@ -2283,6 +2230,7 @@ const AppContent: React.FC = () => {
           setIsLoggedIn(false);
           setCurrentUserId('');
           setHasCreatedProfile(false);
+          setIsProfileLoading(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -4197,7 +4145,7 @@ const AppContent: React.FC = () => {
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                          (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
@@ -4228,70 +4176,90 @@ const AppContent: React.FC = () => {
     return null;
   };
 
-  if (showSplash || !isAuthReady) return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  if (showSplash || !isAuthReady) return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <SplashScreen onComplete={() => setShowSplash(false)} />
+    </motion.div>
+  );
+
   if (!isVerified) return (
-    <AgeVerificationGate onVerify={() => {
-      setIsVerified(true);
-      sessionStorage.setItem('isVerified', 'true');
-    }} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <AgeVerificationGate onVerify={() => {
+        setIsVerified(true);
+        sessionStorage.setItem('isVerified', 'true');
+      }} />
+    </motion.div>
   );
+
   if (!isLoggedIn) return (
-    <LoginPage 
-      onLogin={handleLogin} 
-      onRegister={handleRegister}
-      onSocialLogin={handleSocialLogin}
-    />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <LoginPage 
+        onLogin={handleLogin} 
+        onRegister={handleRegister}
+        onSocialLogin={handleSocialLogin}
+      />
+    </motion.div>
   );
+
+  if (isProfileLoading) return (
+    <SplashScreen onComplete={() => {}} />
+  );
+
   if (!hasCreatedProfile) return (
-    <ProfileCreationPage 
-      initialEmail={auth.currentUser?.email || ''} 
-      onComplete={handleProfileUpdate} 
-    />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <ProfileCreationPage 
+        initialEmail={auth.currentUser?.email || ''} 
+        onComplete={handleProfileUpdate} 
+      />
+    </motion.div>
   );
+
   if (isPaying) return (
-    <PaymentPage 
-      amount={
-        paymentType === 'store' ? 10.00 : 
-        paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
-        (pendingStoreItem?.price || 0)
-      } 
-      itemName={
-        paymentType === 'store' ? "One-Time Store Activation Fee" : 
-        paymentType === 'stable' ? (stableBundleSelected ? "Stable Store Bundle Fee" : "One-Time Stable Access Fee") :
-        (pendingStoreItem?.title || "Store Item")
-      } 
-      destinationAccountId={
-        paymentType === 'item' && pendingStoreItem 
-          ? users.find(u => u.id === pendingStoreItem.userId)?.stripeConnectId 
-          : undefined
-      }
-      paymentLink={
-        paymentType === 'store' 
-          ? "https://buy.stripe.com/aFaaEXby27yzbPH28i8k800" 
-          : paymentType === 'stable'
-            ? (stableBundleSelected 
-                ? "https://buy.stripe.com/4gM7sL9pUf116vnfZ88k802" 
-                : "https://buy.stripe.com/00w6oH45A3ij6vn4gq8k801")
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <PaymentPage 
+        amount={
+          paymentType === 'store' ? 10.00 : 
+          paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
+          (pendingStoreItem?.price || 0)
+        } 
+        itemName={
+          paymentType === 'store' ? "One-Time Store Activation Fee" : 
+          paymentType === 'stable' ? (stableBundleSelected ? "Stable Store Bundle Fee" : "One-Time Stable Access Fee") :
+          (pendingStoreItem?.title || "Store Item")
+        } 
+        destinationAccountId={
+          paymentType === 'item' && pendingStoreItem 
+            ? users.find(u => u.id === pendingStoreItem.userId)?.stripeConnectId 
             : undefined
-      }
-      successTitle={
-        paymentType === 'store' ? "Store Activated" : 
-        paymentType === 'stable' ? "The Stable Activated" :
-        "Item Unlocked"
-      }
-      successMessage={
-        paymentType === 'store' ? "Your store has been activated" : 
-        paymentType === 'stable' ? (stableBundleSelected ? "Your Store Bundle is now active" : "You now have unlimited access to The Stable") :
-        `You have successfully purchased ${pendingStoreItem?.title}`
-      }
-      onSuccess={handlePaymentSuccess}
-      onCancel={() => {
-        setIsPaying(false);
-        setPendingStableListing(null);
-        setPendingStoreItem(null);
-        setStableBundleSelected(false);
-      }}
-    />
+        }
+        paymentLink={
+          paymentType === 'store' 
+            ? "https://buy.stripe.com/aFaaEXby27yzbPH28i8k800" 
+            : paymentType === 'stable'
+              ? (stableBundleSelected 
+                  ? "https://buy.stripe.com/4gM7sL9pUf116vnfZ88k802" 
+                  : "https://buy.stripe.com/00w6oH45A3ij6vn4gq8k801")
+              : undefined
+        }
+        successTitle={
+          paymentType === 'store' ? "Store Activated" : 
+          paymentType === 'stable' ? "The Stable Activated" :
+          "Item Unlocked"
+        }
+        successMessage={
+          paymentType === 'store' ? "Your store has been activated" : 
+          paymentType === 'stable' ? (stableBundleSelected ? "Your Store Bundle is now active" : "You now have unlimited access to The Stable") :
+          `You have successfully purchased ${pendingStoreItem?.title}`
+        }
+        onSuccess={handlePaymentSuccess}
+        onCancel={() => {
+          setIsPaying(false);
+          setPendingStableListing(null);
+          setPendingStoreItem(null);
+          setStableBundleSelected(false);
+        }}
+      />
+    </motion.div>
   );
 
   return (
@@ -4571,7 +4539,7 @@ const AppContent: React.FC = () => {
                       className="w-full h-full object-cover" 
                       alt="Preview" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
                       }}
                     />
                   )}

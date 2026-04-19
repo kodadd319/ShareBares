@@ -7,7 +7,7 @@ import Stripe from "stripe";
 import multer from "multer";
 import fs from "node:fs";
 import admin from "firebase-admin";
-import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore } from "./games.ts";
+import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore, calculateRummyScore } from "./games.ts";
 import { GameState, GameInvite } from "./types.ts";
 
 // Load Firebase config for admin initialization
@@ -66,7 +66,7 @@ async function startServer() {
       id: 'post-1',
       userId: 'creator-1',
       content: 'Check out my new masterpiece! This took 40 hours to complete.',
-      mediaUrl: '/bare-bear-logo.png',
+      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
       mediaType: 'image',
       createdAt: new Date().toISOString(),
       likes: 450,
@@ -78,7 +78,7 @@ async function startServer() {
       id: 'post-2',
       userId: 'creator-1',
       content: 'Secret technique I used for the shading in my last piece.',
-      mediaUrl: '/bare-bear-logo.png',
+      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
       likes: 120,
@@ -90,7 +90,7 @@ async function startServer() {
       id: 'post-3',
       userId: 'creator-2',
       content: 'Unboxing the latest Gemini 3 Developer Kit!',
-      mediaUrl: '/bare-bear-logo.png',
+      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 890,
@@ -102,7 +102,7 @@ async function startServer() {
       id: 'jade-post-1',
       userId: 'ai-jade',
       content: 'The ink tells the story that words can\'t. 🖤 New set showing off the full chest piece details. Who\'s ready to see the close-ups?',
-      mediaUrl: '/bare-bear-logo.png',
+      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 1800000).toISOString(),
       likes: 1240,
@@ -114,7 +114,7 @@ async function startServer() {
       id: 'jade-post-2',
       userId: 'ai-jade',
       content: 'ShareBares sessions. The contrast of the black ink against the neon lights is everything. 🔥😈 Full gallery now in the store.',
-      mediaUrl: '/bare-bear-logo.png',
+      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 3500,
@@ -275,7 +275,7 @@ async function startServer() {
       const gameId = `game-bot-${Date.now()}`;
       const players = [
         { id: data.user.id, displayName: data.user.displayName, avatar: data.user.avatar, isReady: true, isBot: false }, 
-        { id: 'bot', displayName: 'BareBear', avatar: '/bare-bear-logo.png', isReady: true, isBot: true }
+        { id: 'bot', displayName: 'Bare Bear', avatar: 'https://picsum.photos/seed/sharebares/800', isReady: true, isBot: true }
       ];
       const initialGameState = createInitialGameState(gameId, data.gameType, players);
       initialGameState.status = 'playing'; // Start immediately for bot games
@@ -314,164 +314,209 @@ async function startServer() {
       }
     });
 
+    const executeBotTurn = (gameId: string) => {
+      const game = activeGames.get(gameId);
+      if (!game) return;
+
+      setTimeout(() => {
+        const currentGame = activeGames.get(gameId);
+        if (!currentGame) return;
+
+        // Condition for bot to move
+        const isBotTurn = currentGame.turn === 'bot' && currentGame.status === 'playing';
+        const isBlackjackAuto = currentGame.type === 'blackjack' && 
+                               (currentGame.status === 'waiting' || currentGame.status === 'finished') && 
+                               currentGame.players.some(p => p.id === 'bot');
+
+        if (!isBotTurn && !isBlackjackAuto) return;
+
+        let botMove: any = null;
+        const data = currentGame.data;
+
+        if (currentGame.type === 'checkers') {
+          const myColor = 2; // Bot is always player 2
+          const board = data.board;
+          const jumps: any[] = [];
+          const moves: any[] = [];
+
+          for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+              const piece = board[r][c];
+              if (Math.floor(piece) === myColor) {
+                const isKing = piece > 2;
+                const directions = [];
+                // Bot (Player 2) moves down (+1) unless King (both)
+                if (isKing) directions.push([-1, -1], [-1, 1]);
+                directions.push([1, -1], [1, 1]);
+                
+                for (const [dr, dc] of directions) {
+                  const nr = r + dr, nc = c + dc;
+                  if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === 0) moves.push({ from: [r, c], to: [nr, nc] });
+                  const jr = r + dr * 2, jc = c + dc * 2;
+                  if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === 0) {
+                    const mr = r + dr, mc = c + dc;
+                    if (board[mr][mc] !== 0 && Math.floor(board[mr][mc]) !== myColor) jumps.push({ from: [r, c], to: [jr, jc], jumped: [mr, mc] });
+                  }
+                }
+              }
+            }
+          }
+          if (jumps.length > 0) botMove = jumps[Math.floor(Math.random() * jumps.length)];
+          else if (moves.length > 0) botMove = moves[Math.floor(Math.random() * moves.length)];
+
+        } else if (currentGame.type === '10000') {
+          const scoringIndices = getScoringIndices(data.dice);
+          if (data.isFirstRoll) {
+            botMove = { type: 'roll', selectedIndices: [] };
+          } else if (scoringIndices.length > 0) {
+            const selectedDice = scoringIndices.map(i => data.dice[i]);
+            const { score: potentialScore } = calculateDiceScore(selectedDice);
+            const totalTurnScore = data.currentTurnScore + potentialScore;
+            // More aggressive if trailing or high potential
+            if (totalTurnScore >= 750 || (totalTurnScore >= 350 && Math.random() > 0.5)) {
+              botMove = { type: 'bank', selectedIndices: scoringIndices };
+            } else {
+              botMove = { type: 'roll', selectedIndices: scoringIndices };
+            }
+          } else {
+            botMove = { type: 'bank', selectedIndices: [] };
+          }
+
+        } else if (currentGame.type === 'blackjack') {
+          if (data.status === 'playing' && data.currentPlayerIndex === 1) {
+            const val = getBlackjackValue(data.players[1].hand);
+            botMove = val < 17 ? { type: 'hit' } : { type: 'stand' };
+          }
+        } else if (currentGame.type === 'billiards') {
+          const myType = data.playerTypes['bot'];
+          let targets = data.balls.filter((b: any) => b.active);
+          if (myType) {
+            const myBalls = targets.filter((b: any) => b.type === myType);
+            targets = myBalls.length > 0 ? myBalls : targets.filter((b: any) => b.id === 8);
+          } else {
+            targets = targets.filter((b: any) => b.id !== 8);
+          }
+          if (targets.length > 0) {
+            const target = targets[Math.floor(Math.random() * targets.length)];
+            const dx = target.x - data.cueBall.x, dy = target.y - data.cueBall.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const power = Math.min(Math.max(dist * 0.05, 3), 12);
+            const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.04;
+            const fDx = Math.cos(angle) * power * 10;
+            const fDy = Math.sin(angle) * power * 10;
+            
+            // Broadcast intent
+            currentGame.players.forEach(p => {
+              if (p.id !== 'bot') io.to(p.id).emit("game:billiards:shot", { dx: fDx, dy: fDy });
+            });
+
+            setTimeout(() => {
+              const res = handleMove(currentGame, 'bot', { type: 'shoot', dx: fDx, dy: fDy });
+              activeGames.set(gameId, res);
+              res.players.forEach(p => {
+                if (p.id !== 'bot') io.to(p.id).emit("game:updated", res);
+              });
+              if (res.turn === 'bot' && res.status === 'playing') executeBotTurn(gameId);
+            }, 5500);
+            return;
+          }
+        } else if (currentGame.type === 'rummy') {
+          if (data.turnPhase === 'draw') {
+            const drawFromDiscard = data.discardPile.length > 0 && Math.random() > 0.5;
+            botMove = { type: 'draw', fromDiscard: drawFromDiscard };
+          } else if (data.turnPhase === 'discard') {
+            const botPlayer = data.players.find((p: any) => p.id === 'bot');
+            if (botPlayer) {
+              const scoreData = calculateRummyScore(botPlayer.hand);
+              const deadwood = typeof scoreData === 'number' ? scoreData : scoreData.deadwood;
+              if (deadwood <= 10) {
+                botMove = { type: 'discard', cardIndex: 0, knock: true };
+              } else {
+                botMove = { type: 'discard', cardIndex: Math.floor(Math.random() * botPlayer.hand.length) };
+              }
+            }
+          }
+        }
+
+        if (botMove) {
+          const resultGame = handleMove(currentGame, 'bot', botMove);
+          activeGames.set(gameId, resultGame);
+          
+          resultGame.players.forEach(p => {
+            if (p.id !== 'bot') io.to(p.id).emit("game:updated", resultGame);
+          });
+
+          if (Math.random() > 0.8) {
+            const botMessages = [
+              "You play well, but I play better. 😉",
+              "Is that your best move?",
+              "I'm feeling lucky today!",
+              "Don't worry, I won't bite... much.",
+              "Ready to lose your chips?",
+              "I've got a surprise for you."
+            ];
+            const message = {
+              id: `msg-${Date.now()}`,
+              userId: 'bot',
+              displayName: 'Bare Bear',
+              text: botMessages[Math.floor(Math.random() * botMessages.length)],
+              timestamp: Date.now()
+            };
+            resultGame.players.forEach(p => {
+              if (p.id !== 'bot') io.to(p.id).emit("game:message", message);
+            });
+          }
+
+          // Recursive turn if still bot's turn
+          if ((resultGame.turn === 'bot' && resultGame.status === 'playing') || 
+              (resultGame.type === 'blackjack' && (resultGame.status === 'waiting' || resultGame.status === 'finished'))) {
+            executeBotTurn(gameId);
+          }
+        }
+      }, 1500);
+    };
+
     socket.on("game:move", (data: { gameId: string, userId: string, move: any }) => {
       const game = activeGames.get(data.gameId);
       if (game) {
         const updatedGame = handleMove(game, data.userId, data.move);
         activeGames.set(data.gameId, updatedGame);
         
-        // Broadcast update
-        io.to(game.players[0].id).emit("game:updated", updatedGame);
-        if (game.players[1].id !== 'bot') {
-          io.to(game.players[1].id).emit("game:updated", updatedGame);
-        } else if ((updatedGame.status === 'playing' && updatedGame.turn === 'bot') || (updatedGame.type === 'blackjack' && (updatedGame.status === 'waiting' || updatedGame.status === 'finished') && updatedGame.players.some(p => p.id === 'bot'))) {
-          // Automated Bot Turn
+        // Broadcast update to all
+        game.players.forEach(p => {
+          if (p.id !== 'bot') io.to(p.id).emit("game:updated", updatedGame);
+        });
+
+        // Trigger bot if needed
+        const isBotActive = (updatedGame.turn === 'bot' && updatedGame.status === 'playing') || 
+                           (updatedGame.type === 'blackjack' && (updatedGame.status === 'waiting' || updatedGame.status === 'finished') && updatedGame.players.some(p => p.id === 'bot'));
+        
+        if (isBotActive) {
+          executeBotTurn(data.gameId);
+        }
+
+        // Automatic continuous Blackjack loop
+        if (updatedGame.type === 'blackjack' && updatedGame.status === 'finished') {
           setTimeout(() => {
-            let botMove: any = null;
-            const data = updatedGame.data;
-
-            if (updatedGame.type === 'checkers') {
-              const myColor: number = 2; // Bot is always player 2
-              const board = data.board;
-              const jumps: any[] = [];
-              const moves: any[] = [];
-
-              for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                  const piece = board[r][c];
-                  if (Math.floor(piece) === myColor) {
-                    const isKing = piece > 2;
-                    const directions = [];
-                    if (myColor === 1 || isKing) directions.push([-1, -1], [-1, 1]);
-                    if (myColor === 2 || isKing) directions.push([1, -1], [1, 1]);
-
-                    for (const [dr, dc] of directions) {
-                      const nr = r + dr;
-                      const nc = c + dc;
-                      if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === 0) {
-                        moves.push({ from: [r, c], to: [nr, nc] });
-                      }
-                      const jr = r + dr * 2;
-                      const jc = c + dc * 2;
-                      if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && board[jr][jc] === 0) {
-                        const mr = r + dr;
-                        const mc = c + dc;
-                        const mid = board[mr][mc];
-                        if (mid !== 0 && Math.floor(mid) !== myColor) {
-                          jumps.push({ from: [r, c], to: [jr, jc] });
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-              if (jumps.length > 0) botMove = jumps[Math.floor(Math.random() * jumps.length)];
-              else if (moves.length > 0) botMove = moves[Math.floor(Math.random() * moves.length)];
-            } else if (updatedGame.type === '10000') {
-              // Bot logic for 10,000:
-              const scoringIndices = getScoringIndices(data.dice);
-              if (data.isFirstRoll) {
-                botMove = { type: 'roll', selectedIndices: [] };
-              } else if (scoringIndices.length > 0) {
-                // Bot strategy: if score is high enough, bank. Otherwise roll.
-                const selectedDice = scoringIndices.map(i => data.dice[i]);
-                const { score: potentialScore } = calculateDiceScore(selectedDice);
-                const totalTurnScore = data.currentTurnScore + potentialScore;
-                
-                if (totalTurnScore >= 500 || Math.random() > 0.7) {
-                  botMove = { type: 'bank', selectedIndices: scoringIndices };
-                } else {
-                  botMove = { type: 'roll', selectedIndices: scoringIndices };
-                }
-              } else {
-                // This shouldn't happen if not farkled, but just in case
-                botMove = { type: 'bank', selectedIndices: [] };
-              }
-            } else if (updatedGame.type === 'blackjack') {
-              if (data.status === 'waiting' || data.status === 'finished') {
-                botMove = { type: 'deal' };
-              } else if (data.status === 'playing' && data.currentPlayerIndex === 1) {
-                // Bot is player 2
-                const val = getBlackjackValue(data.players[1].hand);
-                if (val < 17) botMove = { type: 'hit' };
-                else botMove = { type: 'stand' };
-              }
-            } else if (updatedGame.type === 'billiards') {
-              // Bot logic for Billiards:
-              const myType = data.playerTypes['bot'];
-              let targets = data.balls.filter((b: any) => b.active);
+            const currentGame = activeGames.get(data.gameId);
+            if (currentGame && currentGame.status === 'finished') {
+              // Deal new hand
+              const nextHand = handleMove(currentGame, 'system', { type: 'deal' });
+              activeGames.set(data.gameId, nextHand);
               
-              if (myType) {
-                const myBalls = targets.filter((b: any) => b.type === myType);
-                if (myBalls.length > 0) {
-                  targets = myBalls;
-                } else {
-                  targets = targets.filter((b: any) => b.id === 8);
-                }
-              } else {
-                // If type not assigned, don't target 8-ball
-                targets = targets.filter((b: any) => b.id !== 8);
-              }
+              // Broadcast the new hand to all human players
+              nextHand.players.forEach(p => {
+                if (p.id !== 'bot') io.to(p.id).emit("game:updated", nextHand);
+              });
 
-              if (targets.length > 0) {
-                const target = targets[Math.floor(Math.random() * targets.length)];
-                const dx = target.x - data.cueBall.x;
-                const dy = target.y - data.cueBall.y;
-                
-                // Calculate distance to adjust power
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const power = Math.min(Math.max(dist * 0.05, 2), 10);
-                
-                // Add some "human" error
-                const error = (Math.random() - 0.5) * 0.05;
-                const angle = Math.atan2(dy, dx) + error;
-                
-                botMove = { 
-                  type: 'shoot', 
-                  dx: Math.cos(angle) * power * 10, 
-                  dy: Math.sin(angle) * power * 10 
-                };
-              } else {
-                botMove = { type: 'shoot', dx: Math.random() * 20 - 10, dy: Math.random() * 20 - 10 };
+              // If the bot is active and it's its turn (e.g. if it were the dealer or if it plays as P1), 
+              // trigger its turn. But normally dealer doesn't "play" until others are done.
+              // Just trigger executeBotTurn for the new state if needed.
+              if (nextHand.turn === 'bot' && nextHand.status === 'playing') {
+                executeBotTurn(data.gameId);
               }
             }
-
-            if (botMove) {
-              const botUpdatedGame = handleMove(updatedGame, 'bot', botMove);
-              activeGames.set(data.gameId, botUpdatedGame);
-              io.to(game.players[0].id).emit("game:updated", botUpdatedGame);
-
-              // Bot chat message for personality
-              if (Math.random() > 0.7) {
-                const botMessages = [
-                  "Nice try, but I'm just getting started.",
-                  "Is that all you've got?",
-                  "I've played with better, but you're fun.",
-                  "Don't cry when I win, darling.",
-                  "You're making this too easy.",
-                  "I like your style, even if you're losing.",
-                  "Let's see how you handle this.",
-                  "Checkmate? Not yet, but soon.",
-                  "I've got a special prize for you if you win... but you won't.",
-                  "You're cute when you're concentrating.",
-                  "I'm starting to think you're letting me win.",
-                  "Don't look at me like that, focus on the game.",
-                  "I've seen more skill in a beginner's room, but you've got spirit.",
-                  "You're playing with fire, darling. Don't get burned."
-                ];
-                const message = {
-                  id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  userId: 'bot',
-                  displayName: 'Jade Vixen',
-                  text: botMessages[Math.floor(Math.random() * botMessages.length)],
-                  timestamp: Date.now()
-                };
-                if (game && game.players && game.players[0]) {
-                  io.to(game.players[0].id).emit("game:message", message);
-                }
-              }
-            }
-          }, 1500);
+          }, 4500); // 4.5s delay to review the hand outcome
         }
       }
     });
@@ -630,6 +675,19 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+
+    // Serve index.html transformed by Vite
+    app.get("*all", async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     // Serve static files in production
     const distPath = path.join(process.cwd(), "dist");

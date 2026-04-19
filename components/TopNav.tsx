@@ -3,6 +3,7 @@ import React from 'react';
 import { Home, Search, MessageSquare, Bell, Settings, Hash, Menu, Plus, ChevronDown, User as UserIcon, LogOut, Shield, Image as ImageIcon, Dices, ExternalLink, Briefcase, Video, DollarSign, Star, Palette } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
 import Logo from './Logo';
+import { APP_LOGO_URL } from '../constants';
 
 interface TopNavProps {
   activeTab: string;
@@ -147,7 +148,7 @@ const TopNav: React.FC<TopNavProps> = ({
                           className="w-8 h-8 rounded-lg object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                            (e.target as HTMLImageElement).src = APP_LOGO_URL;
                           }}
                         />
                         <div>
@@ -182,7 +183,7 @@ const TopNav: React.FC<TopNavProps> = ({
                               className="w-full h-full object-cover" 
                               alt="" 
                               onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                                (e.target as HTMLImageElement).src = APP_LOGO_URL;
                               }}
                             />
                           ) : (
@@ -234,11 +235,16 @@ const TopNav: React.FC<TopNavProps> = ({
         </div>
       </div>
 
-      {/* Center: App Name */}
-      <div className="flex items-center justify-center hidden xl:flex">
-        <h1 className="text-2xl lg:text-4xl font-black tracking-tighter uppercase chrome-text whitespace-nowrap drop-shadow-[0_0_10px_rgba(150,123,182,0.3)]">
-          ShareBares
-        </h1>
+      {/* Center: App Name & Brand */}
+      <div className="flex items-center justify-center hidden lg:flex absolute left-1/2 -translate-x-1/2">
+        <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => setActiveTab('feed')}>
+          <div className="w-8 h-8 rounded-lg overflow-hidden border border-[#967bb6]/30 shadow-lg shadow-[#967bb6]/20 group-hover:scale-110 transition-transform">
+            <Logo size="sm" className="!h-full !w-full !rounded-none !border-none" />
+          </div>
+          <h1 className="text-xl xl:text-3xl font-black tracking-tighter uppercase chrome-text whitespace-nowrap drop-shadow-[0_0_10px_rgba(150,123,182,0.3)]">
+            ShareBares
+          </h1>
+        </div>
       </div>
 
       {/* Right: Comprehensive Navigation */}
@@ -419,12 +425,12 @@ const TopNav: React.FC<TopNavProps> = ({
             className={`p-0.5 rounded-2xl border-2 transition-all shrink-0 flex items-center space-x-2 ${isProfileMenuOpen ? 'border-[#967bb6] shadow-lg shadow-[#967bb6]/20' : 'border-transparent hover:border-white/20'}`}
           >
             <img 
-              src={userAvatar || undefined} 
+              src={userAvatar || APP_LOGO_URL} 
               referrerPolicy="no-referrer" 
               className="w-8 h-8 rounded-[14px] object-cover" 
               alt="Profile" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
               }}
             />
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -549,7 +555,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                   className="w-8 h-8 rounded-lg object-cover" 
                                   alt="" 
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
                                   }}
                                 />
                                 <div>
@@ -584,7 +590,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                       className="w-full h-full object-cover" 
                                       alt="" 
                                       onError={(e) => {
-                                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                                        (e.target as HTMLImageElement).src = APP_LOGO_URL;
                                       }}
                                     />
                                   ) : (

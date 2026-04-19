@@ -8,8 +8,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/png" href="/bare-bear-logo.png">
-    <link rel="apple-touch-icon" href="/bare-bear-logo.png">
+    <link rel="icon" type="image/png" href="https://picsum.photos/seed/sharebares-mascot-bear/800">
+    <link rel="apple-touch-icon" href="https://picsum.photos/seed/sharebares-mascot-bear/800">
     <meta name="apple-mobile-web-app-title" content="ShareBares">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,25 +27,6 @@
                     .catch(err => console.log('SW registration failed: ', err));
             });
         }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              serif: ['Playfair Display', 'serif'],
-              mono: ['JetBrains Mono', 'monospace'],
-              display: ['Anton', 'sans-serif'],
-              cursive: ['Cormorant Garamond', 'serif'],
-              retro: ['"Press Start 2P"', 'system-ui'],
-              futuristic: ['Orbitron', 'sans-serif'],
-              handwritten: ['"Permanent Marker"', 'cursive'],
-            }
-          }
-        }
-      }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;700&family=Anton&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&family=Orbitron:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
     <script src="https://crxcr2.com/popin/latest/affstitial-min.js"></script>
@@ -81,68 +62,9 @@
       expireDays: 0.01
     };
     </script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #000000;
-            color: #e2e8f0;
-        }
-        .glass-panel {
-            background: rgba(15, 15, 15, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(192, 192, 192, 0.1);
-        }
-        .chrome-text {
-            background: linear-gradient(to bottom, #ffffff 0%, #c0c0c0 50%, #808080 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .chrome-border {
-            border: 1px solid transparent;
-            background: linear-gradient(#000, #000) padding-box,
-                        linear-gradient(135deg, #757575, #e0e0e0, #757575) border-box;
-        }
-        .lavender-glow {
-            box-shadow: 0 0 15px rgba(150, 123, 182, 0.3);
-        }
-        /* Hide scrollbar */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        @keyframes loading-bar {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        .animate-loading-bar {
-            animation: loading-bar 2s linear infinite;
-        }
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react": "https://esm.sh/react@^19.2.4",
-    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div id="root"></div>
-<script type="module" src="/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

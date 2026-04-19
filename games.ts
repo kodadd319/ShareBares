@@ -37,9 +37,9 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     const BALL_RADIUS = 12;
     const TABLE_WIDTH = 800;
     const TABLE_HEIGHT = 400;
-    const startX = TABLE_WIDTH * 0.65;
+    const startX = TABLE_WIDTH * 0.7; // Move rack slightly further back
     const startY = TABLE_HEIGHT / 2;
-    const spacing = 1;
+    const spacing = 0.5; // Tighter spacing for better dispersion
     
     const ballOrder = [
         1,
@@ -53,8 +53,12 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     for (let col = 0; col < 5; col++) {
         for (let row = 0; row <= col; row++) {
             const num = ballOrder[ballIdx++];
-            const x = startX + col * (BALL_RADIUS * 2 * Math.cos(Math.PI/6) + spacing);
-            const y = startY + (row - col/2) * (BALL_RADIUS * 2 + spacing);
+            // Add tiny random jitter to the rack positions (0.1px) to break perfect symmetry
+            const jitterX = (Math.random() - 0.5) * 0.1;
+            const jitterY = (Math.random() - 0.5) * 0.1;
+            
+            const x = startX + col * (BALL_RADIUS * 2 * Math.cos(Math.PI/6) + spacing) + jitterX;
+            const y = startY + (row - col/2) * (BALL_RADIUS * 2 + spacing) + jitterY;
             
             let ballType = 'solid';
             let color = '#e74c3c'; // Default solid red
@@ -277,20 +281,120 @@ export const getScoringIndices = (dice: number[]) => {
   return indices;
 };
 
-export const calculateRummyScore = (hand: any[]) => {
-  // Simplified: face cards 10, Ace 1, others face value
-  // In real rummy, melds don't count towards score
-  let score = 0;
-  for (const card of hand) {
-    if (['K', 'Q', 'J', '10'].includes(card.value)) {
-      score += 10;
-    } else if (card.value === 'A') {
-      score += 1;
-    } else {
-      score += parseInt(card.value);
+export const getRankValue = (value: string) => {
+  if (value === 'A') return 1;
+  if (value === 'J') return 11;
+  if (value === 'Q') return 12;
+  if (value === 'K') return 13;
+  return parseInt(value);
+};
+
+export const getCardValue = (card: any) => {
+  const rank = getRankValue(card.value);
+  if (rank >= 10) return 10;
+  if (rank === 1) return 1;
+  return rank;
+};
+
+const findMelds = (hand: any[]) => {
+  const melds: any[][] = [];
+  const sortedHand = [...hand].sort((a, b) => getRankValue(a.value) - getRankValue(b.value));
+
+  // Find Sets (3 or 4 of a kind)
+  const rankGroups: Record<string, any[]> = {};
+  hand.forEach(card => {
+    if (!rankGroups[card.value]) rankGroups[card.value] = [];
+    rankGroups[card.value].push(card);
+  });
+  Object.values(rankGroups).forEach(group => {
+    if (group.length >= 3) melds.push(group);
+    if (group.length === 4) {
+      // Also add all combinations of 3 just in case? Usually 4 is always better.
     }
-  }
-  return score;
+  });
+
+  // Find Runs (3+ of same suit in sequence)
+  const suitGroups: Record<string, any[]> = {};
+  hand.forEach(card => {
+    if (!suitGroups[card.suit]) suitGroups[card.suit] = [];
+    suitGroups[card.suit].push(card);
+  });
+  Object.values(suitGroups).forEach(group => {
+    const sortedGroup = group.sort((a, b) => getRankValue(a.value) - getRankValue(b.value));
+    let currentRun = [sortedGroup[0]];
+    for (let i = 1; i < sortedGroup.length; i++) {
+      if (getRankValue(sortedGroup[i].value) === getRankValue(sortedGroup[i-1].value) + 1) {
+        currentRun.push(sortedGroup[i]);
+      } else if (getRankValue(sortedGroup[i].value) !== getRankValue(sortedGroup[i-1].value)) {
+        if (currentRun.length >= 3) melds.push(currentRun);
+        currentRun = [sortedGroup[i]];
+      }
+    }
+    if (currentRun.length >= 3) melds.push(currentRun);
+  });
+
+  return melds;
+};
+
+export const calculateDeadwood = (hand: any[]) => {
+  const allMelds = findMelds(hand);
+  if (allMelds.length === 0) return hand.reduce((sum, c) => sum + getCardValue(c), 0);
+
+  // We need to find the combination of non-overlapping melds that minimizes deadwood.
+  // For Rummy hands (10-11 cards), we can use a recursive search.
+  
+  const solve = (remainingCards: any[], melds: any[][]): number => {
+    if (melds.length === 0) return remainingCards.reduce((sum, c) => sum + getCardValue(c), 0);
+    
+    let minScore = remainingCards.reduce((sum, c) => sum + getCardValue(c), 0);
+    
+    for (let i = 0; i < melds.length; i++) {
+      const currentMeld = melds[i];
+      // Check if currentMeld is still possible with remainingCards
+      const stillPossible = currentMeld.every(mc => remainingCards.some(rc => rc.suit === mc.suit && rc.value === mc.value));
+      
+      if (stillPossible) {
+        const nextRemaining = remainingCards.filter(rc => !currentMeld.some(mc => mc.suit === rc.suit && rc.value === mc.value));
+        const nextMelds = melds.slice(i + 1);
+        const score = solve(nextRemaining, nextMelds);
+        if (score < minScore) minScore = score;
+      }
+    }
+    
+    return minScore;
+  };
+
+  return solve(hand, allMelds);
+};
+
+export const calculateRummyScore = (hand: any[]) => {
+  const allMelds = findMelds(hand);
+  if (allMelds.length === 0) return { deadwood: hand.reduce((sum, c) => sum + getCardValue(c), 0), melds: [] };
+
+  const solve = (remainingCards: any[], melds: any[][]): { score: number, bestMelds: any[][] } => {
+    if (melds.length === 0) return { score: remainingCards.reduce((sum, c) => sum + getCardValue(c), 0), bestMelds: [] };
+    
+    let bestResult = { score: remainingCards.reduce((sum, c) => sum + getCardValue(c), 0), bestMelds: [] as any[][] };
+    
+    for (let i = 0; i < melds.length; i++) {
+      const currentMeld = melds[i];
+      const stillPossible = currentMeld.every(mc => remainingCards.some(rc => rc.suit === mc.suit && rc.value === mc.value));
+      
+      if (stillPossible) {
+        const nextRemaining = remainingCards.filter(rc => !currentMeld.some(mc => mc.suit === rc.suit && rc.value === mc.value));
+        const nextMelds = melds.slice(i + 1);
+        const res = solve(nextRemaining, nextMelds);
+        if (res.score < bestResult.score) {
+          bestResult = { score: res.score, bestMelds: [currentMeld, ...res.bestMelds] };
+        }
+      }
+    }
+    
+    return bestResult;
+  };
+
+  const result = solve(hand, allMelds);
+  return { deadwood: result.score, melds: result.bestMelds };
 };
 
 export const handleMove = (game: GameState, userId: string, moveData: any): GameState => {
@@ -536,16 +640,18 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
   } else if (game.type === 'billiards') {
     if (moveData.type === 'shoot') {
       const { dx, dy } = moveData;
+      newData.lastShot = { dx, dy, userId, timestamp: Date.now() }; // Record shot
       newData.cueBall.vx = dx * 0.1;
       newData.cueBall.vy = dy * 0.1;
       newData.pottedThisTurn = [];
 
-      // Simulate until stopped
-      const FRICTION = 0.985;
-      const WALL_BOUNCE = 0.6;
-      const BALL_BOUNCE = 0.95;
+      // New physics implementation with sub-stepping for realism
+      const FRICTION = 0.993;
+      const WALL_BOUNCE = 0.8;
+      const BALL_BOUNCE = 0.98;
       const BALL_RADIUS = 12;
-      const POCKET_RADIUS = 22;
+      const POCKET_RADIUS = 26;
+      const SUB_STEPS = 8;
       
       const pockets = [
         { x: 0, y: 0 },
@@ -556,82 +662,89 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         { x: newData.width, y: newData.height }
       ];
 
-      const allBalls = [newData.cueBall, ...newData.balls];
+      const allBalls = [newData.cueBall, ...newData.balls].filter(b => b);
       let iterations = 0;
-      const maxIterations = 3000;
+      const maxIterations = 4000; // Increased to ensure all balls stop
       let scratch = false;
 
       while (iterations < maxIterations) {
         let moving = false;
 
-        allBalls.forEach(ball => {
-          if (!ball.active) return;
-          ball.x += ball.vx;
-          ball.y += ball.vy;
-          ball.vx *= FRICTION;
-          ball.vy *= FRICTION;
+        for (let s = 0; s < SUB_STEPS; s++) {
+          allBalls.forEach(ball => {
+            if (!ball.active) return;
+            
+            ball.x += ball.vx / SUB_STEPS;
+            ball.y += ball.vy / SUB_STEPS;
+            
+            // Scaled friction for sub-stepping
+            ball.vx *= Math.pow(FRICTION, 1 / SUB_STEPS);
+            ball.vy *= Math.pow(FRICTION, 1 / SUB_STEPS);
 
-          if (Math.abs(ball.vx) < 0.05) ball.vx = 0;
-          if (Math.abs(ball.vy) < 0.05) ball.vy = 0;
-          if (ball.vx !== 0 || ball.vy !== 0) moving = true;
+            if (Math.abs(ball.vx) < 0.02) ball.vx = 0;
+            if (Math.abs(ball.vy) < 0.02) ball.vy = 0;
+            if (ball.vx !== 0 || ball.vy !== 0) moving = true;
 
-          // Wall collisions
-          if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
-          if (ball.x > newData.width - BALL_RADIUS) { ball.x = newData.width - BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
-          if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
-          if (ball.y > newData.height - BALL_RADIUS) { ball.y = newData.height - BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
+            // Wall collisions
+            if (ball.x < BALL_RADIUS) { ball.x = BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
+            if (ball.x > newData.width - BALL_RADIUS) { ball.x = newData.width - BALL_RADIUS; ball.vx *= -WALL_BOUNCE; }
+            if (ball.y < BALL_RADIUS) { ball.y = BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
+            if (ball.y > newData.height - BALL_RADIUS) { ball.y = newData.height - BALL_RADIUS; ball.vy *= -WALL_BOUNCE; }
 
-          // Pockets
-          pockets.forEach(p => {
-            const dx = ball.x - p.x;
-            const dy = ball.y - p.y;
-            if (Math.sqrt(dx * dx + dy * dy) < POCKET_RADIUS) {
-              ball.active = false;
-              ball.vx = 0;
-              ball.vy = 0;
-              if (ball === newData.cueBall) {
-                scratch = true;
-              } else {
-                newData.pottedThisTurn.push(ball);
+            // Pockets
+            pockets.forEach(p => {
+              const dx = ball.x - p.x;
+              const dy = ball.y - p.y;
+              if (Math.sqrt(dx * dx + dy * dy) < POCKET_RADIUS) {
+                ball.active = false;
+                ball.vx = 0;
+                ball.vy = 0;
+                if (ball === newData.cueBall) {
+                  scratch = true;
+                } else {
+                  newData.pottedThisTurn.push(JSON.parse(JSON.stringify(ball)));
+                }
               }
-            }
+            });
           });
-        });
 
-        // Ball-to-ball collisions
-        for (let i = 0; i < allBalls.length; i++) {
-          for (let j = i + 1; j < allBalls.length; j++) {
-            const b1 = allBalls[i];
-            const b2 = allBalls[j];
-            if (!b1.active || !b2.active) continue;
+          // Ball-to-ball collisions
+          for (let i = 0; i < allBalls.length; i++) {
+            for (let j = i + 1; j < allBalls.length; j++) {
+              const b1 = allBalls[i];
+              const b2 = allBalls[j];
+              if (!b1.active || !b2.active) continue;
 
-            const dx = b2.x - b1.x;
-            const dy = b2.y - b1.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+              const dx = b2.x - b1.x;
+              const dy = b2.y - b1.y;
+              const distSq = dx * dx + dy * dy;
+              const minDist = BALL_RADIUS * 2;
 
-            if (dist < BALL_RADIUS * 2) {
-              const nx = dx / dist;
-              const ny = dy / dist;
-              const rvx = b1.vx - b2.vx;
-              const rvy = b1.vy - b2.vy;
-              const velAlongNormal = rvx * nx + rvy * ny;
-              
-              if (velAlongNormal < 0) {
-                const impulse = -(1 + BALL_BOUNCE) * velAlongNormal / 2;
-                const impulseX = impulse * nx;
-                const impulseY = impulse * ny;
-                b1.vx += impulseX;
-                b1.vy += impulseY;
-                b2.vx -= impulseX;
-                b2.vy -= impulseY;
+              if (distSq < minDist * minDist) {
+                const dist = Math.sqrt(distSq);
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const rvx = b1.vx - b2.vx;
+                const rvy = b1.vy - b2.vy;
+                const velAlongNormal = rvx * nx + rvy * ny;
+                
+                if (velAlongNormal < 0) {
+                  const impulse = -(1 + BALL_BOUNCE) * velAlongNormal / 2;
+                  const impulseX = impulse * nx;
+                  const impulseY = impulse * ny;
+                  b1.vx += impulseX;
+                  b1.vy += impulseY;
+                  b2.vx -= impulseX;
+                  b2.vy -= impulseY;
+                }
+                
+                const overlap = minDist - dist;
+                b1.x -= nx * overlap / 2;
+                b1.y -= ny * overlap / 2;
+                b2.x += nx * overlap / 2;
+                b2.y += ny * overlap / 2;
+                moving = true;
               }
-              
-              const overlap = BALL_RADIUS * 2 - dist;
-              b1.x -= nx * overlap / 2;
-              b1.y -= ny * overlap / 2;
-              b2.x += nx * overlap / 2;
-              b2.y += ny * overlap / 2;
-              moving = true;
             }
           }
         }

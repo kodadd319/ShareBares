@@ -1,25 +1,27 @@
 import React from 'react';
 import { APP_LOGO_URL } from '../constants';
 
-const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ className, size = 'md' }) => {
-  const logoUrl = APP_LOGO_URL;
-
+const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ className = '', size = 'md' }) => {
+  const [imgSrc, setImgSrc] = React.useState(APP_LOGO_URL);
   const sizeClasses = {
     sm: 'h-12 w-12',
     md: 'h-40 w-40',
     lg: 'h-64 w-64'
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+  const handleImageError = () => {
+    const fallback = 'https://picsum.photos/seed/sharebares-mascot-bear/800';
+    if (imgSrc !== fallback) {
+      setImgSrc(fallback);
+    }
   };
 
   return (
-    <div className={`${sizeClasses[size]} ${className} flex items-center justify-center bg-black rounded-2xl overflow-hidden group relative`}>
+    <div className={`flex items-center justify-center bg-black/50 overflow-hidden group relative rounded-[2rem] border border-[#967bb6]/10 ${sizeClasses[size]} ${className}`}>
       <img 
-        src={logoUrl} 
-        className={`w-full h-full object-contain drop-shadow-[0_0_15px_rgba(150,123,182,0.3)] transition-transform duration-700 group-hover:scale-110 animate-float opacity-100`} 
-        alt="ShareBares - Bare Bear mascot" 
+        src={imgSrc} 
+        className="w-[85%] h-[85%] object-contain drop-shadow-[0_0_20px_rgba(150,123,182,0.4)] transition-all duration-700 group-hover:scale-110 animate-float" 
+        alt="ShareBares Mascot" 
         referrerPolicy="no-referrer"
         onError={handleImageError}
       />

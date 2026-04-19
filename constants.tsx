@@ -5,7 +5,7 @@ export const CURRENT_USER_ID = 'admin-jtothek319';
 
 export const APP_URL = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.sharebares.com');
 
-export const APP_LOGO_URL = '/bare-bear-logo.png';
+export const APP_LOGO_URL = 'https://picsum.photos/seed/sharebares-mascot-bear/800';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
   {
@@ -130,8 +130,8 @@ export const MOCK_USERS: User[] = [
     email: 'jtothek319@gmail.com',
     password: '#Caleb918',
     isBanned: false,
-    avatar: '/bare-bear-logo.png',
-    coverImage: '/bare-bear-logo.png',
+    avatar: 'https://picsum.photos/seed/sharebares/800',
+    coverImage: 'https://picsum.photos/seed/sharebares/800',
     bio: 'System Administrator. Full access enabled.',
     isCreator: true,
     isAdmin: true,
