@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, ArrowRight, Github, Twitter, Chrome } from 'lucide-react';
 import Logo from './Logo';
+import { APP_LOGO_URL } from '../constants';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
@@ -180,7 +181,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
               alt="Featured Content"
               referrerPolicy="no-referrer"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                const target = e.target as HTMLImageElement;
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
+                }
               }}
             />
           </a>

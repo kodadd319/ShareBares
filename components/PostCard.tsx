@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Post, PostVisibility, User, AppComment } from '../types';
 import { Heart, MessageCircle, Eye, Star, Trash2, Lock, Share2, Check } from 'lucide-react';
 import { useBareBear } from './BareBearContext';
-import { APP_URL } from '../constants';
+import { APP_URL, APP_LOGO_URL } from '../constants';
 
 interface PostCardProps {
   post: Post;
@@ -84,12 +84,15 @@ const PostCard: React.FC<PostCardProps> = ({
         <div className="flex items-center space-x-3">
           <div className="relative cursor-pointer" onClick={() => onProfileClick?.(author.id)}>
             <img 
-              src={author.avatar} 
-              alt={author.displayName} 
+              src={author.avatar || APP_LOGO_URL} 
+              alt="" 
               referrerPolicy="no-referrer" 
               className="w-10 h-10 rounded-full border border-[#967bb6]/30" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                const target = e.target as HTMLImageElement;
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
+                }
               }}
             />
             {author.isCreator && (
@@ -149,8 +152,8 @@ const PostCard: React.FC<PostCardProps> = ({
               className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                if (!target.src.includes('bare-bear-logo.png')) {
-                  target.src = '/bare-bear-logo.png';
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
                 }
               }}
             />
@@ -209,12 +212,15 @@ const PostCard: React.FC<PostCardProps> = ({
           {/* Add Comment Input */}
           <form onSubmit={handleCommentSubmit} className="mb-6 flex items-center space-x-3">
             <img 
-              src={users.find(u => u.id === currentUserId)?.avatar || '/bare-bear-logo.png'} 
+              src={users.find(u => u.id === currentUserId)?.avatar || APP_LOGO_URL} 
               referrerPolicy="no-referrer"
               className="w-8 h-8 rounded-full border border-white/10"
-              alt="Me"
+              alt=""
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                const target = e.target as HTMLImageElement;
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
+                }
               }}
             />
             <div className="flex-grow relative">
@@ -242,12 +248,15 @@ const PostCard: React.FC<PostCardProps> = ({
                 return (
                   <div key={comment.id} className="flex space-x-3">
                     <img 
-                      src={commenter?.avatar || '/bare-bear-logo.png'} 
-                      alt={commenter?.displayName || 'User'} 
+                      src={commenter?.avatar || APP_LOGO_URL} 
+                      alt="" 
                       referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full border border-white/10"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                     <div className="flex-grow bg-white/5 rounded-xl p-3">

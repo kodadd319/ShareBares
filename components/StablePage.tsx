@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { StableListing } from '../types';
 import { User as UserIcon, MapPin, DollarSign, MessageSquare, Shield, ChevronDown, Filter, Navigation, X } from 'lucide-react';
+import { APP_LOGO_URL } from '../constants';
 
 interface StablePageProps {
   listings: StableListing[];
@@ -189,7 +190,10 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
                         className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== APP_LOGO_URL) {
+                            target.src = APP_LOGO_URL;
+                          }
                         }}
                       />
                     ))
@@ -199,7 +203,10 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
                       className="w-full h-full object-cover col-span-2" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                   )}

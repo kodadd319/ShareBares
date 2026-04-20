@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '../types';
+import { APP_LOGO_URL } from '../constants';
 import { 
   Plus, Send, MessageSquare, Search, MoreVertical, 
   Phone, Video, Info, Smile, Image as ImageIcon,
@@ -100,7 +101,10 @@ const ChatPage: React.FC<ChatPageProps> = ({
             alt="Promotional Banner" 
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
             }}
           />
         </a>
@@ -188,11 +192,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 <div className="relative shrink-0 cursor-pointer" onClick={(e) => { e.stopPropagation(); onProfileClick?.(user.id); }}>
                   <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${isActive ? 'border-[#967bb6]' : 'border-white/10 group-hover:border-white/30'}`}>
                     <img 
-                      src={user.avatar} 
+                      src={user.avatar || APP_LOGO_URL} 
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                   </div>
@@ -243,11 +250,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 
                 <div className="relative cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
                   <img 
-                    src={selectedUser.avatar} 
+                    src={selectedUser.avatar || APP_LOGO_URL} 
                     className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== APP_LOGO_URL) {
+                        target.src = APP_LOGO_URL;
+                      }
                     }}
                   />
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
@@ -297,11 +307,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                       <div className="w-8 h-8 shrink-0 mb-1 cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
                         {showAvatar ? (
                           <img 
-                            src={selectedUser.avatar} 
+                            src={selectedUser.avatar || APP_LOGO_URL} 
                             className="w-full h-full rounded-lg object-cover border border-white/10" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== APP_LOGO_URL) {
+                                target.src = APP_LOGO_URL;
+                              }
                             }}
                           />
                         ) : <div className="w-8" />}
@@ -338,11 +351,14 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 <div className="flex justify-start items-end space-x-2">
                   <div className="w-8 h-8 shrink-0 mb-1">
                     <img 
-                      src={selectedUser.avatar} 
+                      src={selectedUser.avatar || APP_LOGO_URL} 
                       className="w-full h-full rounded-lg object-cover border border-white/10" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                   </div>
@@ -402,7 +418,10 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   alt="Featured Content"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== APP_LOGO_URL) {
+                      target.src = APP_LOGO_URL;
+                    }
                   }}
                 />
               </a>

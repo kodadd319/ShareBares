@@ -3,11 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, Check, ArrowLeft, Shield, Lock } from 'lucide-react';
 import { useBareBear } from './BareBearContext';
 import { StableListing } from '../types';
+import { APP_LOGO_URL } from '../constants';
 
 interface JoinStablePageProps {
   onBack: () => void;
   onGoToMonetization: () => void;
-  onSubmit: (listing: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean) => void;
+  onSubmit: (listing: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean, photoFiles: File[]) => void;
   hasPaidStableFee: boolean;
 }
 
@@ -30,20 +31,23 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
   const [contactInfo, setContactInfo] = useState('');
   const [importantInfo, setImportantInfo] = useState('');
   const [postToStore, setPostToStore] = useState(false);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      if (photos.length >= 2) return;
+      if (photoFiles.length >= 2) return;
       const file = e.target.files[0];
+      setPhotoFiles(prev => [...prev, file]);
       const url = URL.createObjectURL(file);
-      setPhotos(prev => [...prev, url]);
+      setPreviews(prev => [...prev, url]);
     }
   };
 
   const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -58,9 +62,9 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
       pricing,
       contactInfo,
       importantInfo,
-      photos,
-      avatarUrl: photos[0] || '/bare-bear-logo.png'
-    }, postToStore);
+      photos: [], // Will be populated by parent after upload
+      avatarUrl: APP_LOGO_URL // Will be populated by parent after upload
+    }, postToStore, photoFiles);
   };
 
   if (!hasPaidStableFee) {
@@ -201,14 +205,17 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
             <div>
               <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Photos (Max 2)</label>
               <div className="grid grid-cols-2 gap-4">
-                {photos.map((url, index) => (
+                {previews.map((url, index) => (
                   <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                     <img 
                       src={url} 
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                     <button 
@@ -220,7 +227,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                     </button>
                   </div>
                 ))}
-                {photos.length < 2 && (
+                {previews.length < 2 && (
                   <button 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}

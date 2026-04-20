@@ -7,11 +7,12 @@ import {
 } from 'lucide-react';
 import { User, MediaItem } from '../types';
 import AdPlaceholder from './AdPlaceholder';
+import { APP_LOGO_URL } from '../constants';
 
 interface MyProfilePageProps {
   me: User;
   users: User[];
-  onUploadPhoto: (photo: Omit<MediaItem, 'id' | 'createdAt'>) => void;
+  onUploadPhoto: (file: File) => void;
   onDeletePhoto: (photoId: string) => void;
   onAcceptFriendRequest: (userId: string) => void;
   onRejectFriendRequest: (userId: string) => void;
@@ -35,12 +36,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const url = URL.createObjectURL(file);
-      onUploadPhoto({
-        url,
-        type: 'image',
-        isNSFW: false
-      });
+      onUploadPhoto(file);
     }
   };
 
@@ -130,7 +126,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     className="w-full h-full object-cover" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== APP_LOGO_URL) {
+                        target.src = APP_LOGO_URL;
+                      }
                     }}
                   />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -174,7 +173,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== APP_LOGO_URL) {
+                              target.src = APP_LOGO_URL;
+                            }
                           }}
                         />
                         <div>
@@ -218,7 +220,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                         className="w-12 h-12 rounded-xl object-cover" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== APP_LOGO_URL) {
+                            target.src = APP_LOGO_URL;
+                          }
                         }}
                       />
                       <div>
@@ -293,7 +298,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== APP_LOGO_URL) {
+                                target.src = APP_LOGO_URL;
+                              }
                             }}
                           />
                           <div>
@@ -339,7 +347,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== APP_LOGO_URL) {
+                                target.src = APP_LOGO_URL;
+                              }
                             }}
                           />
                           <div>
@@ -379,7 +390,10 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== APP_LOGO_URL) {
+                              target.src = APP_LOGO_URL;
+                            }
                           }}
                         />
                         <div className="absolute -top-1 -right-1 bg-black text-[#967bb6] p-1 rounded-full shadow-lg border border-[#967bb6]/30">

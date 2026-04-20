@@ -143,12 +143,15 @@ const TopNav: React.FC<TopNavProps> = ({
                         className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                       >
                         <img 
-                          src={u.avatar || undefined} 
+                          src={u.avatar || APP_LOGO_URL} 
                           referrerPolicy="no-referrer" 
                           className="w-8 h-8 rounded-lg object-cover" 
                           alt="" 
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== APP_LOGO_URL) {
+                              target.src = APP_LOGO_URL;
+                            }
                           }}
                         />
                         <div>
@@ -550,12 +553,15 @@ const TopNav: React.FC<TopNavProps> = ({
                                 className="w-full flex items-center space-x-3 px-4 py-2 hover:bg-[#967bb6]/10 transition-all text-left"
                               >
                                 <img 
-                                  src={u.avatar || undefined} 
+                                  src={u.avatar || APP_LOGO_URL} 
                                   referrerPolicy="no-referrer" 
                                   className="w-8 h-8 rounded-lg object-cover" 
                                   alt="" 
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                                    const target = e.target as HTMLImageElement;
+                                    if (target.src !== APP_LOGO_URL) {
+                                      target.src = APP_LOGO_URL;
+                                    }
                                   }}
                                 />
                                 <div>

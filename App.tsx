@@ -21,7 +21,7 @@ import StoreCustomizationPage from './components/StoreCustomizationPage';
 import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
 import { BareBearProvider, useBareBear } from './components/BareBearContext';
-import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS } from './constants';
+import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS, APP_LOGO_URL } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
 import { Toaster, toast } from 'sonner';
 import { 
@@ -80,44 +80,6 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
         <p className="text-[7px] leading-tight text-slate-700 font-medium uppercase tracking-wider max-w-3xl mx-auto opacity-60">
           LEGAL DISCLAIMER: ShareBares maintains a zero-tolerance policy for illegal content. Users are strictly prohibited from uploading, selling, or distributing copyrighted or trademarked material without authorization. Any content involving minors, non-consensual sexual material, or illegal acts is strictly forbidden and will result in immediate termination of account and reporting to relevant authorities. By using this platform, you agree to comply with all local and international laws.
         </p>
-      </div>
-    </div>
-  );
-};
-
-const AgeVerificationGate: React.FC<{ onVerify: () => void }> = ({ onVerify }) => {
-  return (
-    <div className="fixed inset-0 z-[999] bg-black flex items-center justify-center p-4">
-      <div className="max-w-md w-full glass-panel rounded-3xl p-8 border-[#c0c0c0]/20 shadow-2xl shadow-[#967bb6]/10 text-center animate-in fade-in zoom-in duration-300 chrome-border">
-        <div className="flex justify-center mb-6">
-          <Logo size="lg" />
-        </div>
-        <p className="text-[#967bb6] font-bold uppercase tracking-[0.2em] text-xs mb-6">Adults Only • NSFW Content</p>
-        
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 text-left">
-          <div className="flex items-start space-x-3 text-[#967bb6] mb-4">
-            <AlertCircle size={20} className="shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">Unrestricted Adult Content</p>
-          </div>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            By entering, you confirm that you are at least 18 years old. This site contains unrestricted adult material, including nudity and sexually explicit content, which is allowed throughout the platform.
-          </p>
-        </div>
-
-        <div className="flex flex-col space-y-3">
-          <button 
-            onClick={onVerify}
-            className="w-full bg-black text-[#967bb6] py-4 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all active:scale-[0.98] chrome-border"
-          >
-            Enter
-          </button>
-          <button 
-            onClick={() => window.location.href = 'https://www.google.com'}
-            className="w-full bg-white/5 hover:bg-white/10 text-slate-400 py-4 rounded-2xl font-bold transition-all"
-          >
-            Leave
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -316,12 +278,15 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
             onClick={() => coverInputRef.current?.click()}
           >
             <img 
-              src={cover || undefined} 
+              src={cover || APP_LOGO_URL} 
               referrerPolicy="no-referrer" 
               className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
-              alt="Cover" 
+              alt="" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                const target = e.target as HTMLImageElement;
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
+                }
               }}
             />
             <input 
@@ -344,12 +309,15 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
               onClick={() => avatarInputRef.current?.click()}
             >
               <img 
-                src={avatar || undefined} 
+                src={avatar || APP_LOGO_URL} 
                 referrerPolicy="no-referrer" 
                 className="w-full h-full object-cover" 
-                alt="Avatar" 
+                alt="" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== APP_LOGO_URL) {
+                    target.src = APP_LOGO_URL;
+                  }
                 }}
               />
               <input 
@@ -582,10 +550,13 @@ const SettingsPage: React.FC<{
           width="300" 
           height="250" 
           referrerPolicy="no-referrer"
-          alt="Advertisement"
+          alt=""
           className="rounded-2xl shadow-2xl border border-white/10"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+            const target = e.target as HTMLImageElement;
+            if (target.src !== APP_LOGO_URL) {
+              target.src = APP_LOGO_URL;
+            }
           }}
         />
       </a>
@@ -898,8 +869,8 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [avatar, setAvatar] = useState('/bare-bear-logo.png');
-  const [cover, setCover] = useState('/bare-bear-logo.png');
+  const [avatar, setAvatar] = useState(APP_LOGO_URL);
+  const [cover, setCover] = useState(APP_LOGO_URL);
   const [isCreator, setIsCreator] = useState(false);
   const [location, setLocation] = useState('');
   const [occupation, setOccupation] = useState('');
@@ -976,7 +947,10 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
                 className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
                 alt="Cover" 
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== APP_LOGO_URL) {
+                    target.src = APP_LOGO_URL;
+                  }
                 }}
               />
               <input 
@@ -1004,7 +978,10 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
                   className="w-full h-full object-cover" 
                   alt="Avatar" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== APP_LOGO_URL) {
+                      target.src = APP_LOGO_URL;
+                    }
                   }}
                 />
                 <input 
@@ -1796,12 +1773,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 const AppContent: React.FC = () => {
   const { showPrompt, install, dismiss } = usePWA();
   const [showSplash, setShowSplash] = useState(true);
-  const [isVerified, setIsVerified] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('isVerified') === 'true';
-    }
-    return false;
-  });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
@@ -2364,7 +2335,7 @@ const AppContent: React.FC = () => {
           commentsCount: 0,
           visibility: PostVisibility.PUBLIC,
           category: 'Jade',
-          mediaUrl: '/bare-bear-logo.png',
+          mediaUrl: APP_LOGO_URL,
           mediaType: 'image',
         };
         try {
@@ -2690,8 +2661,8 @@ const AppContent: React.FC = () => {
             username: username,
             displayName: displayName,
             email: email,
-            avatar: '/bare-bear-logo.png',
-            coverImage: '/bare-bear-logo.png',
+            avatar: APP_LOGO_URL,
+            coverImage: APP_LOGO_URL,
             bio: 'Welcome to my profile!',
             isCreator: false,
             isAdmin: email === 'jtothek319@gmail.com',
@@ -2805,8 +2776,6 @@ const AppContent: React.FC = () => {
       setCurrentUserId(CURRENT_USER_ID);
       setActiveTab('feed');
       setViewingUserId(null);
-      setIsVerified(false);
-      sessionStorage.removeItem('isVerified');
       setShowSplash(true);
     } catch (error) {
       console.error('Logout failed:', error);
@@ -2871,6 +2840,7 @@ const AppContent: React.FC = () => {
   const handlePost = async () => {
     if (!newPostContent.trim() && !newPostMedia) return;
     
+    setIsCreating(true);
     let mediaUrl = undefined;
     
     if (newPostMedia) {
@@ -2884,9 +2854,16 @@ const AppContent: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           mediaUrl = data.url;
+        } else {
+          toast.error('Failed to upload media. Please try again.');
+          setIsCreating(false);
+          return;
         }
       } catch (err) {
         console.error('Failed to upload media:', err);
+        toast.error('Error uploading media.');
+        setIsCreating(false);
+        return;
       }
     }
     
@@ -2901,7 +2878,10 @@ const AppContent: React.FC = () => {
       commentsCount: 0,
       visibility: newPostVisibility,
       mediaUrl: mediaUrl,
-      mediaType: mediaUrl ? (newPostMedia?.type.startsWith('video') ? 'video' : 'image') : undefined,
+      mediaType: mediaUrl ? (
+        mediaUrl.match(/\.(mp4|mov|webm|ogg)$/i) ? 'video' : 
+        (newPostMedia?.type.startsWith('video') ? 'video' : 'image')
+      ) : undefined,
     };
     
     try {
@@ -2914,6 +2894,7 @@ const AppContent: React.FC = () => {
       toast.success('Post created successfully!');
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
+      setIsCreating(false);
       toast.error('Failed to create post. Please try again.');
     }
   };
@@ -3282,17 +3263,35 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleUploadPhoto = async (photo: Omit<MediaItem, 'id' | 'createdAt'>) => {
-    const newPhoto: MediaItem = {
-      ...photo,
-      id: `photo-${Date.now()}`,
-      createdAt: new Date().toISOString()
-    };
+  const handleUploadPhoto = async (file: File) => {
     try {
-      await updateDoc(doc(db, 'users', currentUserId), { photos: [newPhoto, ...me.photos] });
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      
+      const photoId = `photo-${Date.now()}`;
+      const newPhoto: MediaItem = {
+        id: photoId,
+        url: data.url,
+        type: 'image',
+        isNSFW: false,
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedPhotos = [newPhoto, ...(me.photos || [])];
+      await updateDoc(doc(db, 'users', currentUserId), { photos: updatedPhotos });
       addNotification(NotificationType.FOLLOW, 'Photo Uploaded', 'Your new photo is now live on your profile.');
+      toast.success('Photo uploaded!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+      console.error('Photo upload error:', error);
+      toast.error('Failed to upload photo');
     }
   };
 
@@ -3366,30 +3365,46 @@ const AppContent: React.FC = () => {
   };
 
   const handleAddItemToStore = async (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
-    const itemId = `si-${Date.now()}`;
-    const mediaUrls = files.map(file => URL.createObjectURL(file));
-    const newItem: StoreItem = {
-      id: itemId,
-      userId: currentUserId,
-      ...itemData,
-      thumbnailUrl: mediaUrls[0],
-      mediaUrls: mediaUrls,
-      createdAt: new Date().toISOString()
-    };
-    
     try {
+      const mediaUrls: string[] = [];
+      
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          mediaUrls.push(data.url);
+        }
+      }
+
+      const itemId = `si-${Date.now()}`;
+      const newItem: StoreItem = {
+        id: itemId,
+        userId: currentUserId,
+        ...itemData,
+        thumbnailUrl: mediaUrls[0] || APP_LOGO_URL,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : [APP_LOGO_URL],
+        createdAt: new Date().toISOString()
+      };
+      
       await setDoc(doc(db, 'storeItems', itemId), newItem);
       addNotification(
         NotificationType.PURCHASE,
         'Item Added!',
         `Your item "${itemData.title}" has been added to your store.`,
       );
+      toast.success('Item added to store!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `storeItems/${itemId}`);
+      console.error('Store item upload error:', error);
+      toast.error('Failed to add store item');
     }
   };
 
-  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean) => {
+  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean, photoFiles: File[]) => {
     if (!me.hasPaidStableFee && !me.isAdmin) {
       setPendingStableListing(listingData);
       setStableBundleSelected(postToStore);
@@ -3398,15 +3413,32 @@ const AppContent: React.FC = () => {
       return;
     }
 
-    const listingId = `sl-${Date.now()}`;
-    const newListing: StableListing = {
-      id: listingId,
-      userId: currentUserId,
-      ...listingData,
-      createdAt: new Date().toISOString()
-    };
-    
     try {
+      const uploadedPhotos: string[] = [];
+      
+      for (const file of photoFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          uploadedPhotos.push(data.url);
+        }
+      }
+
+      const listingId = `sl-${Date.now()}`;
+      const newListing: StableListing = {
+        id: listingId,
+        userId: currentUserId,
+        ...listingData,
+        photos: uploadedPhotos,
+        avatarUrl: uploadedPhotos[0] || APP_LOGO_URL,
+        createdAt: new Date().toISOString()
+      };
+      
       await setDoc(doc(db, 'stableListings', listingId), newListing);
 
       if (postToStore) {
@@ -3417,8 +3449,8 @@ const AppContent: React.FC = () => {
           title: `${listingData.providerName} - Stable Listing`,
           description: listingData.services,
           price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
-          thumbnailUrl: listingData.avatarUrl || listingData.photos?.[0] || '',
-          mediaUrls: listingData.photos || [listingData.avatarUrl || ''],
+          thumbnailUrl: newListing.avatarUrl,
+          mediaUrls: newListing.photos,
           type: 'other',
           createdAt: new Date().toISOString()
         };
@@ -3426,8 +3458,10 @@ const AppContent: React.FC = () => {
       }
 
       setActiveTab('stable');
+      toast.success('Stable listing created!');
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `stableListings/${listingId}`);
+      console.error('Stable listing upload error:', error);
+      toast.error('Failed to create stable listing');
     }
   };
 
@@ -3707,7 +3741,10 @@ const AppContent: React.FC = () => {
             className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" 
             alt="" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
@@ -3722,7 +3759,10 @@ const AppContent: React.FC = () => {
                   className="w-full h-full object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== APP_LOGO_URL) {
+                      target.src = APP_LOGO_URL;
+                    }
                   }}
                 />
               </div>
@@ -4179,15 +4219,6 @@ const AppContent: React.FC = () => {
   if (showSplash || !isAuthReady) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <SplashScreen onComplete={() => setShowSplash(false)} />
-    </motion.div>
-  );
-
-  if (!isVerified) return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <AgeVerificationGate onVerify={() => {
-        setIsVerified(true);
-        sessionStorage.setItem('isVerified', 'true');
-      }} />
     </motion.div>
   );
 

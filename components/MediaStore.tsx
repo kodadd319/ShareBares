@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
+import { APP_LOGO_URL } from '../constants';
 import AdPlaceholder from './AdPlaceholder';
 
 interface MediaStoreProps {
@@ -333,7 +334,10 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                   </div>
@@ -556,7 +560,10 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
           alt={item.title} 
           onError={(e) => {
-            (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+            const target = e.target as HTMLImageElement;
+            if (target.src !== APP_LOGO_URL) {
+              target.src = APP_LOGO_URL;
+            }
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
@@ -660,7 +667,10 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                     className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" 
                     alt={`${item.title} ${idx + 1}`} 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== APP_LOGO_URL) {
+                        target.src = APP_LOGO_URL;
+                      }
                     }}
                   />
                 ))

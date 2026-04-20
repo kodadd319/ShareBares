@@ -40,13 +40,19 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
+});
 
 async function startServer() {
   const app = express();
-  app.use(express.json()); // Add JSON body parser
+  app.use(express.json());
   
-  // Serve static files from public directory
+  // Serve static files from public directory explicitly
+  app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
   app.use(express.static("public"));
 
   const httpServer = createServer(app);
@@ -489,17 +495,23 @@ async function startServer() {
 
         // Trigger bot if needed
         const isBotActive = (updatedGame.turn === 'bot' && updatedGame.status === 'playing') || 
-                           (updatedGame.type === 'blackjack' && (updatedGame.status === 'waiting' || updatedGame.status === 'finished') && updatedGame.players.some(p => p.id === 'bot'));
+                           (updatedGame.type === 'blackjack' && (updatedGame.data.status === 'waiting' || updatedGame.data.status === 'finished') && updatedGame.players.some(p => p.id === 'bot'));
         
         if (isBotActive) {
           executeBotTurn(data.gameId);
         }
 
         // Automatic continuous Blackjack loop
-        if (updatedGame.type === 'blackjack' && updatedGame.status === 'finished') {
-          setTimeout(() => {
+        if (updatedGame.type === 'blackjack' && updatedGame.data.status === 'finished') {
+          // Clear any existing timeouts for this game to prevent duplicates
+          if ((global as any).blackjackTimeouts?.[data.gameId]) {
+            clearTimeout((global as any).blackjackTimeouts[data.gameId]);
+          }
+          if (!(global as any).blackjackTimeouts) (global as any).blackjackTimeouts = {};
+
+          (global as any).blackjackTimeouts[data.gameId] = setTimeout(() => {
             const currentGame = activeGames.get(data.gameId);
-            if (currentGame && currentGame.status === 'finished') {
+            if (currentGame && currentGame.data.status === 'finished') {
               // Deal new hand
               const nextHand = handleMove(currentGame, 'system', { type: 'deal' });
               activeGames.set(data.gameId, nextHand);
@@ -509,13 +521,11 @@ async function startServer() {
                 if (p.id !== 'bot') io.to(p.id).emit("game:updated", nextHand);
               });
 
-              // If the bot is active and it's its turn (e.g. if it were the dealer or if it plays as P1), 
-              // trigger its turn. But normally dealer doesn't "play" until others are done.
-              // Just trigger executeBotTurn for the new state if needed.
               if (nextHand.turn === 'bot' && nextHand.status === 'playing') {
                 executeBotTurn(data.gameId);
               }
             }
+            delete (global as any).blackjackTimeouts[data.gameId];
           }, 4500); // 4.5s delay to review the hand outcome
         }
       }

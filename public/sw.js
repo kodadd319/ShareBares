@@ -3,8 +3,7 @@ const ASSETS = [
   '/',
   '/index.html',
   '/index.css',
-  '/manifest.json',
-  '/bare-bear-logo.png'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

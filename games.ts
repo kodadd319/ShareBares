@@ -599,6 +599,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         newData.currentPlayerIndex = 0;
         newData.status = 'playing';
         nextTurn = newData.players[0].id;
+        status = 'playing';
 
         // Check if first player has immediate blackjack
         const firstPlayer = newData.players[0];
@@ -609,7 +610,7 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
             nextTurn = newData.players[1].id;
           } else {
             dealerPlay(newData);
-            status = 'finished';
+            // Internal data status becomes 'finished', but top-level status stays 'playing'
           }
         }
       }
@@ -625,8 +626,9 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
           nextTurn = newData.players[newData.currentPlayerIndex].id;
         } else {
           dealerPlay(newData);
-          status = 'finished';
+          // Internal data status becomes 'finished', but top-level status stays 'playing'
         }
+        status = 'playing';
       }
     } else if (moveData.type === 'stand') {
       if (newData.currentPlayerIndex < newData.players.length - 1) {
@@ -634,8 +636,9 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         nextTurn = newData.players[newData.currentPlayerIndex].id;
       } else {
         dealerPlay(newData);
-        status = 'finished';
+        // Internal data status becomes 'finished', but top-level status stays 'playing'
       }
+      status = 'playing';
     }
   } else if (game.type === 'billiards') {
     if (moveData.type === 'shoot') {

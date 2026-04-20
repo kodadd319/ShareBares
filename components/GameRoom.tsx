@@ -234,7 +234,10 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             alt="Banner"
             className="rounded-2xl shadow-2xl border border-white/10"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
             }}
           />
         </a>
@@ -303,7 +306,10 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             alt="Featured Content"
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
             }}
           />
         </a>
@@ -379,11 +385,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   >
                     <div className="flex items-center space-x-4">
                       <img 
-                        src={u.avatar || undefined} 
+                        src={u.avatar || APP_LOGO_URL} 
                         className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== APP_LOGO_URL) {
+                            target.src = APP_LOGO_URL;
+                          }
                         }}
                       />
                       <div className="text-left">
@@ -414,11 +423,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   >
                     <div className="flex items-center space-x-4">
                       <img 
-                        src={u.avatar || undefined} 
+                        src={u.avatar || APP_LOGO_URL} 
                         className="w-12 h-12 rounded-xl object-cover group-hover:scale-110 transition-transform" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                          const target = e.target as HTMLImageElement;
+                          if (target.src !== APP_LOGO_URL) {
+                            target.src = APP_LOGO_URL;
+                          }
                         }}
                       />
                       <div className="text-left">
@@ -484,11 +496,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             <div className={`flex flex-col items-center space-y-2 ${activeGame.turn === me?.id ? 'scale-110' : 'opacity-50'}`}>
               <div className={`w-12 h-12 rounded-2xl border-2 p-0.5 transition-all ${activeGame.turn === me?.id ? 'border-[#967bb6] shadow-[0_0_15px_rgba(150,123,182,0.5)]' : 'border-transparent'}`}>
                 <img 
-                  src={me?.avatar || undefined} 
+                  src={me?.avatar || APP_LOGO_URL} 
                   className="w-full h-full rounded-xl object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== APP_LOGO_URL) {
+                      target.src = APP_LOGO_URL;
+                    }
                   }}
                 />
               </div>
@@ -506,11 +521,14 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             <div className={`flex flex-col items-center space-y-2 ${activeGame.turn === opponent?.id ? 'scale-110' : 'opacity-50'}`}>
               <div className={`w-12 h-12 rounded-2xl border-2 p-0.5 transition-all ${activeGame.turn === opponent?.id ? 'border-[#967bb6] shadow-[0_0_15px_rgba(150,123,182,0.5)]' : 'border-transparent'}`}>
                 <img 
-                  src={opponent?.avatar || undefined} 
+                  src={opponent?.avatar || APP_LOGO_URL} 
                   className="w-full h-full rounded-xl object-cover" 
                   alt="" 
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                    const target = e.target as HTMLImageElement;
+                    if (target.src !== APP_LOGO_URL) {
+                      target.src = APP_LOGO_URL;
+                    }
                   }}
                 />
               </div>
@@ -672,7 +690,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                 </button>
               )}
             </div>
-          ) : activeGame.status === 'finished' ? (
+          ) : (activeGame.status === 'finished' && activeGame.type !== 'blackjack') ? (
             <div className="text-center space-y-8 animate-in fade-in zoom-in duration-500">
               <div className="relative">
                 <div className="absolute inset-0 bg-amber-500/20 blur-3xl rounded-full"></div>

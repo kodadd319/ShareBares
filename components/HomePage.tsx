@@ -91,12 +91,15 @@ const HomePage: React.FC<HomePageProps> = ({
           className="glass-panel rounded-3xl p-4 flex items-center space-x-4 cursor-pointer hover:border-[#967bb6]/30 transition-all chrome-border"
         >
           <img 
-            src={me.avatar} 
+            src={me.avatar || APP_LOGO_URL} 
             referrerPolicy="no-referrer" 
             className="w-10 h-10 rounded-xl border border-white/10" 
             alt="" 
             onError={(e) => {
-              (e.target as HTMLImageElement).src = APP_LOGO_URL;
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
             }}
           />
           <div className="flex-grow bg-white/5 rounded-xl px-4 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-widest">
@@ -128,12 +131,15 @@ const HomePage: React.FC<HomePageProps> = ({
                 <div className="relative mb-3">
                   <div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-black shadow-xl group-hover:scale-105 transition-transform">
                     <img 
-                      src={user.avatar} 
+                      src={user.avatar || APP_LOGO_URL} 
                       referrerPolicy="no-referrer" 
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                        const target = e.target as HTMLImageElement;
+                        if (target.src !== APP_LOGO_URL) {
+                          target.src = APP_LOGO_URL;
+                        }
                       }}
                     />
                   </div>
@@ -221,12 +227,15 @@ const HomePage: React.FC<HomePageProps> = ({
               <div key={user.id} className="flex items-center justify-between group">
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onProfileClick?.(user.id)}>
                   <img 
-                    src={user.avatar} 
+                    src={user.avatar || APP_LOGO_URL} 
                     referrerPolicy="no-referrer" 
                     className="w-10 h-10 rounded-xl border border-white/10" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== APP_LOGO_URL) {
+                        target.src = APP_LOGO_URL;
+                      }
                     }}
                   />
                   <div className="min-w-0">

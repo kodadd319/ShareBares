@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, DollarSign, Edit3, Search, X, Palette } from 'lucide-react';
 import { User, StoreItem } from '../types';
 import { toast } from 'sonner';
+import { APP_LOGO_URL } from '../constants';
 
 interface StoreManagementPageProps {
   user: User;
@@ -384,7 +385,10 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                             alt="" 
                             className="w-full h-full object-cover" 
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                              const target = e.target as HTMLImageElement;
+                              if (target.src !== APP_LOGO_URL) {
+                                target.src = APP_LOGO_URL;
+                              }
                             }}
                           />
                         </div>

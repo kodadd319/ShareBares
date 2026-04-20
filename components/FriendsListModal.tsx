@@ -2,6 +2,7 @@
 import React from 'react';
 import { X, Users, UserX, Ban } from 'lucide-react';
 import { User } from '../types';
+import { APP_LOGO_URL } from '../constants';
 
 interface FriendsListModalProps {
   isOpen: boolean;
@@ -54,11 +55,14 @@ const FriendsListModal: React.FC<FriendsListModalProps> = ({
                   }}
                 >
                   <img 
-                    src={friend.avatar} 
+                    src={friend.avatar || APP_LOGO_URL} 
                     className="w-12 h-12 rounded-xl object-cover border border-white/10" 
                     alt="" 
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/bare-bear-logo.png';
+                      const target = e.target as HTMLImageElement;
+                      if (target.src !== APP_LOGO_URL) {
+                        target.src = APP_LOGO_URL;
+                      }
                     }}
                   />
                   <div>
