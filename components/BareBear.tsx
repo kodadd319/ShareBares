@@ -31,15 +31,17 @@ const BareBear: React.FC<BareBearProps> = ({
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v12_${action}`));
-  const [loading, setLoading] = useState(!imageUrl);
+  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v12_${action}`) || '/logo.png');
+  const [loading, setLoading] = useState(false);
+  const generationStarted = useRef(false);
 
   useEffect(() => {
     const generate = async () => {
-      // Only skip if we already have a generated image (data URL)
-      if (imageUrl && imageUrl.startsWith('data:image')) return;
+      // Only generate if we are still using the default logo and haven't started yet
+      if ((imageUrl && imageUrl.startsWith('data:image')) || generationStarted.current) return;
 
       try {
+        generationStarted.current = true;
         setLoading(true);
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
         const response = await ai.models.generateContent({

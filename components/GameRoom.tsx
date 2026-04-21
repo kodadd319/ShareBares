@@ -105,6 +105,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2 && lastTouchDistance !== null) {
+      e.preventDefault();
       const distance = Math.hypot(
         e.touches[0].pageX - e.touches[1].pageX,
         e.touches[0].pageY - e.touches[1].pageY
@@ -1510,8 +1511,9 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   // New implementation
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [aiming, setAiming] = useState(false);
-  const [aimAngle, setAimAngle] = useState(0);
+  const aimAngleRef = useRef(0);
   const [power, setPower] = useState(20);
+  const powerRef = useRef(20);
   const [lastMousePos, setLastMousePos] = useState<{ x: number, y: number } | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -1521,6 +1523,11 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const cueBallRef = useRef<any>(null);
   const isSimulatingRef = useRef(false);
   const animationRef = useRef<number | null>(null);
+
+  // Synchronize powerRef with power state
+  useEffect(() => {
+    powerRef.current = power;
+  }, [power]);
 
   const FRICTION = 0.9935; // Slightly more friction for better stopping
   const WALL_BOUNCE = 0.75;
@@ -1598,9 +1605,9 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     if (!isMyTurn || isSimulatingRef.current || !cueBallRef.current) return;
     
     // Power scale adjusted for better feel
-    const powerScale = power * 0.22;
-    const dx = Math.cos(aimAngle) * powerScale;
-    const dy = Math.sin(aimAngle) * powerScale;
+    const powerScale = powerRef.current * 0.22;
+    const dx = Math.cos(aimAngleRef.current) * powerScale;
+    const dy = Math.sin(aimAngleRef.current) * powerScale;
 
     cueBallRef.current.vx = dx;
     cueBallRef.current.vy = dy;
@@ -1621,6 +1628,17 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isMyTurn || isSimulatingRef.current || !canvasRef.current || !cueBallRef.current) return;
+    
+    // Touch-zoom protection
+    if ('touches' in e) {
+      if (e.touches.length > 1) {
+        setAiming(false);
+        return; // Allow parent to handle pinch zoom
+      }
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+    }
+
     const mouse = getMouse(e, canvasRef.current);
 
     // Check if clicking power bar on canvas
@@ -1629,7 +1647,9 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     const bx = WIDTH + 10, by = (HEIGHT - barH) / 2;
     if (mouse.x >= bx - 10 && mouse.x <= bx + barW && mouse.y >= by && mouse.y <= by + barH) {
       const newPower = Math.round(((by + barH - mouse.y) / barH) * 100);
-      setPower(Math.min(Math.max(newPower, 5), 100));
+      const clampedPower = Math.min(Math.max(newPower, 5), 100);
+      setPower(clampedPower);
+      powerRef.current = clampedPower;
       return;
     }
 
@@ -1648,6 +1668,17 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!canvasRef.current || !cueBallRef.current) return;
+    
+    // Touch-zoom protection
+    if ('touches' in e) {
+      if (e.touches.length > 1) {
+        setAiming(false);
+        return; // Allow parent to handle pinch zoom
+      }
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+    }
+
     const mouse = getMouse(e, canvasRef.current);
 
     // Support power bar dragging
@@ -1656,7 +1687,9 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       const bx = WIDTH + 10, by = (HEIGHT - barH) / 2;
       if (mouse.x >= bx - 10 && mouse.x <= bx + 50) {
         const newPower = Math.round(((by + barH - mouse.y) / barH) * 100);
-        setPower(Math.min(Math.max(newPower, 5), 100));
+        const clampedPower = Math.min(Math.max(newPower, 5), 100);
+        setPower(clampedPower);
+        powerRef.current = clampedPower;
         return;
       }
     }
@@ -1664,15 +1697,16 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     if (aiming && lastMousePos) {
       const sensitivity = 0.006;
       const deltaX = mouse.x - lastMousePos.x;
-      setAimAngle(prev => prev + deltaX * sensitivity);
+      aimAngleRef.current += deltaX * sensitivity;
       setLastMousePos(mouse);
     } else if (!isSimulatingRef.current && isMyTurn) {
-      // Auto-aim towards mouse if not dragging
-      const dx = mouse.x - cueBallRef.current.x;
-      const dy = mouse.y - cueBallRef.current.y;
-      // Only update if mouse is far enough
-      if (Math.sqrt(dx * dx + dy * dy) > 50) {
-        setAimAngle(Math.atan2(dy, dx));
+      // For non-touch hovering, auto-aim towards mouse
+      if (!('touches' in e)) {
+        const dx = mouse.x - cueBallRef.current.x;
+        const dy = mouse.y - cueBallRef.current.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 50) {
+          aimAngleRef.current = Math.atan2(dy, dx);
+        }
       }
     }
   };
@@ -1815,21 +1849,21 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     const drawCue = () => {
       if (isSimulatingRef.current || !isMyTurn || !cueBallRef.current) return;
 
-      const dist = 50 + power * 0.4;
+      const dist = 50 + powerRef.current * 0.4;
       const cueLen = 300;
-      const startX = cueBallRef.current.x - Math.cos(aimAngle) * dist;
-      const startY = cueBallRef.current.y - Math.sin(aimAngle) * dist;
-      const endX = cueBallRef.current.x - Math.cos(aimAngle) * (dist + cueLen);
-      const endY = cueBallRef.current.y - Math.sin(aimAngle) * (dist + cueLen);
+      const startX = cueBallRef.current.x - Math.cos(aimAngleRef.current) * dist;
+      const startY = cueBallRef.current.y - Math.sin(aimAngleRef.current) * dist;
+      const endX = cueBallRef.current.x - Math.cos(aimAngleRef.current) * (dist + cueLen);
+      const endY = cueBallRef.current.y - Math.sin(aimAngleRef.current) * (dist + cueLen);
 
       // --- Aim Line with collision detection ---
-      let aimEndX = cueBallRef.current.x + Math.cos(aimAngle) * 1000;
-      let aimEndY = cueBallRef.current.y + Math.sin(aimAngle) * 1000;
+      let aimEndX = cueBallRef.current.x + Math.cos(aimAngleRef.current) * 1000;
+      let aimEndY = cueBallRef.current.y + Math.sin(aimAngleRef.current) * 1000;
       let collisionPoint = null;
 
       // Check for first ball collision along aim line
-      const dirX = Math.cos(aimAngle);
-      const dirY = Math.sin(aimAngle);
+      const dirX = Math.cos(aimAngleRef.current);
+      const dirY = Math.sin(aimAngleRef.current);
       
       let minT = 1000;
       ballsRef.current.forEach(ball => {
@@ -1897,7 +1931,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       ctx.fill();
       
       // Fill
-      const pRatio = power / 100;
+      const pRatio = powerRef.current / 100;
       const fillH = barH * pRatio;
       const fillGrad = ctx.createLinearGradient(bx, by + barH, bx, by);
       fillGrad.addColorStop(0, '#4ade80');
@@ -1933,7 +1967,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(startX, startY);
-      ctx.lineTo(startX + Math.cos(aimAngle) * 5, startY + Math.sin(aimAngle) * 5);
+      ctx.lineTo(startX + Math.cos(aimAngleRef.current) * 5, startY + Math.sin(aimAngleRef.current) * 5);
       ctx.stroke();
     };
 
@@ -2034,6 +2068,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     };
 
     const render = () => {
+      if (!ctx) return;
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       drawTable();
       ballsRef.current.forEach(drawBall);
@@ -2047,7 +2082,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [aimAngle, power, isMyTurn, pockets, game]); // Added game to dependencies
+  }, [pockets]); // Removed game and isMyTurn to prevent loop churn
 
   return (
     <div className="flex flex-col items-center gap-6 p-4">
@@ -2063,7 +2098,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           onTouchStart={handleMouseDown}
           onTouchMove={handleMouseMove}
           onTouchEnd={handleMouseUp}
-          className="rounded-xl shadow-2xl cursor-crosshair border-8 border-[#3d2b1f] max-w-full bg-[#1a331a]"
+          className="rounded-xl shadow-2xl cursor-crosshair border-8 border-[#3d2b1f] max-w-full bg-[#1a331a] touch-none"
           style={{ width: WIDTH + 40, height: HEIGHT }}
         />
         
