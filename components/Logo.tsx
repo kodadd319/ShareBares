@@ -10,7 +10,7 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
   };
 
   const handleImageError = () => {
-    const fallback = 'https://picsum.photos/seed/sharebares-mascot-bear/800';
+    const fallback = APP_LOGO_URL;
     if (imgSrc !== fallback) {
       setImgSrc(fallback);
     }

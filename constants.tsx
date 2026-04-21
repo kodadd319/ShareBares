@@ -5,7 +5,7 @@ export const CURRENT_USER_ID = 'admin-jtothek319';
 
 export const APP_URL = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.sharebares.com');
 
-export const APP_LOGO_URL = 'https://picsum.photos/seed/sharebares-mascot-bear/800';
+export const APP_LOGO_URL = '/logo.png';
 
 export const MOCK_STABLE_LISTINGS: StableListing[] = [
   {

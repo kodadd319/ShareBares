@@ -936,6 +936,17 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
         <form onSubmit={handleSubmit} className="glass-panel rounded-3xl p-8 border-[#c0c0c0]/10 shadow-2xl space-y-8 relative overflow-hidden chrome-border">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#967bb6]/10 blur-[100px] pointer-events-none"></div>
 
+          <div className="flex justify-end">
+            <button 
+              type="button"
+              onClick={() => firebaseLogout()}
+              className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors flex items-center space-x-1"
+            >
+              <LogOut size={12} />
+              <span>Use Different Account</span>
+            </button>
+          </div>
+
           <div className="relative mb-28">
             <div 
               className="h-44 w-full rounded-2xl overflow-hidden bg-white/5 relative group border border-white/5 cursor-pointer"
@@ -2074,7 +2085,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setPersistence(auth, browserLocalPersistence).catch(err => console.error('Failed to set persistence:', err));
+    setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
     getGoogleRedirectResult().then((result) => {
@@ -2141,7 +2152,7 @@ const AppContent: React.FC = () => {
             setIsLoggedIn(true);
           }
 
-          // Seed other mock data if database is empty (non-blocking)database is empty (non-blocking)
+          // Seed other mock data if database is empty (non-blocking)
           const seedData = async () => {
             try {
               // Ensure Jade exists
@@ -2210,8 +2221,15 @@ const AppContent: React.FC = () => {
       }
     });
 
+    // Fallback: Ensure isAuthReady becomes true if onAuthStateChanged is slow
+    const authTimeout = setTimeout(() => {
+      console.log('Auth check timed out, forcing isAuthReady to true');
+      setIsAuthReady(true);
+    }, 5000);
+
     return () => {
       unsubscribeAuth();
+      clearTimeout(authTimeout);
     };
   }, []);
 
@@ -2773,12 +2791,14 @@ const AppContent: React.FC = () => {
     try {
       await firebaseLogout();
       setIsLoggedIn(false);
-      setCurrentUserId(CURRENT_USER_ID);
+      setCurrentUserId('');
       setActiveTab('feed');
       setViewingUserId(null);
       setShowSplash(true);
+      toast.success('Signed out successfully');
     } catch (error) {
       console.error('Logout failed:', error);
+      toast.error('Logout failed');
     }
   };
 
@@ -4216,9 +4236,13 @@ const AppContent: React.FC = () => {
     return null;
   };
 
+  const handleSplashComplete = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   if (showSplash || !isAuthReady) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <SplashScreen onComplete={() => setShowSplash(false)} />
+      <SplashScreen onComplete={handleSplashComplete} />
     </motion.div>
   );
 
@@ -4233,7 +4257,7 @@ const AppContent: React.FC = () => {
   );
 
   if (isProfileLoading) return (
-    <SplashScreen onComplete={() => {}} />
+    <SplashScreen onComplete={handleSplashComplete} />
   );
 
   if (!hasCreatedProfile) return (
