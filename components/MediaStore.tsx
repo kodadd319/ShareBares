@@ -3,6 +3,7 @@ import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase
 import { User, StoreItem, StableListing } from '../types';
 import { APP_LOGO_URL } from '../constants';
 import AdPlaceholder from './AdPlaceholder';
+import VideoPlayer from './VideoPlayer';
 
 interface MediaStoreProps {
   user: User;
@@ -11,6 +12,7 @@ interface MediaStoreProps {
   isOwnStore: boolean;
   isAdmin?: boolean;
   purchasedItemIds?: string[];
+  storeOwnerId?: string;
   onBack: () => void;
   onPurchase?: (item: StoreItem) => void;
   onDeleteItem?: (itemId: string) => void;
@@ -18,7 +20,7 @@ interface MediaStoreProps {
   onProfileClick?: (userId: string) => void;
 }
 
-const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [], isOwnStore, isAdmin, purchasedItemIds = [], onBack, onPurchase, onDeleteItem, onAddItem, onProfileClick }) => {
+const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [], isOwnStore, isAdmin, purchasedItemIds = [], storeOwnerId, onBack, onPurchase, onDeleteItem, onAddItem, onProfileClick }) => {
   const customization = user.storeCustomization || {
     backgroundColor: '#000000',
     accentColor: '#967bb6',
@@ -26,7 +28,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
     fontColor: '#ffffff',
     layout: 'grid'
   };
-  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'packs' | 'other' | 'services'>('all');
+  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'packs' | 'other' | 'services' | 'purchased'>('all');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
@@ -100,6 +102,13 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
   };
 
   const filteredItems = items.filter(item => {
+    if (activeSection === 'purchased') {
+      return purchasedItemIds.includes(item.id);
+    }
+    
+    // If viewing a specific store, filter items not matching that owner
+    if (storeOwnerId && item.userId !== storeOwnerId) return false;
+
     if (activeSection === 'all') return true;
     if (activeSection === 'videos') return item.type === 'video';
     if (activeSection === 'packs') return item.type === 'picture_pack';
@@ -187,6 +196,13 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                 Escort Services
               </button>
             )}
+            <button 
+              onClick={() => setActiveSection('purchased')}
+              className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
+              style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'purchased' ? 1 : 0.5 }}
+            >
+              My Purchases
+            </button>
           </div>
 
           {isOwnStore && (
@@ -555,17 +571,32 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           customization.layout === 'list' ? 'w-48 h-48 rounded-3xl shrink-0' : 'aspect-[4/5] rounded-[2rem] mb-4'
         } ${canView ? 'cursor-pointer' : ''}`}
       >
-        <img 
-          src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
-          className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
-          alt={item.title} 
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            if (target.src !== APP_LOGO_URL) {
-              target.src = APP_LOGO_URL;
-            }
-          }}
-        />
+        {item.type === 'video' ? (
+          <div className={`w-full h-full relative ${!canView ? 'blur-sm grayscale' : ''}`}>
+            <video 
+              src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
+              className="w-full h-full object-cover"
+              muted
+              playsInline
+            />
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <Play size={32} className="text-white opacity-50" />
+            </div>
+          </div>
+        ) : (
+          <img 
+            src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
+            alt={item.title} 
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (target.src !== APP_LOGO_URL) {
+                target.src = APP_LOGO_URL;
+              }
+            }}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
         
         <div className="absolute top-4 right-4 flex flex-col space-y-2 items-end">
@@ -658,7 +689,11 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           <div className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-[3rem] overflow-hidden chrome-border shadow-2xl flex flex-col">
             <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-4">
               {item.type === 'video' ? (
-                <video src={item.mediaUrls[0]} controls autoPlay className="max-w-full max-h-full object-contain" />
+                <VideoPlayer 
+                  src={item.mediaUrls[0]} 
+                  autoPlay 
+                  className="w-full h-full"
+                />
               ) : (
                 item.mediaUrls.map((url, idx) => (
                   <img 

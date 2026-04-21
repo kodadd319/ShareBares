@@ -52,7 +52,7 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
       <div className="flex flex-col items-center space-y-8 animate-in zoom-in duration-1000">
-        <Logo size="lg" className="scale-150 mb-8" />
+        <Logo size="lg" className="mb-8" />
         <div className="text-center space-y-4 max-w-2xl">
           <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter uppercase chrome-text drop-shadow-[0_0_20px_rgba(150,123,182,0.5)]">
             ShareBares
@@ -2899,8 +2899,11 @@ const AppContent: React.FC = () => {
       visibility: newPostVisibility,
       mediaUrl: mediaUrl,
       mediaType: mediaUrl ? (
-        mediaUrl.match(/\.(mp4|mov|webm|ogg)$/i) ? 'video' : 
-        (newPostMedia?.type.startsWith('video') ? 'video' : 'image')
+        (newPostMedia?.type.startsWith('video') || 
+         mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi)$/i) || 
+         mediaUrl.includes('video') ||
+         mediaUrl.startsWith('blob:') ||
+         mediaUrl.startsWith('data:video/')) ? 'video' : 'image'
       ) : undefined,
     };
     
@@ -3324,11 +3327,18 @@ const AppContent: React.FC = () => {
   };
 
   const handleDeletePost = async (postId: string) => {
-    try {
-      await deleteDoc(doc(db, 'posts', postId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `posts/${postId}`);
-    }
+    setConfirmAction({
+      message: 'Are you sure you want to delete this post? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'posts', postId));
+          setConfirmAction(null);
+          toast.success('Post deleted successfully');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `posts/${postId}`);
+        }
+      }
+    });
   };
 
   const handleDeleteStoreItem = async (itemId: string) => {
@@ -3412,6 +3422,18 @@ const AppContent: React.FC = () => {
       };
       
       await setDoc(doc(db, 'storeItems', itemId), newItem);
+      
+      // Also update user's storeUploads for easier tracking
+      const newMediaItems: MediaItem[] = mediaUrls.map((url, index) => ({
+        id: `${itemId}-${index}`,
+        url,
+        type: itemData.type === 'video' ? 'video' : 'image',
+        createdAt: new Date().toISOString(),
+        isNSFW: true
+      }));
+      
+      const updatedStoreUploads = [...(me.storeUploads || []), ...newMediaItems];
+      await updateDoc(doc(db, 'users', currentUserId), { storeUploads: updatedStoreUploads });
       addNotification(
         NotificationType.PURCHASE,
         'Item Added!',
@@ -3672,6 +3694,7 @@ const AppContent: React.FC = () => {
       onSelectUser={navigateToProfile}
       onLikePost={handleLikePost}
       onCommentPost={handleCommentPost}
+      onDeletePost={(post) => handleDeletePost(post.id)}
       onProfileClick={navigateToProfile}
       onCreatePost={() => setIsCreating(true)}
     />
@@ -4174,6 +4197,7 @@ const AppContent: React.FC = () => {
                       isFan={user.fanIds?.includes(currentUserId)}
                       onLike={() => handleLikePost(post)}
                       onComment={() => handleCommentPost(post)}
+                      onDelete={() => handleDeletePost(post.id)}
                       onProfileClick={navigateToProfile}
                       comments={comments}
                       users={users}
@@ -4205,7 +4229,7 @@ const AppContent: React.FC = () => {
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                         alt="" 
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
+                          (e.target as HTMLImageElement).src = APP_LOGO_URL;
                         }}
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
@@ -4353,7 +4377,7 @@ const AppContent: React.FC = () => {
         } : undefined}
       />
 
-      <main className={`${activeTab === 'messages' ? '' : 'pb-24'} pt-16`}>
+      <main className={`${activeTab === 'messages' ? '' : 'pb-24'} pt-20`}>
         {activeTab === 'feed' && renderFeed()}
         {activeTab === 'messages' && renderMessages()}
         {activeTab === 'profile' && renderProfile(me, true)}
@@ -4389,11 +4413,12 @@ const AppContent: React.FC = () => {
         {activeTab === 'media-store' && viewingUserId && (
           <MediaStore 
             user={users.find(u => u.id === viewingUserId) || me}
-            items={storeItems.filter(i => i.userId === viewingUserId)}
+            items={storeItems}
             stableListings={stableListings.filter(l => l.userId === viewingUserId)}
             isOwnStore={viewingUserId === currentUserId}
             isAdmin={me.isAdmin}
             purchasedItemIds={me.purchasedItemIds || []}
+            storeOwnerId={viewingUserId}
             onBack={() => setActiveTab('user-profile')}
             onPurchase={handlePurchaseItem}
             onDeleteItem={handleDeleteStoreItem}
@@ -4594,7 +4619,7 @@ const AppContent: React.FC = () => {
                       className="w-full h-full object-cover" 
                       alt="Preview" 
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
+                        (e.target as HTMLImageElement).src = APP_LOGO_URL;
                       }}
                     />
                   )}

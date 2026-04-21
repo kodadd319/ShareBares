@@ -17,6 +17,7 @@ interface HomePageProps {
   onCommentPost?: (post: Post, commenterId: string, text: string) => void;
   onProfileClick?: (userId: string) => void;
   onCreatePost?: () => void;
+  onDeletePost?: (post: Post) => void;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ 
@@ -29,7 +30,8 @@ const HomePage: React.FC<HomePageProps> = ({
   onLikePost,
   onCommentPost,
   onProfileClick,
-  onCreatePost
+  onCreatePost,
+  onDeletePost
 }) => {
   const otherUsers = users.filter(u => u.id !== me.id);
   
@@ -182,6 +184,7 @@ const HomePage: React.FC<HomePageProps> = ({
                       isFan={author.fanIds?.includes(me.id)}
                       onLike={() => onLikePost?.(post)}
                       onComment={(text) => onCommentPost?.(post, me.id, text)}
+                      onDelete={() => onDeletePost?.(post)}
                       onProfileClick={onProfileClick}
                       comments={comments}
                       users={users}

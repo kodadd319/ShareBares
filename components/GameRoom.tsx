@@ -1538,6 +1538,14 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
         cueBallRef.current.vy = data.dy * 0.1;
         isSimulatingRef.current = true;
         setIsSimulating(true);
+
+        // Fail-safe to end simulation after 12 seconds
+        setTimeout(() => {
+          if (isSimulatingRef.current) {
+            isSimulatingRef.current = false;
+            setIsSimulating(false);
+          }
+        }, 12000);
       }
     };
     socket.on("game:billiards:shot", handleRemoteShot);
@@ -1589,7 +1597,8 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const handleShoot = () => {
     if (!isMyTurn || isSimulatingRef.current || !cueBallRef.current) return;
     
-    const powerScale = power * 0.18;
+    // Power scale adjusted for better feel
+    const powerScale = power * 0.22;
     const dx = Math.cos(aimAngle) * powerScale;
     const dy = Math.sin(aimAngle) * powerScale;
 
@@ -1600,17 +1609,37 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
 
     onMove({ type: 'shoot', dx: dx * 10, dy: dy * 10 });
     setPower(20);
+
+    // Fail-safe to end simulation after 12 seconds
+    setTimeout(() => {
+      if (isSimulatingRef.current) {
+        isSimulatingRef.current = false;
+        setIsSimulating(false);
+      }
+    }, 12000);
   };
 
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (!isMyTurn || isSimulatingRef.current || !canvasRef.current || !cueBallRef.current) return;
     const mouse = getMouse(e, canvasRef.current);
+
+    // Check if clicking power bar on canvas
+    const barW = 40; // Wider hit area
+    const barH = 200;
+    const bx = WIDTH + 10, by = (HEIGHT - barH) / 2;
+    if (mouse.x >= bx - 10 && mouse.x <= bx + barW && mouse.y >= by && mouse.y <= by + barH) {
+      const newPower = Math.round(((by + barH - mouse.y) / barH) * 100);
+      setPower(Math.min(Math.max(newPower, 5), 100));
+      return;
+    }
+
     const dx = mouse.x - cueBallRef.current.x;
     const dy = mouse.y - cueBallRef.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     
     if (dist < BALL_RADIUS * 4) {
-      handleShoot();
+      // No automatic shooting on click near ball
+      return;
     } else {
       setAiming(true);
       setLastMousePos(mouse);
@@ -1620,6 +1649,17 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
     if (!canvasRef.current || !cueBallRef.current) return;
     const mouse = getMouse(e, canvasRef.current);
+
+    // Support power bar dragging
+    if (('buttons' in e && e.buttons === 1) || 'touches' in e) {
+      const barH = 200;
+      const bx = WIDTH + 10, by = (HEIGHT - barH) / 2;
+      if (mouse.x >= bx - 10 && mouse.x <= bx + 50) {
+        const newPower = Math.round(((by + barH - mouse.y) / barH) * 100);
+        setPower(Math.min(Math.max(newPower, 5), 100));
+        return;
+      }
+    }
 
     if (aiming && lastMousePos) {
       const sensitivity = 0.006;
@@ -1782,42 +1822,96 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       const endX = cueBallRef.current.x - Math.cos(aimAngle) * (dist + cueLen);
       const endY = cueBallRef.current.y - Math.sin(aimAngle) * (dist + cueLen);
 
-      // Extended Aim Line
-      ctx.beginPath();
-      ctx.setLineDash([8, 8]);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 2;
-      ctx.moveTo(cueBallRef.current.x, cueBallRef.current.y);
-      ctx.lineTo(
-        cueBallRef.current.x + Math.cos(aimAngle) * 1000,
-        cueBallRef.current.y + Math.sin(aimAngle) * 1000
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
+      // --- Aim Line with collision detection ---
+      let aimEndX = cueBallRef.current.x + Math.cos(aimAngle) * 1000;
+      let aimEndY = cueBallRef.current.y + Math.sin(aimAngle) * 1000;
+      let collisionPoint = null;
 
-      // Power Meter on Canvas
-      const meterWidth = 150;
-      const meterHeight = 15;
-      const mx = 20, my = HEIGHT - 35;
+      // Check for first ball collision along aim line
+      const dirX = Math.cos(aimAngle);
+      const dirY = Math.sin(aimAngle);
       
-      // Meter Background
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.roundRect(mx, my, meterWidth, meterHeight, 5);
+      let minT = 1000;
+      ballsRef.current.forEach(ball => {
+        if (!ball.active) return;
+        
+        // Ray-Sphere intersection
+        const ocX = cueBallRef.current.x - ball.x;
+        const ocY = cueBallRef.current.y - ball.y;
+        const b = 2 * (ocX * dirX + ocY * dirY);
+        const c = ocX * ocX + ocY * ocY - (BALL_RADIUS * 2) * (BALL_RADIUS * 2);
+        const disc = b * b - 4 * c;
+        
+        if (disc >= 0) {
+          const t = (-b - Math.sqrt(disc)) / 2;
+          if (t > 0 && t < minT) {
+            minT = t;
+          }
+        }
+      });
+
+      // Wall collision for aim line
+      const wT = [
+        (BALL_RADIUS - cueBallRef.current.x) / dirX,
+        (WIDTH - BALL_RADIUS - cueBallRef.current.x) / dirX,
+        (BALL_RADIUS - cueBallRef.current.y) / dirY,
+        (HEIGHT - BALL_RADIUS - cueBallRef.current.y) / dirY
+      ];
+      wT.forEach(t => {
+        if (t > 0 && t < minT) minT = t;
+      });
+
+      aimEndX = cueBallRef.current.x + dirX * minT;
+      aimEndY = cueBallRef.current.y + dirY * minT;
+
+      // Draw dashed line
+      ctx.beginPath();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(cueBallRef.current.x, cueBallRef.current.y);
+      ctx.lineTo(aimEndX, aimEndY);
+      ctx.stroke();
+
+      // Ghost ball at aim end
+      ctx.beginPath();
+      ctx.setLineDash([]);
+      ctx.arc(aimEndX, aimEndY, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.stroke();
+      
+      // Reflection direction hint (simple)
+      ctx.beginPath();
+      ctx.moveTo(aimEndX, aimEndY);
+      ctx.lineTo(aimEndX + dirX * 30, aimEndY + dirY * 30);
+      ctx.stroke();
+
+      // --- Power Bar on Canvas (Side) ---
+      const barW = 12;
+      const barH = 200;
+      const bx = WIDTH + 15, by = (HEIGHT - barH) / 2;
+      
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.roundRect(bx, by, barW, barH, 6);
       ctx.fill();
       
-      // Meter Fill
-      const fillGrad = ctx.createLinearGradient(mx, my, mx + meterWidth, my);
+      // Fill
+      const pRatio = power / 100;
+      const fillH = barH * pRatio;
+      const fillGrad = ctx.createLinearGradient(bx, by + barH, bx, by);
       fillGrad.addColorStop(0, '#4ade80');
       fillGrad.addColorStop(0.5, '#facc15');
       fillGrad.addColorStop(1, '#ef4444');
       
       ctx.fillStyle = fillGrad;
-      ctx.roundRect(mx, my, (power / 100) * meterWidth, meterHeight, 5);
+      ctx.roundRect(bx, by + barH - fillH, barW, fillH, 6);
       ctx.fill();
       
-      ctx.strokeStyle = 'white';
+      // Border
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(mx, my, meterWidth, meterHeight);
+      ctx.strokeRect(bx, by, barW, barH);
 
       // Cue Stick
       ctx.lineWidth = 8;
@@ -1839,7 +1933,7 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
       ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(startX, startY);
-      ctx.lineTo(startX + Math.cos(aimAngle) * 5, startY + Math.sin(aimAngle) * 5); // Correct directional tip
+      ctx.lineTo(startX + Math.cos(aimAngle) * 5, startY + Math.sin(aimAngle) * 5);
       ctx.stroke();
     };
 
@@ -1969,12 +2063,24 @@ const BilliardsGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
           onTouchStart={handleMouseDown}
           onTouchMove={handleMouseMove}
           onTouchEnd={handleMouseUp}
-          className="rounded-xl shadow-2xl cursor-crosshair border-8 border-[#3d2b1f] max-w-full"
+          className="rounded-xl shadow-2xl cursor-crosshair border-8 border-[#3d2b1f] max-w-full bg-[#1a331a]"
+          style={{ width: WIDTH + 40, height: HEIGHT }}
         />
         
         {isMyTurn && !isSimulating && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-white text-xs font-bold animate-pulse">
-            YOUR TURN - AIM & SHOOT
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
+            <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 text-white text-xs font-bold animate-pulse mb-3">
+              YOUR TURN - AIM & SET POWER
+            </div>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShoot();
+              }}
+              className="pointer-events-auto bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white px-8 py-3 rounded-full font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.4)] border border-red-400/30 transform active:scale-95 transition-all"
+            >
+              Take Shot
+            </button>
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { Post, PostVisibility, User, AppComment } from '../types';
 import { Heart, MessageCircle, Eye, Star, Trash2, Lock, Share2, Check } from 'lucide-react';
 import { useBareBear } from './BareBearContext';
 import { APP_URL, APP_LOGO_URL } from '../constants';
+import VideoPlayer from './VideoPlayer';
 
 interface PostCardProps {
   post: Post;
@@ -107,11 +108,11 @@ const PostCard: React.FC<PostCardProps> = ({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {isAdmin && (
+          {(isAdmin || isMe) && (
             <button 
               onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
               className="p-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-              title="Delete Post (Admin)"
+              title={isAdmin ? "Delete Post (Admin)" : "Delete Post"}
             >
               <Trash2 size={16} />
             </button>
@@ -136,11 +137,10 @@ const PostCard: React.FC<PostCardProps> = ({
           onClick={isLocked ? handleLockedClick : undefined}
         >
           {post.mediaType === 'video' ? (
-            <video 
+            <VideoPlayer 
               src={post.mediaUrl}
-              className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`}
+              className={`w-full h-full transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`}
               controls={!isLocked}
-              playsInline
               loop
               muted
             />

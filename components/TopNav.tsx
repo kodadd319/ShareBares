@@ -88,7 +88,7 @@ const TopNav: React.FC<TopNavProps> = ({
 
   return (
     <nav 
-      className="fixed top-0 left-0 right-0 h-16 glass-panel border-b border-[#c0c0c0]/20 flex items-center justify-between px-4 lg:px-8 z-50 transition-colors duration-500"
+      className="fixed top-0 left-0 right-0 h-20 glass-panel border-b border-[#c0c0c0]/20 flex items-center justify-between px-4 lg:px-8 z-50 transition-colors duration-500"
       style={{ backgroundColor: customStyle?.menuBarColor || undefined }}
     >
       {/* Left: Brand, Mobile Menu & Search Bar */}
@@ -433,7 +433,7 @@ const TopNav: React.FC<TopNavProps> = ({
               className="w-8 h-8 rounded-[14px] object-cover" 
               alt="Profile" 
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/bear/400/400';
+                (e.target as HTMLImageElement).src = APP_LOGO_URL;
               }}
             />
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -519,7 +519,7 @@ const TopNav: React.FC<TopNavProps> = ({
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="fixed top-16 left-0 right-0 bg-[#050505] z-40 lg:hidden border-b border-white/10 shadow-2xl animate-in slide-in-from-top duration-300">
+          <div className="fixed top-20 left-0 right-0 bg-[#050505] z-40 lg:hidden border-b border-white/10 shadow-2xl animate-in slide-in-from-top duration-300">
             <div className="p-6 space-y-4">
               <div className="relative mb-6">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />

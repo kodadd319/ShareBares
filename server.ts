@@ -72,7 +72,7 @@ async function startServer() {
       id: 'post-1',
       userId: 'creator-1',
       content: 'Check out my new masterpiece! This took 40 hours to complete.',
-      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
+      mediaUrl: '/logo.png',
       mediaType: 'image',
       createdAt: new Date().toISOString(),
       likes: 450,
@@ -84,7 +84,7 @@ async function startServer() {
       id: 'post-2',
       userId: 'creator-1',
       content: 'Secret technique I used for the shading in my last piece.',
-      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
+      mediaUrl: '/logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
       likes: 120,
@@ -96,7 +96,7 @@ async function startServer() {
       id: 'post-3',
       userId: 'creator-2',
       content: 'Unboxing the latest Gemini 3 Developer Kit!',
-      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
+      mediaUrl: '/logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 890,
@@ -108,7 +108,7 @@ async function startServer() {
       id: 'jade-post-1',
       userId: 'ai-jade',
       content: 'The ink tells the story that words can\'t. 🖤 New set showing off the full chest piece details. Who\'s ready to see the close-ups?',
-      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
+      mediaUrl: '/logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 1800000).toISOString(),
       likes: 1240,
@@ -120,7 +120,7 @@ async function startServer() {
       id: 'jade-post-2',
       userId: 'ai-jade',
       content: 'ShareBares sessions. The contrast of the black ink against the neon lights is everything. 🔥😈 Full gallery now in the store.',
-      mediaUrl: 'https://picsum.photos/seed/sharebares-mascot-bear/800',
+      mediaUrl: '/logo.png',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 3500,
@@ -281,7 +281,7 @@ async function startServer() {
       const gameId = `game-bot-${Date.now()}`;
       const players = [
         { id: data.user.id, displayName: data.user.displayName, avatar: data.user.avatar, isReady: true, isBot: false }, 
-        { id: 'bot', displayName: 'Bare Bear', avatar: 'https://picsum.photos/seed/sharebares/800', isReady: true, isBot: true }
+        { id: 'bot', displayName: 'Bare Bear', avatar: '/logo.png', isReady: true, isBot: true }
       ];
       const initialGameState = createInitialGameState(gameId, data.gameType, players);
       initialGameState.status = 'playing'; // Start immediately for bot games
@@ -321,25 +321,35 @@ async function startServer() {
     });
 
     const executeBotTurn = (gameId: string) => {
-      const game = activeGames.get(gameId);
-      if (!game) return;
+      const g = activeGames.get(gameId);
+      if (!g) return;
 
-      setTimeout(() => {
+      // Random delay for realism
+      const turnDelay = g.type === 'billiards' ? 2500 : 1500;
+
+      setTimeout(async () => {
         const currentGame = activeGames.get(gameId);
         if (!currentGame) return;
 
-        // Condition for bot to move
+        // Condition for bot to move: must be bot turn AND playing status
+        // Exception for Blackjack which has auto-eval phases
         const isBotTurn = currentGame.turn === 'bot' && currentGame.status === 'playing';
         const isBlackjackAuto = currentGame.type === 'blackjack' && 
-                               (currentGame.status === 'waiting' || currentGame.status === 'finished') && 
+                               (currentGame.data.status === 'waiting' || currentGame.data.status === 'finished') && 
                                currentGame.players.some(p => p.id === 'bot');
 
-        if (!isBotTurn && !isBlackjackAuto) return;
+        if (!isBotTurn && !isBlackjackAuto) {
+          console.log(`Not bot turn for game ${gameId}. Current turn: ${currentGame.turn}`);
+          return;
+        }
 
+        console.log(`Executing bot turn for ${currentGame.type} (Game: ${gameId})`);
+        
         let botMove: any = null;
         const data = currentGame.data;
 
         if (currentGame.type === 'checkers') {
+          // ... (keep checkers logic as is)
           const myColor = 2; // Bot is always player 2
           const board = data.board;
           const jumps: any[] = [];
@@ -351,10 +361,8 @@ async function startServer() {
               if (Math.floor(piece) === myColor) {
                 const isKing = piece > 2;
                 const directions = [];
-                // Bot (Player 2) moves down (+1) unless King (both)
                 if (isKing) directions.push([-1, -1], [-1, 1]);
                 directions.push([1, -1], [1, 1]);
-                
                 for (const [dr, dc] of directions) {
                   const nr = r + dr, nc = c + dc;
                   if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && board[nr][nc] === 0) moves.push({ from: [r, c], to: [nr, nc] });
@@ -371,6 +379,7 @@ async function startServer() {
           else if (moves.length > 0) botMove = moves[Math.floor(Math.random() * moves.length)];
 
         } else if (currentGame.type === '10000') {
+          // ... (keep 10000 logic)
           const scoringIndices = getScoringIndices(data.dice);
           if (data.isFirstRoll) {
             botMove = { type: 'roll', selectedIndices: [] };
@@ -378,7 +387,6 @@ async function startServer() {
             const selectedDice = scoringIndices.map(i => data.dice[i]);
             const { score: potentialScore } = calculateDiceScore(selectedDice);
             const totalTurnScore = data.currentTurnScore + potentialScore;
-            // More aggressive if trailing or high potential
             if (totalTurnScore >= 750 || (totalTurnScore >= 350 && Math.random() > 0.5)) {
               botMove = { type: 'bank', selectedIndices: scoringIndices };
             } else {
@@ -389,6 +397,7 @@ async function startServer() {
           }
 
         } else if (currentGame.type === 'blackjack') {
+          // ... (keep blackjack logic)
           if (data.status === 'playing' && data.currentPlayerIndex === 1) {
             const val = getBlackjackValue(data.players[1].hand);
             botMove = val < 17 ? { type: 'hit' } : { type: 'stand' };
@@ -396,22 +405,65 @@ async function startServer() {
         } else if (currentGame.type === 'billiards') {
           const myType = data.playerTypes['bot'];
           let targets = data.balls.filter((b: any) => b.active);
+          
           if (myType) {
             const myBalls = targets.filter((b: any) => b.type === myType);
             targets = myBalls.length > 0 ? myBalls : targets.filter((b: any) => b.id === 8);
           } else {
             targets = targets.filter((b: any) => b.id !== 8);
           }
+
           if (targets.length > 0) {
-            const target = targets[Math.floor(Math.random() * targets.length)];
-            const dx = target.x - data.cueBall.x, dy = target.y - data.cueBall.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const power = Math.min(Math.max(dist * 0.05, 3), 12);
-            const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.04;
-            const fDx = Math.cos(angle) * power * 10;
-            const fDy = Math.sin(angle) * power * 10;
+            const pockets = [
+              { x: 0, y: 0 }, { x: data.width / 2, y: 0 }, { x: data.width, y: 0 },
+              { x: 0, y: data.height }, { x: data.width / 2, y: data.height }, { x: data.width, y: data.height }
+            ];
+
+            let bestShot = null;
+            let bestScore = -Infinity;
+
+            for (const ball of targets) {
+              for (const pocket of pockets) {
+                const dx = pocket.x - ball.x;
+                const dy = pocket.y - ball.y;
+                const distBallToPocket = Math.hypot(dx, dy);
+                if (distBallToPocket === 0) continue;
+
+                const nx = dx / distBallToPocket;
+                const ny = dy / distBallToPocket;
+                const RADIUS = 12;
+                const phantomX = ball.x - nx * RADIUS * 2;
+                const phantomY = ball.y - ny * RADIUS * 2;
+
+                const cueDx = phantomX - data.cueBall.x;
+                const cueDy = phantomY - data.cueBall.y;
+                const distCueToPhantom = Math.hypot(cueDx, cueDy);
+                if (distCueToPhantom === 0) continue;
+
+                const cnx = cueDx / distCueToPhantom;
+                const cny = cueDy / distCueToPhantom;
+                const dot = (cnx * nx) + (cny * ny);
+
+                if (dot > 0.4) {
+                  const score = dot * 1000 - distCueToPhantom - distBallToPocket;
+                  if (score > bestScore) {
+                    bestScore = score;
+                    bestShot = { dx: cueDx, dy: cueDy };
+                  }
+                }
+              }
+            }
+
+            if (!bestShot) {
+              const target = targets[0];
+              bestShot = { dx: target.x - data.cueBall.x, dy: target.y - data.cueBall.y };
+            }
+
+            const power = 20 + Math.random() * 20;
+            const mag = Math.hypot(bestShot.dx, bestShot.dy);
+            const fDx = (bestShot.dx / mag) * power * 10;
+            const fDy = (bestShot.dy / mag) * power * 10;
             
-            // Broadcast intent
             currentGame.players.forEach(p => {
               if (p.id !== 'bot') io.to(p.id).emit("game:billiards:shot", { dx: fDx, dy: fDy });
             });
@@ -422,11 +474,14 @@ async function startServer() {
               res.players.forEach(p => {
                 if (p.id !== 'bot') io.to(p.id).emit("game:updated", res);
               });
-              if (res.turn === 'bot' && res.status === 'playing') executeBotTurn(gameId);
-            }, 5500);
+              if (res.turn === 'bot' && res.status === 'playing') {
+                setTimeout(() => executeBotTurn(gameId), 3000);
+              }
+            }, 7000); 
             return;
           }
         } else if (currentGame.type === 'rummy') {
+          // ... (keep rummy logic)
           if (data.turnPhase === 'draw') {
             const drawFromDiscard = data.discardPile.length > 0 && Math.random() > 0.5;
             botMove = { type: 'draw', fromDiscard: drawFromDiscard };
@@ -435,11 +490,8 @@ async function startServer() {
             if (botPlayer) {
               const scoreData = calculateRummyScore(botPlayer.hand);
               const deadwood = typeof scoreData === 'number' ? scoreData : scoreData.deadwood;
-              if (deadwood <= 10) {
-                botMove = { type: 'discard', cardIndex: 0, knock: true };
-              } else {
-                botMove = { type: 'discard', cardIndex: Math.floor(Math.random() * botPlayer.hand.length) };
-              }
+              if (deadwood <= 10) botMove = { type: 'discard', cardIndex: 0, knock: true };
+              else botMove = { type: 'discard', cardIndex: Math.floor(Math.random() * botPlayer.hand.length) };
             }
           }
         }
@@ -447,39 +499,24 @@ async function startServer() {
         if (botMove) {
           const resultGame = handleMove(currentGame, 'bot', botMove);
           activeGames.set(gameId, resultGame);
-          
           resultGame.players.forEach(p => {
             if (p.id !== 'bot') io.to(p.id).emit("game:updated", resultGame);
           });
 
+          // Chance for bot to trash talk
           if (Math.random() > 0.8) {
-            const botMessages = [
-              "You play well, but I play better. 😉",
-              "Is that your best move?",
-              "I'm feeling lucky today!",
-              "Don't worry, I won't bite... much.",
-              "Ready to lose your chips?",
-              "I've got a surprise for you."
-            ];
-            const message = {
-              id: `msg-${Date.now()}`,
-              userId: 'bot',
-              displayName: 'Bare Bear',
-              text: botMessages[Math.floor(Math.random() * botMessages.length)],
-              timestamp: Date.now()
-            };
-            resultGame.players.forEach(p => {
-              if (p.id !== 'bot') io.to(p.id).emit("game:message", message);
-            });
+            const botMessages = ["Nice try!", "Master of the table.", "Feeling lucky!", "Don't blink.", "I'm on fire!"];
+            const msg = { id: `msg-${Date.now()}`, userId: 'bot', displayName: 'Bare Bear', text: botMessages[Math.floor(Math.random() * botMessages.length)], timestamp: Date.now() };
+            resultGame.players.forEach(p => { if (p.id !== 'bot') io.to(p.id).emit("game:message", msg); });
           }
 
-          // Recursive turn if still bot's turn
+          // Continue if still bot turn
           if ((resultGame.turn === 'bot' && resultGame.status === 'playing') || 
               (resultGame.type === 'blackjack' && (resultGame.status === 'waiting' || resultGame.status === 'finished'))) {
             executeBotTurn(gameId);
           }
         }
-      }, 1500);
+      }, turnDelay);
     };
 
     socket.on("game:move", (data: { gameId: string, userId: string, move: any }) => {
@@ -546,6 +583,18 @@ async function startServer() {
         const playerIds = new Set(game.players.map(p => p.id).filter(id => id !== 'bot'));
         playerIds.forEach(id => {
           io.to(id).emit("game:message", message);
+        });
+      }
+    });
+
+    socket.on("game:billiards:shot", (data: { gameId: string, dx: number, dy: number }) => {
+      const game = activeGames.get(data.gameId);
+      if (game) {
+        // Broadcast the shot to other players in this game for animation
+        game.players.forEach(p => {
+          if (p.id !== socket.id && p.id !== 'bot') {
+            io.to(p.id).emit("game:billiards:shot", { dx: data.dx, dy: data.dy });
+          }
         });
       }
     });
