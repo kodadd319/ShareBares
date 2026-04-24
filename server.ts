@@ -325,7 +325,7 @@ async function startServer() {
       if (!g) return;
 
       // Random delay for realism
-      const turnDelay = g.type === 'billiards' ? 2500 : 1500;
+      const turnDelay = 1500;
 
       setTimeout(async () => {
         const currentGame = activeGames.get(gameId);
@@ -401,84 +401,6 @@ async function startServer() {
           if (data.status === 'playing' && data.currentPlayerIndex === 1) {
             const val = getBlackjackValue(data.players[1].hand);
             botMove = val < 17 ? { type: 'hit' } : { type: 'stand' };
-          }
-        } else if (currentGame.type === 'billiards') {
-          const myType = data.playerTypes['bot'];
-          let targets = data.balls.filter((b: any) => b.active);
-          
-          if (myType) {
-            const myBalls = targets.filter((b: any) => b.type === myType);
-            targets = myBalls.length > 0 ? myBalls : targets.filter((b: any) => b.id === 8);
-          } else {
-            targets = targets.filter((b: any) => b.id !== 8);
-          }
-
-          if (targets.length > 0) {
-            const pockets = [
-              { x: 0, y: 0 }, { x: data.width / 2, y: 0 }, { x: data.width, y: 0 },
-              { x: 0, y: data.height }, { x: data.width / 2, y: data.height }, { x: data.width, y: data.height }
-            ];
-
-            let bestShot = null;
-            let bestScore = -Infinity;
-
-            for (const ball of targets) {
-              for (const pocket of pockets) {
-                const dx = pocket.x - ball.x;
-                const dy = pocket.y - ball.y;
-                const distBallToPocket = Math.hypot(dx, dy);
-                if (distBallToPocket === 0) continue;
-
-                const nx = dx / distBallToPocket;
-                const ny = dy / distBallToPocket;
-                const RADIUS = 12;
-                const phantomX = ball.x - nx * RADIUS * 2;
-                const phantomY = ball.y - ny * RADIUS * 2;
-
-                const cueDx = phantomX - data.cueBall.x;
-                const cueDy = phantomY - data.cueBall.y;
-                const distCueToPhantom = Math.hypot(cueDx, cueDy);
-                if (distCueToPhantom === 0) continue;
-
-                const cnx = cueDx / distCueToPhantom;
-                const cny = cueDy / distCueToPhantom;
-                const dot = (cnx * nx) + (cny * ny);
-
-                if (dot > 0.4) {
-                  const score = dot * 1000 - distCueToPhantom - distBallToPocket;
-                  if (score > bestScore) {
-                    bestScore = score;
-                    bestShot = { dx: cueDx, dy: cueDy };
-                  }
-                }
-              }
-            }
-
-            if (!bestShot) {
-              const target = targets[0];
-              bestShot = { dx: target.x - data.cueBall.x, dy: target.y - data.cueBall.y };
-            }
-
-            const power = 20 + Math.random() * 20;
-            const mag = Math.hypot(bestShot.dx, bestShot.dy);
-            const fDx = (bestShot.dx / mag) * power * 10;
-            const fDy = (bestShot.dy / mag) * power * 10;
-            
-            currentGame.players.forEach(p => {
-              if (p.id !== 'bot') io.to(p.id).emit("game:billiards:shot", { dx: fDx, dy: fDy });
-            });
-
-            setTimeout(() => {
-              const res = handleMove(currentGame, 'bot', { type: 'shoot', dx: fDx, dy: fDy });
-              activeGames.set(gameId, res);
-              res.players.forEach(p => {
-                if (p.id !== 'bot') io.to(p.id).emit("game:updated", res);
-              });
-              if (res.turn === 'bot' && res.status === 'playing') {
-                setTimeout(() => executeBotTurn(gameId), 3000);
-              }
-            }, 7000); 
-            return;
           }
         } else if (currentGame.type === 'rummy') {
           // ... (keep rummy logic)
@@ -583,18 +505,6 @@ async function startServer() {
         const playerIds = new Set(game.players.map(p => p.id).filter(id => id !== 'bot'));
         playerIds.forEach(id => {
           io.to(id).emit("game:message", message);
-        });
-      }
-    });
-
-    socket.on("game:billiards:shot", (data: { gameId: string, dx: number, dy: number }) => {
-      const game = activeGames.get(data.gameId);
-      if (game) {
-        // Broadcast the shot to other players in this game for animation
-        game.players.forEach(p => {
-          if (p.id !== socket.id && p.id !== 'bot') {
-            io.to(p.id).emit("game:billiards:shot", { dx: data.dx, dy: data.dy });
-          }
         });
       }
     });
