@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Post, PostVisibility, User, AppComment } from '../types';
 import { Heart, MessageCircle, Eye, Star, Trash2, Lock, Share2, Check } from 'lucide-react';
-import { useBareBear } from './BareBearContext';
+import { useShareBares } from './MascotContext';
 import { APP_URL, APP_LOGO_URL } from '../constants';
 import VideoPlayer from './VideoPlayer';
 
@@ -28,7 +28,7 @@ const PostCard: React.FC<PostCardProps> = ({
   const [copied, setCopied] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const { showMascot } = useBareBear();
+  const { showMascot } = useShareBares();
   
   const liked = post.likedBy?.includes(currentUserId);
   

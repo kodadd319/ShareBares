@@ -3,19 +3,19 @@ import { GoogleGenAI } from "@google/genai";
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
 
-export type BareBearAction = 'dance' | 'point' | 'wave' | 'wink' | 'sad' | 'surprised';
+export type ShareBaresAction = 'dance' | 'point' | 'wave' | 'wink' | 'sad' | 'surprised';
 
-interface BareBearProps {
-  action?: BareBearAction;
+interface ShareBaresProps {
+  action?: ShareBaresAction;
   message?: string;
   onClose?: () => void;
   isVisible?: boolean;
   position?: 'bottom-right' | 'bottom-left' | 'center';
 }
 
-const BARE_BEAR_BASE_PROMPT = 'A high-quality 3D animated female bear named "Bare Bear" that resembles a naughty, sexy "Care Bear". She has vibrant blue fur, long eyelashes, and a mischievous, seductive expression with a wink. She wears a black leather harness and has a white heart with a blue flame on her belly. She is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). She is edgy, detailed, and vibrant. The image should contain NO TEXT or words.';
+const SHARE_BARES_BASE_PROMPT = 'A high-quality 3D animated female bear named "ShareBares" that resembles a naughty, sexy "Care Bear". She has vibrant blue fur, long eyelashes, and a mischievous, seductive expression with a wink. She wears a black leather harness and has a white heart with a blue flame on her belly. She is surrounded by dark purple and blue smoke clouds. The style is modern 3D animation (Pixar/Dreamworks style). She is edgy, detailed, and vibrant. The image should contain NO TEXT or words.';
 
-const ACTION_PROMPTS: Record<BareBearAction, string> = {
+const ACTION_PROMPTS: Record<ShareBaresAction, string> = {
   dance: 'She is doing a silly, energetic dance with her arms up and a big mischievous grin.',
   point: 'She is pointing her finger towards the left side of the screen with a knowing wink, as if highlighting something important.',
   wave: 'She is waving her paw enthusiastically with a friendly and playful expression.',
@@ -24,81 +24,21 @@ const ACTION_PROMPTS: Record<BareBearAction, string> = {
   surprised: 'She has a wide-eyed, surprised expression with her paws on her cheeks.'
 };
 
-const BareBear: React.FC<BareBearProps> = ({ 
+const ShareBares: React.FC<ShareBaresProps> = ({ 
   action = 'wink', 
   message, 
   onClose, 
   isVisible = true,
   position = 'bottom-right'
 }) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(localStorage.getItem(`barebear_v12_${action}`) || '/logo.png');
-  const [loading, setLoading] = useState(false);
+  const [imageUrl] = useState<string>('/logo.png');
+  const [loading] = useState(false);
   const generationStarted = useRef(false);
 
   useEffect(() => {
-    const generate = async () => {
-      // Only generate if we are still using the default logo and haven't started yet
-      if ((imageUrl && imageUrl.startsWith('data:image')) || generationStarted.current) return;
-
-      try {
-        generationStarted.current = true;
-        setLoading(true);
-        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: {
-            parts: [
-              {
-                text: `${BARE_BEAR_BASE_PROMPT} ${ACTION_PROMPTS[action]}`,
-              },
-            ],
-          },
-        });
-
-        const parts = response.candidates?.[0]?.content?.parts;
-        let imageFound = false;
-        if (parts) {
-          for (const part of parts) {
-            if (part.inlineData) {
-              const url = `data:image/png;base64,${part.inlineData.data}`;
-              setImageUrl(url);
-              imageFound = true;
-              try {
-                localStorage.setItem(`barebear_v12_${action}`, url);
-                // Clear old mascot versions to save space
-                Object.keys(localStorage).forEach(key => {
-                  if (key.startsWith('barebear_v') && !key.startsWith('barebear_v12_')) {
-                    localStorage.removeItem(key);
-                  }
-                });
-              } catch (e) {
-                console.warn('Failed to cache Bare Bear image in localStorage:', e);
-              }
-              break;
-            }
-          }
-        }
-        
-        if (!imageFound) {
-          throw new Error('No image generated in response');
-        }
-      } catch (error: any) {
-        const errorString = JSON.stringify(error);
-        const isQuotaError = errorString.includes('429') || errorString.includes('quota') || (error.message && (error.message.includes('429') || error.message.includes('quota')));
-        
-        if (isQuotaError) {
-          console.warn('Bare Bear generation paused: Gemini API quota exceeded. Using fallback mascot.');
-        } else {
-          console.error('Error generating Bare Bear:', error);
-        }
-        setImageUrl('/logo.png');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    generate();
-  }, [action, imageUrl]);
+    // Generation is disabled as per user request to keep the logo permanent
+    console.log('Mascot generation is disabled. Using permanent logo.');
+  }, [action]);
 
   const positionClasses = {
     'bottom-right': 'bottom-8 right-8',
@@ -147,7 +87,7 @@ const BareBear: React.FC<BareBearProps> = ({
                   }}
                   src={imageUrl || undefined}
                   className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(150,123,182,0.4)]"
-                  alt="Bare Bear Mascot"
+                  alt="ShareBares Mascot"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/logo.png';
@@ -171,4 +111,4 @@ const BareBear: React.FC<BareBearProps> = ({
   );
 };
 
-export default BareBear;
+export default ShareBares;

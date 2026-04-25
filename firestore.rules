@@ -228,11 +228,14 @@ service cloud.firestore {
 
     match /users/{userId} {
       // PII Protection: Only owner or admin can read full user doc
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == false || isAdmin());
-      // Allow others to update specific fields for social interactions
+      allow read, list: if isAuthenticated();
+      
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+        (request.resource.data.get('isAdmin', false) == false || isAdmin());
+      
       allow update: if isAuthenticated() && (
-        (isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.isAdmin == resource.data.isAdmin || isAdmin())) ||
+        (isOwner(userId) && isValidUser(request.resource.data) && 
+          (request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false) || isAdmin())) ||
         (hasOnlyAllowedFields(resource.data.keys().concat(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds'])))
       );
       allow delete: if isAdmin();

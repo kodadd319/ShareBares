@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, Check, ArrowLeft, Shield, Lock } from 'lucide-react';
-import { useBareBear } from './BareBearContext';
+import { useShareBares } from './MascotContext';
 import { StableListing } from '../types';
 import { APP_LOGO_URL } from '../constants';
 
@@ -14,7 +14,7 @@ interface JoinStablePageProps {
 
 const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetization, onSubmit, hasPaidStableFee }) => {
   const [name, setName] = useState('');
-  const { showMascot } = useBareBear();
+  const { showMascot } = useShareBares();
 
   useEffect(() => {
     showMascot({

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, ShieldCheck, ArrowLeft, Lock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import Logo from './Logo';
-import { useBareBear } from './BareBearContext';
+import { useShareBares } from './MascotContext';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import StripePaymentForm from './StripePaymentForm';
@@ -35,7 +35,7 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { showMascot } = useBareBear();
+  const { showMascot } = useShareBares();
 
   useEffect(() => {
     showMascot({

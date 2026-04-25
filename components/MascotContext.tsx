@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import BareBear, { BareBearAction } from './BareBear';
+import ShareBares, { ShareBaresAction } from './Mascot';
 
-interface BareBearContextType {
+interface ShareBaresContextType {
   showMascot: (config: {
-    action?: BareBearAction;
+    action?: ShareBaresAction;
     message?: string;
     duration?: number;
     position?: 'bottom-right' | 'bottom-left' | 'center';
@@ -11,12 +11,12 @@ interface BareBearContextType {
   hideMascot: () => void;
 }
 
-const BareBearContext = createContext<BareBearContextType | undefined>(undefined);
+const ShareBaresContext = createContext<ShareBaresContextType | undefined>(undefined);
 
-export const BareBearProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ShareBaresProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [config, setConfig] = useState<{
-    action: BareBearAction;
+    action: ShareBaresAction;
     message?: string;
     position: 'bottom-right' | 'bottom-left' | 'center';
   }>({
@@ -34,7 +34,7 @@ export const BareBearProvider: React.FC<{ children: ReactNode }> = ({ children }
     duration = 5000,
     position = 'bottom-right'
   }: {
-    action?: BareBearAction;
+    action?: ShareBaresAction;
     message?: string;
     duration?: number;
     position?: 'bottom-right' | 'bottom-left' | 'center';
@@ -50,23 +50,23 @@ export const BareBearProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   return (
-    <BareBearContext.Provider value={{ showMascot, hideMascot }}>
+    <ShareBaresContext.Provider value={{ showMascot, hideMascot }}>
       {children}
-      <BareBear
+      <ShareBares
         isVisible={isVisible}
         action={config.action}
         message={config.message}
         position={config.position}
         onClose={hideMascot}
       />
-    </BareBearContext.Provider>
+    </ShareBaresContext.Provider>
   );
 };
 
-export const useBareBear = () => {
-  const context = useContext(BareBearContext);
+export const useShareBares = () => {
+  const context = useContext(ShareBaresContext);
   if (context === undefined) {
-    throw new Error('useBareBear must be used within a BareBearProvider');
+    throw new Error('useShareBares must be used within a ShareBaresProvider');
   }
   return context;
 };

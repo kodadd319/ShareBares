@@ -573,13 +573,16 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
       >
         {item.type === 'video' ? (
           <div className={`w-full h-full relative ${!canView ? 'blur-sm grayscale' : ''}`}>
-            <video 
+            <VideoPlayer 
               src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
-              className="w-full h-full object-cover"
+              className="w-full h-full"
               muted
-              playsInline
+              autoPlay={false}
+              controls={false}
+              showPlayIcon={false}
+              clickToPlay={false}
             />
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
               <Play size={32} className="text-white opacity-50" />
             </div>
           </div>
@@ -603,7 +606,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           {!canView && (
             <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center space-x-1">
               <DollarSign size={12} style={{ color: customization.accentColor }} />
-              <span className="text-white font-black text-sm">{item.price}</span>
+              <span className="text-white font-black text-sm">{isNaN(item.price) ? '0.00' : item.price}</span>
             </div>
           )}
           {canView && (

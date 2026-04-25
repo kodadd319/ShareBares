@@ -20,7 +20,7 @@ import MyProfilePage from './components/MyProfilePage';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
 import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
-import { BareBearProvider, useBareBear } from './components/BareBearContext';
+import { ShareBaresProvider, useShareBares } from './components/MascotContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS, APP_LOGO_URL } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
 import { Toaster, toast } from 'sonner';
@@ -515,7 +515,7 @@ const SettingsPage: React.FC<{
   onUpdateUser: (data: Partial<User>) => void;
   setConfirmAction: (action: { message: string, onConfirm: () => void } | null) => void;
 }> = ({ me, onEditProfile, onLogout, onUpdateUser, setConfirmAction }) => {
-  const { showMascot } = useBareBear();
+  const { showMascot } = useShareBares();
   const [activeView, setActiveView] = useState<'main' | 'account' | 'privacy' | 'notifications' | 'security' | 'help'>('main');
 
   const updateSetting = (key: string, value: any) => {
@@ -865,7 +865,7 @@ const SettingsPage: React.FC<{
 };
 
 
-const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile: Partial<User>) => void }> = ({ initialEmail, onComplete }) => {
+const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: string; onComplete: (profile: Partial<User>) => void }> = ({ currentUserId, initialEmail, onComplete }) => {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
@@ -903,6 +903,7 @@ const ProfileCreationPage: React.FC<{ initialEmail: string; onComplete: (profile
     e.preventDefault();
     if (!displayName || !username) return;
     onComplete({
+      id: currentUserId,
       displayName,
       username,
       bio,
@@ -1791,7 +1792,7 @@ const AppContent: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
-  const { showMascot } = useBareBear();
+  const { showMascot } = useShareBares();
 
   const [profileTab, setProfileTab] = useState('posts');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -2153,7 +2154,9 @@ const AppContent: React.FC = () => {
           }
 
           // Seed other mock data if database is empty (non-blocking)
+          // Only for the technical administrator to prevent permission errors for others
           const seedData = async () => {
+            if (user.email !== 'jtothek319@gmail.com') return;
             try {
               // Ensure Jade exists
               try {
@@ -2804,7 +2807,7 @@ const AppContent: React.FC = () => {
 
   const handleProfileUpdate = async (profileData: Partial<User>) => {
     try {
-      await updateDoc(doc(db, 'users', currentUserId), profileData);
+      await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
       if (!hasCreatedProfile) setHasCreatedProfile(true);
       setActiveTab('feed');
     } catch (error) {
@@ -2814,7 +2817,7 @@ const AppContent: React.FC = () => {
 
   const handleUpdateUser = async (profileData: Partial<User>) => {
     try {
-      await updateDoc(doc(db, 'users', currentUserId), profileData);
+      await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
     }
@@ -4287,6 +4290,7 @@ const AppContent: React.FC = () => {
   if (!hasCreatedProfile) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <ProfileCreationPage 
+        currentUserId={currentUserId}
         initialEmail={auth.currentUser?.email || ''} 
         onComplete={handleProfileUpdate} 
       />
@@ -4297,9 +4301,12 @@ const AppContent: React.FC = () => {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <PaymentPage 
         amount={
-          paymentType === 'store' ? 10.00 : 
+          isNaN(paymentType === 'store' ? 10.00 : 
           paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
-          (pendingStoreItem?.price || 0)
+          (pendingStoreItem?.price || 0)) ? 0 :
+          (paymentType === 'store' ? 10.00 : 
+          paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
+          (pendingStoreItem?.price || 0))
         } 
         itemName={
           paymentType === 'store' ? "One-Time Store Activation Fee" : 
@@ -4730,10 +4737,10 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <BareBearProvider>
+      <ShareBaresProvider>
         <AppContent />
         <Toaster position="top-center" richColors theme="dark" />
-      </BareBearProvider>
+      </ShareBaresProvider>
     </ErrorBoundary>
   );
 };

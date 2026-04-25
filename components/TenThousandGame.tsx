@@ -195,7 +195,7 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
         <div className={`p-4 rounded-3xl border-2 transition-all ${!isMyTurn ? 'bg-[#967bb6]/10 border-[#967bb6] shadow-[0_0_20px_rgba(150,123,182,0.2)]' : 'bg-white/5 border-white/10'}`}>
           <div className="flex items-center space-x-2 mb-1">
             <img src={opponent?.avatar || APP_LOGO_URL} className="w-7 h-7 rounded-full border border-white/20" alt="Opponent" onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }} />
-            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{opponent?.displayName || 'BareBear'}</span>
+            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{opponent?.displayName || 'ShareBares'}</span>
           </div>
           <p className="text-2xl font-black text-white tracking-tighter">{opponentTotalScore.toLocaleString()}</p>
           {!isMyTurn && (

@@ -290,7 +290,7 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
                   onClick={() => playWithBot(game.id as GameType)}
                   className="px-4 py-2 bg-white/5 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all border border-white/10"
                 >
-                  Vs BareBear
+                  Vs ShareBares
                 </button>
               </div>
             </div>
@@ -1148,7 +1148,7 @@ const BlackjackGame: React.FC<{ game: GameState, onMove: (data: any) => void, is
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <img 
-                      src={game.players.find(p => p.id === player.id)?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.id}`} 
+                      src={game.players.find(p => p.id === player.id)?.avatar || APP_LOGO_URL} 
                       className="w-6 h-6 rounded-full border border-white/20"
                       alt=""
                     />

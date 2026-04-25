@@ -118,7 +118,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       setEditDetails({
         title: item.title,
         description: item.description || '',
-        price: item.price.toString()
+        price: isNaN(item.price) ? '0.00' : item.price.toString()
       });
     } else {
       toast.error('Media item not found with that title.');
@@ -394,7 +394,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         </div>
                         <div>
                           <p className="text-white font-bold text-sm">{editingItem.title}</p>
-                          <p className="text-slate-500 text-[10px] uppercase font-bold">${editingItem.price}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold">${isNaN(editingItem.price) ? '0.00' : editingItem.price}</p>
                         </div>
                       </div>
                       <button 

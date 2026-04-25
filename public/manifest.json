@@ -1,7 +1,7 @@
 {
   "name": "ShareBares",
   "short_name": "ShareBares",
-  "description": "Exclusive content platform for creators and fans. Meet barebear and join the community.",
+  "description": "Exclusive content platform for creators and fans. Meet ShareBares and join the community.",
   "id": "/",
   "start_url": "/",
   "display": "standalone",
