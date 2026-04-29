@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Search, MessageSquare, Bell, Settings, Hash, Menu, Plus, ChevronDown, User as UserIcon, LogOut, Shield, Image as ImageIcon, Dices, ExternalLink, Briefcase, Video, DollarSign, Star, Palette } from 'lucide-react';
+import { Home, Search, MessageSquare, Bell, Settings, Hash, Menu, Plus, ChevronDown, User as UserIcon, LogOut, Shield, Image as ImageIcon, Dices, ExternalLink, Briefcase, Video, DollarSign, Star, Palette, ShoppingBag, Users, X } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
 import Logo from './Logo';
 import { APP_LOGO_URL } from '../constants';
@@ -16,8 +16,10 @@ interface TopNavProps {
   storeItems: StoreItem[];
   stableListings: StableListing[];
   navigateToProfile: (userId: string) => void;
+  navigateToStore: (userId: string) => void;
   onViewPublicProfile: () => void;
   onLogout: () => void;
+  currentUserId: string;
   hasUnreadMessages?: boolean;
   hasUnreadNotifications?: boolean;
   customStyle?: {
@@ -38,8 +40,10 @@ const TopNav: React.FC<TopNavProps> = ({
   storeItems,
   stableListings,
   navigateToProfile,
+  navigateToStore,
   onViewPublicProfile,
   onLogout,
+  currentUserId,
   hasUnreadMessages,
   hasUnreadNotifications,
   customStyle
@@ -52,7 +56,13 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isMoreVideosMobileOpen, setIsMoreVideosMobileOpen] = React.useState(false);
   const [isStableSubMenuOpen, setIsStableSubMenuOpen] = React.useState(false);
   const [isStableMobileOpen, setIsStableMobileOpen] = React.useState(false);
+  const [isStoresSubMenuOpen, setIsStoresSubMenuOpen] = React.useState(false);
+  const [isOtherStoresBoxOpen, setIsOtherStoresBoxOpen] = React.useState(false);
+  const [isStoresMobileOpen, setIsStoresMobileOpen] = React.useState(false);
+  const [isOtherStoresMobileOpen, setIsOtherStoresMobileOpen] = React.useState(false);
   const [showResults, setShowResults] = React.useState(false);
+
+  const activeStoreUsers = users.filter(u => u.hasPaidStoreFee);
 
   const filteredUsers = searchQuery.length > 1 
     ? users.filter(u => 
@@ -321,6 +331,96 @@ const TopNav: React.FC<TopNavProps> = ({
                           <Plus size={14} />
                           <span className="text-xs font-bold uppercase tracking-widest">Join Stable</span>
                         </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {item.id === 'feed' && (
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setIsStoresSubMenuOpen(!isStoresSubMenuOpen);
+                        setIsStableSubMenuOpen(false);
+                        setIsGamesSubMenuOpen(false);
+                        setIsMoreVideosSubMenuOpen(false);
+                        setIsOtherStoresBoxOpen(false);
+                      }}
+                      className={`px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group ${
+                        activeTab === 'media-store'
+                        ? 'bg-white/5' 
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                      }`}
+                      style={activeTab === 'media-store' ? { color: activeTextColor, backgroundColor: activeBgColor } : {}}
+                    >
+                      <div className="relative">
+                        <ShoppingBag size={18} />
+                      </div>
+                      <span className="text-[10px] uppercase font-black tracking-widest hidden xl:inline">Stores</span>
+                      <ChevronDown size={14} className={`transition-transform duration-300 ${isStoresSubMenuOpen ? 'rotate-180' : ''}`} />
+                      {activeTab === 'media-store' && (
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full shadow-lg" style={{ backgroundColor: activeTextColor, boxShadow: `0 0 8px ${activeTextColor}` }}></div>
+                      )}
+                    </button>
+
+                    {isStoresSubMenuOpen && (
+                      <div className="absolute left-0 mt-3 w-48 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border z-[100]">
+                        <button 
+                         onClick={() => { navigateToStore(currentUserId); setIsStoresSubMenuOpen(false); }}
+                          className="w-full flex items-center space-x-3 px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
+                        >
+                          <UserIcon size={14} />
+                          <span className="text-xs font-bold uppercase tracking-widest">My Store</span>
+                        </button>
+                        <button 
+                          onClick={() => { setIsOtherStoresBoxOpen(!isOtherStoresBoxOpen); setIsStoresSubMenuOpen(false); }}
+                          className="w-full flex items-center space-x-3 px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
+                        >
+                          <Users size={14} />
+                          <span className="text-xs font-bold uppercase tracking-widest">Other Stores</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {isOtherStoresBoxOpen && (
+                      <div className="absolute left-full ml-2 top-0 w-64 bg-[#050505] rounded-[2rem] border border-[#c0c0c0]/20 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 chrome-border z-[110]">
+                        <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6]">Active User Stores</h3>
+                          <button onClick={() => setIsOtherStoresBoxOpen(false)} className="text-slate-500 hover:text-white">
+                            <X size={14} />
+                          </button>
+                        </div>
+                        <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                          {activeStoreUsers.length > 0 ? (
+                            activeStoreUsers.map(user => (
+                              <button
+                                key={user.id}
+                                onClick={() => {
+                                  navigateToStore(user.id);
+                                  setIsOtherStoresBoxOpen(false);
+                                }}
+                                className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 transition-all group text-left"
+                              >
+                                <img 
+                                  src={user.avatar || APP_LOGO_URL} 
+                                  className="w-8 h-8 rounded-lg object-cover border border-white/10" 
+                                  alt="" 
+                                  onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white group-hover:text-[#967bb6] transition-colors truncate uppercase tracking-tighter">
+                                    {user.displayName}
+                                  </p>
+                                  <p className="text-[9px] text-slate-500">@{user.username}</p>
+                                </div>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="p-8 text-center">
+                              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">No active stores</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -705,6 +805,81 @@ const TopNav: React.FC<TopNavProps> = ({
                                 <Plus size={20} />
                                 <span className="text-xs font-black uppercase tracking-widest">Join Stable</span>
                               </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {item.id === 'feed' && (
+                        <div className="pt-0">
+                          <button
+                            onClick={() => setIsStoresMobileOpen(!isStoresMobileOpen)}
+                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all relative ${
+                              activeTab === 'media-store'
+                              ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
+                              : 'text-slate-400 hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <ShoppingBag size={24} />
+                              <span className="text-sm font-black uppercase tracking-widest">Stores</span>
+                            </div>
+                            <ChevronDown size={18} className={`transition-transform duration-300 ${isStoresMobileOpen ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {isStoresMobileOpen && (
+                            <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                              <button 
+                                onClick={() => { navigateToStore(currentUserId); setIsMobileMenuOpen(false); }}
+                                className="w-full flex items-center space-x-4 p-4 rounded-2xl bg-white/5 text-slate-300 hover:text-white transition-all"
+                              >
+                                <UserIcon size={20} />
+                                <span className="text-xs font-black uppercase tracking-widest">My Store</span>
+                              </button>
+                              <button 
+                                onClick={() => setIsOtherStoresMobileOpen(!isOtherStoresMobileOpen)}
+                                className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 text-slate-300 hover:text-white transition-all"
+                              >
+                                <div className="flex items-center space-x-4">
+                                  <Users size={20} />
+                                  <span className="text-xs font-black uppercase tracking-widest">Other Stores</span>
+                                </div>
+                                <ChevronDown size={16} className={`transition-transform duration-300 ${isOtherStoresMobileOpen ? 'rotate-180' : ''}`} />
+                              </button>
+
+                              {isOtherStoresMobileOpen && (
+                                <div className="mt-2 ml-4 space-y-1 max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-2xl p-2 border border-white/5 animate-in slide-in-from-top-2 duration-200">
+                                  {activeStoreUsers.length > 0 ? (
+                                    activeStoreUsers.map(user => (
+                                      <button
+                                        key={`mob-store-${user.id}`}
+                                        onClick={() => {
+                                          navigateToStore(user.id);
+                                          setIsMobileMenuOpen(false);
+                                        }}
+                                        className="w-full flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 transition-all text-left"
+                                      >
+                                        <img 
+                                          src={user.avatar || APP_LOGO_URL} 
+                                          className="w-8 h-8 rounded-lg object-cover" 
+                                          alt="" 
+                                          onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}
+                                        />
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-bold text-white truncate uppercase tracking-tighter">
+                                            {user.displayName}
+                                          </p>
+                                          <p className="text-[9px] text-slate-500">@{user.username}</p>
+                                        </div>
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="p-4 text-center">
+                                      <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">No active stores</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

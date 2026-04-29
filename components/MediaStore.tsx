@@ -116,10 +116,9 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
     return true;
   });
 
-  const videos = filteredItems.filter(i => i.type === 'video');
-  const packs = filteredItems.filter(i => i.type === 'picture_pack');
-  const other = filteredItems.filter(i => i.type === 'other');
-  const pictures = filteredItems.filter(i => i.type === 'image' as any); // Legacy support if any
+  const videos = filteredItems.filter(i => (i.type as string) === 'video');
+  const packs = filteredItems.filter(i => i.type === 'picture_pack' || (i.type as string) === 'image' || (i.type as string) === 'pictures');
+  const other = filteredItems.filter(i => (i.type as string) === 'other');
 
   return (
     <div className="min-h-screen pb-20 transition-all duration-500" style={{ backgroundColor: customization.backgroundColor, color: customization.fontColor, fontFamily: customization.fontFamily }}>
@@ -263,7 +262,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
               <div className="p-3 rounded-2xl" style={{ backgroundColor: `${customization.accentColor}20`, color: customization.accentColor }}>
                 <ImageIcon size={24} />
               </div>
-              <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Picture Packs</h3>
+              <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: customization.fontColor }}>Pictures & Packs</h3>
               <div className="flex-grow h-px bg-white/5"></div>
             </div>
             
@@ -551,9 +550,11 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
   const [showFull, setShowFull] = useState(false);
   const canView = isAdmin || isPurchased;
 
+  const [videoPoster, setVideoPoster] = useState<string | undefined>(item.thumbnailUrl);
+
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
-    item.mediaUrls.forEach((url, index) => {
+    item.mediaUrls?.forEach((url, index) => {
       const link = document.createElement('a');
       link.href = url;
       link.download = `${item.title}_${index + 1}`;
@@ -561,6 +562,12 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
       link.click();
       document.body.removeChild(link);
     });
+  };
+
+  const getMediaUrl = (url: string) => {
+    if (!url) return APP_LOGO_URL;
+    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    return url.startsWith('/') ? url : `/${url}`;
   };
 
   return (
@@ -574,7 +581,8 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
         {item.type === 'video' ? (
           <div className={`w-full h-full relative ${!canView ? 'blur-sm grayscale' : ''}`}>
             <VideoPlayer 
-              src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
+              src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
+              poster={getMediaUrl(item.thumbnailUrl)}
               className="w-full h-full"
               muted
               autoPlay={false}
@@ -582,13 +590,13 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
               showPlayIcon={false}
               clickToPlay={false}
             />
-            <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
               <Play size={32} className="text-white opacity-50" />
             </div>
           </div>
         ) : (
           <img 
-            src={canView ? item.mediaUrls[0] : item.thumbnailUrl} 
+            src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
             className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
             alt={item.title} 
             referrerPolicy="no-referrer"
@@ -693,7 +701,8 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
             <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-4">
               {item.type === 'video' ? (
                 <VideoPlayer 
-                  src={item.mediaUrls[0]} 
+                  src={getMediaUrl(item.mediaUrls[0])} 
+                  poster={getMediaUrl(item.thumbnailUrl)}
                   autoPlay 
                   className="w-full h-full"
                 />
@@ -701,7 +710,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                 item.mediaUrls.map((url, idx) => (
                   <img 
                     key={idx} 
-                    src={url} 
+                    src={getMediaUrl(url)} 
                     className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" 
                     alt={`${item.title} ${idx + 1}`} 
                     onError={(e) => {

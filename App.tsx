@@ -3,6 +3,15 @@ import React, { useState, useEffect, useRef, useCallback, Component, ErrorInfo, 
 import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import * as PeerNamespace from 'simple-peer';
+import { Buffer } from 'buffer';
+
+if (typeof window !== 'undefined') {
+  window.Buffer = Buffer;
+  if (!(window as any).process) {
+    (window as any).process = { env: {} };
+  }
+}
+
 const SimplePeer = (PeerNamespace as any).default || PeerNamespace;
 import TopNav from './components/TopNav';
 import FriendsListModal from './components/FriendsListModal';
@@ -31,7 +40,7 @@ import {
   HelpCircle, LogOut, ChevronRight, ChevronDown, MapPin, Briefcase, Globe, Phone, Mail,
   Instagram, Twitter, ShoppingBag, Trash2, MessageCircle, Video, CreditCard,
   UserPlus, UserCheck, UserX, Users, Flame, Ban, Dices, ExternalLink, Palette, DollarSign,
-  TrendingUp, Sparkles, MicOff, VideoOff
+  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff
 } from 'lucide-react';
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
 import { 
@@ -94,9 +103,10 @@ const CallOverlay: React.FC<{
   remoteStream: MediaStream | null;
   onAnswer: () => void;
   onHangup: () => void;
+  onSwitchCamera: () => void;
   isCalling: boolean;
   type: 'voice' | 'video';
-}> = ({ call, callAccepted, myVideo, userVideo, stream, remoteStream, onAnswer, onHangup, isCalling, type }) => {
+}> = ({ call, callAccepted, myVideo, userVideo, stream, remoteStream, onAnswer, onHangup, onSwitchCamera, isCalling, type }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
 
@@ -129,7 +139,15 @@ const CallOverlay: React.FC<{
           {type === 'video' ? (
             <>
               {callAccepted ? (
-                <video playsInline ref={userVideo} autoPlay className="w-full h-full object-cover" />
+                <div className="w-full h-full relative">
+                  <video playsInline ref={userVideo} autoPlay className="w-full h-full object-cover" />
+                  {!remoteStream && (
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 border-4 border-[#967bb6] border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <p className="text-slate-300 font-black uppercase tracking-widest text-[10px]">Connecting Stream...</p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <div className="w-24 h-24 bg-[#967bb6]/20 rounded-full flex items-center justify-center mb-4 animate-pulse">
@@ -195,6 +213,15 @@ const CallOverlay: React.FC<{
           >
             <X size={32} />
           </button>
+          {callAccepted && type === 'video' && (
+              <button 
+                onClick={onSwitchCamera}
+                className="w-16 h-16 rounded-full flex items-center justify-center bg-white/10 text-white shadow-xl hover:bg-white/20 transition-all ml-4"
+                title="Switch Camera"
+              >
+                <RefreshCw size={28} />
+              </button>
+          )}
         </div>
       </div>
     </div>
@@ -923,6 +950,28 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
       },
       subscribersCount: 0,
       followingCount: 0,
+      friendIds: [],
+      pendingFriendRequestsSent: [],
+      pendingFriendRequestsReceived: [],
+      likedPostIds: [],
+      fwbIds: [],
+      pendingFwbRequestsSent: [],
+      pendingFwbRequestsReceived: [],
+      fwbRequestsResetDate: new Date().toISOString(),
+      fwbRequestsSentCount: 0,
+      fanIds: [],
+      profileCustomization: {},
+      photos: [],
+      storeUploads: [],
+      blockedUserIds: [],
+      settings: {
+        pushNotifications: true,
+        emailNotifications: true,
+        profileVisibility: 'public',
+        messagingPrivacy: 'everyone'
+      },
+      createdAt: new Date().toISOString(),
+      lastActive: new Date().toISOString()
     });
   };
 
@@ -1818,6 +1867,12 @@ const AppContent: React.FC = () => {
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
   const [isViewingAsPublic, setIsViewingAsPublic] = useState(false);
 
+  const navigateToStore = useCallback((userId: string) => {
+    setViewingUserId(userId);
+    setActiveTab('media-store');
+    window.scrollTo(0, 0);
+  }, []);
+
   const navigateToProfile = useCallback((userId: string) => {
     if (userId === currentUserId && !isViewingAsPublic) {
       setActiveTab('profile');
@@ -1935,6 +1990,39 @@ const AppContent: React.FC = () => {
 
   const selectedUserIdRef = useRef<string | null>(null);
 
+  const [useFrontCamera, setUseFrontCamera] = useState(true);
+
+  const switchCamera = useCallback(async () => {
+    if (!stream || callType !== 'video') return;
+    
+    try {
+      const currentVideoTrack = stream.getVideoTracks()[0];
+      if (currentVideoTrack) {
+        currentVideoTrack.stop();
+      }
+      
+      const constraints = {
+        video: { facingMode: useFrontCamera ? 'environment' : 'user' },
+        audio: true
+      };
+      
+      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      setUseFrontCamera(!useFrontCamera);
+      setStream(newStream);
+      
+      if (connectionRef.current) {
+        connectionRef.current.replaceTrack(
+          currentVideoTrack,
+          newStream.getVideoTracks()[0],
+          stream
+        );
+      }
+    } catch (error) {
+      console.error('Error switching camera:', error);
+      toast.error('Could not switch camera');
+    }
+  }, [stream, callType, useFrontCamera]);
+
   const leaveCall = useCallback(() => {
     setCallEnded(true);
     if ((window as any)._ringtone) {
@@ -1981,16 +2069,36 @@ const AppContent: React.FC = () => {
 
     navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true }).then((currentStream) => {
       setStream(currentStream);
-      const peer = new SimplePeer({ initiator: true, trickle: false, stream: currentStream });
+      const peer = new SimplePeer({ 
+        initiator: true, 
+        trickle: true, 
+        stream: currentStream,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+          ]
+        }
+      });
 
       peer.on('signal', (data) => {
-        socket?.emit('call_user', {
-          userToCall: id,
-          signalData: data,
-          from: currentUserId,
-          name: me.displayName,
-          type
-        });
+        if (data.type === 'offer') {
+          socket?.emit('call_user', {
+            userToCall: id,
+            signalData: data,
+            from: currentUserId,
+            name: me.displayName,
+            type
+          });
+        } else if (data.candidate) {
+          socket?.emit('ice_candidate', {
+            to: id,
+            candidate: data
+          });
+        }
       });
 
       peer.on('stream', (remoteStream) => {
@@ -2036,10 +2144,30 @@ const AppContent: React.FC = () => {
 
     navigator.mediaDevices.getUserMedia({ video: call?.type === 'video', audio: true }).then((currentStream) => {
       setStream(currentStream);
-      const peer = new SimplePeer({ initiator: false, trickle: false, stream: currentStream });
+      const peer = new SimplePeer({ 
+        initiator: false, 
+        trickle: true, 
+        stream: currentStream,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+          ]
+        }
+      });
 
       peer.on('signal', (data) => {
-        socket?.emit('answer_call', { signal: data, to: call?.from });
+        if (data.type === 'answer') {
+          socket?.emit('answer_call', { signal: data, to: call?.from });
+        } else if (data.candidate) {
+          socket?.emit('ice_candidate', {
+            to: call?.from,
+            candidate: data
+          });
+        }
       });
 
       peer.on('stream', (remoteStream) => {
@@ -2434,6 +2562,12 @@ const AppContent: React.FC = () => {
       }
     });
 
+    newSocket.on('ice_candidate', (candidate) => {
+      if (connectionRef.current) {
+        connectionRef.current.signal(candidate);
+      }
+    });
+
     newSocket.on('call_ended', () => {
       setCallEnded(true);
       if ((window as any)._ringtone) {
@@ -2784,6 +2918,10 @@ const AppContent: React.FC = () => {
         toast.error('Google login is not enabled in Firebase Console.', { id: toastId });
       } else if (error.code === 'auth/unauthorized-domain') {
         toast.error('This domain is not authorized for Firebase Auth. Please add it in your Firebase Console.', { id: toastId });
+      } else if (error.code === 'auth/network-request-failed') {
+        toast.error('Network request failed. This can happen if third-party cookies are blocked. Attempting redirect login as fallback...', { id: toastId, duration: 6000 });
+        // Fallback to redirect
+        setTimeout(() => handleSocialLogin(provider, true), 3000);
       } else {
         toast.error(`Login failed: ${errorMessage}`, { id: toastId });
       }
@@ -3081,7 +3219,7 @@ const AppContent: React.FC = () => {
       });
 
       addNotification(
-        NotificationType.FOLLOW,
+        NotificationType.FRIEND_REQUEST,
         'Friend Request',
         `${me.displayName || 'Someone'} sent you a friend request!`,
         { senderId: currentUserId, userId: targetUserId }
@@ -3106,7 +3244,7 @@ const AppContent: React.FC = () => {
       });
 
       addNotification(
-        NotificationType.FOLLOW,
+        NotificationType.FRIEND_REQUEST,
         'Friend Request Accepted',
         `${me.displayName || 'Someone'} accepted your friend request!`,
         { senderId: currentUserId, userId: targetUserId }
@@ -3197,7 +3335,7 @@ const AppContent: React.FC = () => {
       });
 
       addNotification(
-        NotificationType.FOLLOW,
+        NotificationType.FWB_REQUEST,
         'FWB Request',
         `Someone sent you a private FWB request!`,
         { senderId: currentUserId, userId: targetUserId }
@@ -3222,7 +3360,7 @@ const AppContent: React.FC = () => {
       });
 
       addNotification(
-        NotificationType.FOLLOW,
+        NotificationType.FWB_REQUEST,
         'FWB Request Accepted',
         `Your private FWB request was accepted!`,
         { senderId: currentUserId, userId: targetUserId }
@@ -3398,6 +3536,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleAddItemToStore = async (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
+    const uploadToastId = toast.loading('Uploading media to store...');
     try {
       const mediaUrls: string[] = [];
       
@@ -3411,7 +3550,14 @@ const AppContent: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           mediaUrls.push(data.url);
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `Upload failed with status ${res.status}`);
         }
+      }
+
+      if (mediaUrls.length === 0) {
+        throw new Error('No files were successfully uploaded.');
       }
 
       const itemId = `si-${Date.now()}`;
@@ -3419,14 +3565,13 @@ const AppContent: React.FC = () => {
         id: itemId,
         userId: currentUserId,
         ...itemData,
-        thumbnailUrl: mediaUrls[0] || APP_LOGO_URL,
-        mediaUrls: mediaUrls.length > 0 ? mediaUrls : [APP_LOGO_URL],
+        thumbnailUrl: mediaUrls[0], // Use first uploaded item as thumb
+        mediaUrls: mediaUrls,
         createdAt: new Date().toISOString()
       };
       
       await setDoc(doc(db, 'storeItems', itemId), newItem);
       
-      // Also update user's storeUploads for easier tracking
       const newMediaItems: MediaItem[] = mediaUrls.map((url, index) => ({
         id: `${itemId}-${index}`,
         url,
@@ -3436,16 +3581,21 @@ const AppContent: React.FC = () => {
       }));
       
       const updatedStoreUploads = [...(me.storeUploads || []), ...newMediaItems];
-      await updateDoc(doc(db, 'users', currentUserId), { storeUploads: updatedStoreUploads });
+      await updateDoc(doc(db, 'users', currentUserId), { 
+        storeUploads: updatedStoreUploads,
+        hasPaidStoreFee: true // Just to be sure
+      });
+      
       addNotification(
-        NotificationType.PURCHASE,
-        'Item Added!',
-        `Your item "${itemData.title}" has been added to your store.`,
+        NotificationType.SYSTEM,
+        'Item Published',
+        `Your store item "${itemData.title}" is now live!`
       );
-      toast.success('Item added to store!');
-    } catch (error) {
-      console.error('Store item upload error:', error);
-      toast.error('Failed to add store item');
+
+      toast.success('Store item published successfully!', { id: uploadToastId });
+    } catch (error: any) {
+      console.error('Error adding item to store:', error);
+      toast.error(`Store upload failed: ${error.message || 'Unknown error'}`, { id: uploadToastId });
     }
   };
 
@@ -3700,6 +3850,10 @@ const AppContent: React.FC = () => {
       onDeletePost={(post) => handleDeletePost(post.id)}
       onProfileClick={navigateToProfile}
       onCreatePost={() => setIsCreating(true)}
+      onAcceptFriendRequest={handleAcceptFriendRequest}
+      onDeclineFriendRequest={handleDeclineFriendRequest}
+      onAcceptFwbRequest={handleAcceptFwbRequest}
+      onDeclineFwbRequest={handleDeclineFwbRequest}
     />
   );
 
@@ -3825,6 +3979,26 @@ const AppContent: React.FC = () => {
                     <div className="flex items-center space-x-1 border border-white/20 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.5)]" title="Stable Member - Escort Services" style={{ backgroundColor: '#000000', color: '#967bb6' }}>
                       <Briefcase size={14} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Stable Member</span>
+                    </div>
+                  )}
+                  {me.fwbIds.includes(user.id) && (
+                    <div className="flex items-center space-x-1 border border-[#967bb6]/40 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(150,123,182,0.3)] bg-[#967bb6]/10 text-[#967bb6]" title="Private FWB Partner">
+                      <Flame size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">FWB Partner: {me.id === user.id ? 'Private List' : me.displayName}</span>
+                    </div>
+                  )}
+                  {isOwnProfile && user.fwbIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {user.fwbIds.map(fId => {
+                        const fUser = users.find(u => u.id === fId);
+                        if (!fUser) return null;
+                        return (
+                          <div key={fId} className="flex items-center space-x-1 border border-[#967bb6]/40 px-2 py-0.5 rounded-lg bg-[#967bb6]/5 text-[#967bb6]">
+                            <Flame size={10} />
+                            <span className="text-[8px] font-black uppercase">FWB: {fUser.displayName}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -4373,6 +4547,8 @@ const AppContent: React.FC = () => {
         storeItems={storeItems}
         stableListings={stableListings}
         navigateToProfile={navigateToProfile}
+        navigateToStore={navigateToStore}
+        currentUserId={currentUserId}
         onViewPublicProfile={viewOwnProfileAsPublic}
         onLogout={handleLogout}
         hasUnreadMessages={appNotifications.some(n => n.type === NotificationType.MESSAGE && !n.isRead)}
@@ -4703,6 +4879,7 @@ const AppContent: React.FC = () => {
           remoteStream={remoteStream}
           onAnswer={answerCall}
           onHangup={leaveCall}
+          onSwitchCamera={switchCamera}
           isCalling={isCalling}
           type={callType}
         />

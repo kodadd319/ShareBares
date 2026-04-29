@@ -125,6 +125,10 @@ async function testConnection() {
     const testDoc = doc(db, '_connection_test_', 'ping');
     await getDocFromServer(testDoc).catch(async (e) => {
       // If server get fails, try a normal get which might use cache but also triggers connection
+      if (e.message.includes('permission-denied') || e.message.includes('Missing or insufficient permissions')) {
+        console.log("Firestore reachability test: Connected (Permission restricted as expected)");
+        return;
+      }
       console.warn("Server-side ping failed, trying standard get:", e.message);
       return await getDoc(testDoc);
     });
@@ -132,11 +136,14 @@ async function testConnection() {
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : String(error);
     if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('failed-precondition')) {
-      console.error("Firestore connection failed: The client is offline or the backend is unreachable. This often means the Firebase project is not fully provisioned or the database ID is incorrect.");
-      console.log("Current Config:", {
+      console.error("Firestore connection failed: The client is offline or the backend is unreachable.");
+      console.log("Diagnostics:", {
         projectId: firebaseConfig.projectId,
-        databaseId: (firebaseConfig as any).firestoreDatabaseId || '(default)'
+        databaseId: (firebaseConfig as any).firestoreDatabaseId || '(default)',
+        apiKey: firebaseConfig.apiKey ? 'Present' : 'Missing',
+        authDomain: firebaseConfig.authDomain
       });
+      console.log("Suggestion: Please verify that the Firebase project is correctly provisioned and that the Firestore database exists in the specified region.");
     } else {
       console.warn("Firestore connection test (ignorable if app works):", errMessage);
     }

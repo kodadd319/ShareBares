@@ -3,7 +3,7 @@ import React from 'react';
 import { User, Post, AppComment } from '../types';
 import PostCard from './PostCard';
 import AdPlaceholder from './AdPlaceholder';
-import { Star, TrendingUp, Users, ChevronRight, Sparkles } from 'lucide-react';
+import { Star, TrendingUp, Users, ChevronRight, Sparkles, Flame } from 'lucide-react';
 import { APP_LOGO_URL } from '../constants';
 
 interface HomePageProps {
@@ -18,6 +18,10 @@ interface HomePageProps {
   onProfileClick?: (userId: string) => void;
   onCreatePost?: () => void;
   onDeletePost?: (post: Post) => void;
+  onAcceptFriendRequest?: (userId: string) => void;
+  onDeclineFriendRequest?: (userId: string) => void;
+  onAcceptFwbRequest?: (userId: string) => void;
+  onDeclineFwbRequest?: (userId: string) => void;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ 
@@ -31,7 +35,11 @@ const HomePage: React.FC<HomePageProps> = ({
   onCommentPost,
   onProfileClick,
   onCreatePost,
-  onDeletePost
+  onDeletePost,
+  onAcceptFriendRequest,
+  onDeclineFriendRequest,
+  onAcceptFwbRequest,
+  onDeclineFwbRequest
 }) => {
   const otherUsers = users.filter(u => u.id !== me.id);
   
@@ -159,6 +167,74 @@ const HomePage: React.FC<HomePageProps> = ({
             ))}
           </div>
         </section>
+
+        {/* Requests Popups */}
+        {(me.pendingFriendRequestsReceived.length > 0 || me.pendingFwbRequestsReceived.length > 0) && (
+          <div className="space-y-4">
+            {me.pendingFriendRequestsReceived.map(userId => {
+              const requester = users.find(u => u.id === userId);
+              if (!requester) return null;
+              return (
+                <div key={`friend-req-${userId}`} className="glass-panel rounded-3xl p-6 border-[#967bb6]/30 bg-gradient-to-br from-[#967bb6]/10 to-transparent flex items-center justify-between shadow-xl animate-in slide-in-from-top-4 duration-500 chrome-border">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10">
+                      <img src={requester.avatar || APP_LOGO_URL} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <p className="text-white font-black text-sm uppercase tracking-tighter">Friend Request</p>
+                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{requester.displayName} wants to be friends!</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button 
+                      onClick={() => onAcceptFriendRequest?.(userId)}
+                      className="px-4 py-2 bg-[#967bb6] text-white rounded-lg font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-all"
+                    >
+                      Accept
+                    </button>
+                    <button 
+                      onClick={() => onDeclineFriendRequest?.(userId)}
+                      className="px-4 py-2 bg-white/5 text-slate-400 hover:text-white rounded-lg font-black uppercase text-[9px] tracking-widest transition-all"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {me.pendingFwbRequestsReceived.map(userId => {
+              const requester = users.find(u => u.id === userId);
+              if (!requester) return null;
+              return (
+                <div key={`fwb-req-${userId}`} className="glass-panel rounded-3xl p-6 border-[#967bb6]/30 bg-gradient-to-br from-[#967bb6]/10 to-transparent flex items-center justify-between shadow-xl animate-in slide-in-from-top-4 duration-500 chrome-border">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-black flex items-center justify-center">
+                      <Flame size={24} className="text-[#967bb6]" />
+                    </div>
+                    <div>
+                      <p className="text-white font-black text-sm uppercase tracking-tighter">Private FWB Request</p>
+                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Someone sent you a private FWB request!</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <button 
+                      onClick={() => onAcceptFwbRequest?.(userId)}
+                      className="px-4 py-2 bg-[#967bb6] text-white rounded-lg font-black uppercase text-[9px] tracking-widest hover:scale-105 transition-all"
+                    >
+                      Accept
+                    </button>
+                    <button 
+                      onClick={() => onDeclineFwbRequest?.(userId)}
+                      className="px-4 py-2 bg-white/5 text-slate-400 hover:text-white rounded-lg font-black uppercase text-[9px] tracking-widest transition-all"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Main Feed */}
         <section className="space-y-6">

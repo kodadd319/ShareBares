@@ -143,7 +143,9 @@ export enum NotificationType {
   LIKE = 'LIKE',
   COMMENT = 'COMMENT',
   FOLLOW = 'FOLLOW',
-  SYSTEM = 'SYSTEM'
+  SYSTEM = 'SYSTEM',
+  FRIEND_REQUEST = 'FRIEND_REQUEST',
+  FWB_REQUEST = 'FWB_REQUEST'
 }
 
 export interface AppNotification {

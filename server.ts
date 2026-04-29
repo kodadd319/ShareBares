@@ -2,26 +2,12 @@ import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import Stripe from "stripe";
 import multer from "multer";
 import fs from "node:fs";
 import admin from "firebase-admin";
 import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore, calculateRummyScore } from "./games.ts";
 import { GameState, GameInvite } from "./types.ts";
-
-// Load Firebase config for admin initialization
-const firebaseConfig = JSON.parse(fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8"));
-
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
-}
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), "public", "uploads");
@@ -43,14 +29,39 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB limit
+    fileSize: 500 * 1024 * 1024 // 500MB limit for high-quality videos
   }
 });
+
+// Use process.cwd() for path resolution to be safe in both ESM and CJS environments
+const resolvedDirname = process.cwd();
 
 async function startServer() {
   const app = express();
   app.use(express.json());
   
+  let firebaseProjectId = "";
+  
+  // Load Firebase config inside startServer to allow for better error handling
+  try {
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    if (fs.existsSync(configPath)) {
+      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      firebaseProjectId = firebaseConfig.projectId;
+      // Initialize Firebase Admin
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          projectId: firebaseConfig.projectId,
+        });
+        console.log("Firebase Admin initialized successfully.");
+      }
+    } else {
+      console.warn("firebase-applet-config.json not found. Firebase features will be limited.");
+    }
+  } catch (error) {
+    console.error("Error loading Firebase config:", error);
+  }
+
   // Serve static files from public directory explicitly
   app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
   app.use(express.static("public"));
@@ -63,7 +74,7 @@ async function startServer() {
     }
   });
 
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
 
   // In-memory store for messages (in a real app, use a database)
   const messages: any[] = [];
@@ -571,7 +582,7 @@ async function startServer() {
               error: "IAM_API_DISABLED", 
               message: "The 'IAM Service Account Credentials API' is disabled OR the service account lacks permissions.",
               details: errorMessage,
-              link: `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseConfig.projectId}`
+              link: `https://console.developers.google.com/apis/api/iamcredentials.googleapis.com/overview?project=${firebaseProjectId}`
             });
           }
           return res.status(500).json({ error: "TOKEN_GENERATION_FAILED", message: errorMessage });
@@ -649,7 +660,7 @@ async function startServer() {
     app.get("*all", async (req, res, next) => {
       const url = req.originalUrl;
       try {
-        let template = fs.readFileSync(path.resolve(__dirname, "index.html"), "utf-8");
+        let template = fs.readFileSync(path.resolve(resolvedDirname, "index.html"), "utf-8");
         template = await vite.transformIndexHtml(url, template);
         res.status(200).set({ "Content-Type": "text/html" }).end(template);
       } catch (e: any) {
@@ -671,4 +682,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("CRITICAL: Failed to start server:", err);
+  process.exit(1);
+});

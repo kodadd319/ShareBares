@@ -1,5 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import ReactPlayer from 'react-player';
+import Hls from 'hls.js';
 import { 
   Play, 
   Pause, 
@@ -13,6 +14,11 @@ import {
   PictureInPicture as Pip
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+// Inject Hls into window for ReactPlayer to pick up
+if (typeof window !== 'undefined') {
+  (window as any).Hls = Hls;
+}
 
 interface VideoPlayerProps {
   src: string;
@@ -37,13 +43,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   showPlayIcon = true,
   clickToPlay = true
 }) => {
-  const playerRef = useRef<ReactPlayer>(null);
+  const Player = (ReactPlayer as any).default || ReactPlayer;
+  const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [isReady, setIsReady] = useState(false);
   const [isMuted, setIsMuted] = useState(muted);
   const [volume, setVolume] = useState(0.8);
   const [played, setPlayed] = useState(0);
+  const [playedSeconds, setPlayedSeconds] = useState(0);
   const [loaded, setLoaded] = useState(0);
   const [duration, setDuration] = useState(0);
   const [seeking, setSeeking] = useState(false);
@@ -56,6 +65,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmounted = useRef(false);
+  const lastPlayRequestTime = useRef<number>(0);
 
   useEffect(() => {
     isUnmounted.current = false;
@@ -69,19 +79,61 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
       
-      // Sync internal playing state
-      setIsPlaying(false);
-
-      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      // Explicitly stop playing on unmount
+      if (playerRef.current) {
+        try {
+          const internalPlayer = playerRef.current.getInternalPlayer();
+          if (internalPlayer) {
+            if (typeof internalPlayer.pause === 'function') {
+              internalPlayer.pause();
+            }
+            // For native HTMLMediaElement, clear src to prevent interruption errors
+            if (internalPlayer instanceof HTMLMediaElement) {
+              internalPlayer.removeAttribute('src');
+              internalPlayer.load();
+            }
+          }
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      }
     };
   }, []);
 
+  const playerConfig = useMemo(() => ({
+    file: {
+      forceVideo: true,
+      hlsOptions: {
+        enableWorker: true,
+        lowLatencyMode: true,
+      },
+      attributes: {
+        controlsList: 'nodownload',
+        poster: poster,
+        playsInline: true,
+        onWaiting: () => {
+          if (isUnmounted.current) return;
+          setIsLoading(true);
+        },
+        onPlaying: () => {
+          if (isUnmounted.current) return;
+          setIsLoading(false);
+        },
+      }
+    }
+  }), [poster]);
+
   useEffect(() => {
     // Reset play state when source changes
+    setIsReady(false);
     setIsPlaying(autoPlay);
     setError(null);
     setIsLoading(true);
   }, [src, autoPlay]);
+
+  useEffect(() => {
+    setIsMuted(muted);
+  }, [muted]);
 
   const handleMouseMove = () => {
     if (isUnmounted.current) return;
@@ -96,7 +148,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const togglePlay = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (isUnmounted.current) return;
+    if (isUnmounted.current || !isReady) return;
+    
+    // Throttle play requests to prevent "interrupted by pause" errors
+    const now = Date.now();
+    if (now - lastPlayRequestTime.current < 200) return;
+    lastPlayRequestTime.current = now;
+    
     setIsPlaying(!isPlaying);
   };
 
@@ -117,9 +175,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!seeking) {
       setPlayed(state.played);
       setLoaded(state.loaded);
+      setPlayedSeconds(state.playedSeconds);
     }
     if (duration === 0 && playerRef.current) {
-      const d = playerRef.current.getDuration();
+      const d = typeof playerRef.current.getDuration === 'function' ? playerRef.current.getDuration() : 0;
       if (d > 0) setDuration(d);
     }
   };
@@ -155,14 +214,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const skipForward = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const currentTime = playerRef.current?.getCurrentTime() || 0;
-    playerRef.current?.seekTo(currentTime + 10);
+    if (playerRef.current && typeof playerRef.current.seekTo === 'function') {
+      playerRef.current.seekTo(playedSeconds + 10);
+    }
   };
 
   const skipBackward = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const currentTime = playerRef.current?.getCurrentTime() || 0;
-    playerRef.current?.seekTo(currentTime - 10);
+    if (playerRef.current && typeof playerRef.current.seekTo === 'function') {
+      playerRef.current.seekTo(Math.max(0, playedSeconds - 10));
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -186,8 +247,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseLeave={() => isPlaying && setShowControls(false)}
       onClick={clickToPlay ? togglePlay : undefined}
     >
-      <ReactPlayer
-        key={src}
+      <Player
         ref={playerRef}
         url={src}
         playing={isPlaying}
@@ -200,11 +260,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         height="100%"
         style={{ position: 'absolute', top: 0, left: 0 }}
         poster={poster}
-        onProgress={handleProgress}
+        onProgress={handleProgress as any}
         onReady={() => {
           if (isUnmounted.current) return;
+          setIsReady(true);
           setIsLoading(false);
-          if (playerRef.current) {
+          if (playerRef.current && typeof playerRef.current.getDuration === 'function') {
             setDuration(playerRef.current.getDuration());
           }
         }}
@@ -216,23 +277,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           if (isUnmounted.current) return;
           setError(`Error playing video. Format may not be supported by your browser. ${e}`);
         }}
-              config={{
-                file: {
-                  attributes: {
-                    controlsList: 'nodownload',
-                    poster: poster,
-                    playsInline: true,
-                    onWaiting: () => {
-                      if (isUnmounted.current) return;
-                      setIsLoading(true);
-                    },
-                    onPlaying: () => {
-                      if (isUnmounted.current) return;
-                      setIsLoading(false);
-                    },
-                  }
-                }
-              }}
+        config={playerConfig as any}
       />
 
       {/* Loading & Buffer State */}
