@@ -18,23 +18,26 @@ const databaseId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
 console.log('Initializing Firestore with databaseId:', databaseId);
 
 // Use the default database if no ID is provided, or the specific one if it is
-const configWithDb = firebaseConfig as any;
-export const db = configWithDb.firestoreDatabaseId 
-  ? getFirestore(app, configWithDb.firestoreDatabaseId)
-  : getFirestore(app);
+// Force default database to troubleshoot 'unavailable' error
+// const configWithDb = firebaseConfig as any;
+// export const db = configWithDb.firestoreDatabaseId 
+//   ? getFirestore(app, configWithDb.firestoreDatabaseId)
+//   : getFirestore(app);
+export const db = getFirestore(app);
 
 // Enable persistence
-if (typeof window !== 'undefined') {
-  enableMultiTabIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // Multiple tabs open, persistence can only be enabled in one tab at a time.
-      console.warn('Firestore persistence failed-precondition: Multiple tabs open');
-    } else if (err.code === 'unimplemented') {
-      // The current browser does not support all of the features required to enable persistence
-      console.warn('Firestore persistence unimplemented');
-    }
-  });
-}
+// Disable persistence for now to troubleshoot connectivity
+// if (typeof window !== 'undefined') {
+//   enableMultiTabIndexedDbPersistence(db).catch((err) => {
+//     if (err.code === 'failed-precondition') {
+//       // Multiple tabs open, persistence can only be enabled in one tab at a time.
+//       console.warn('Firestore persistence failed-precondition: Multiple tabs open');
+//     } else if (err.code === 'unimplemented') {
+//       // The current browser does not support all of the features required to enable persistence
+//       console.warn('Firestore persistence unimplemented');
+//     }
+//   });
+// }
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

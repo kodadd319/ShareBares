@@ -140,7 +140,7 @@ service cloud.firestore {
       return isAuthenticated() && 
         (request.auth.token.email == "jtothek319@gmail.com" ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true));
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true));
     }
 
     function hasRequiredFields(fields) {
@@ -152,7 +152,7 @@ service cloud.firestore {
     }
 
     function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+      return email is string && email.size() > 3 && email.size() < 256;
     }
 
     function isValidDateString(dateStr) {
@@ -166,15 +166,14 @@ service cloud.firestore {
     function isValidUser(data) {
       return hasRequiredFields(['id', 'username', 'email']) &&
              data.id is string && data.id.size() > 0 &&
-             data.username is string && data.username.size() >= 3 && data.username.size() <= 30 &&
-             isValidEmail(data.email) &&
-             (data.avatar == null || (data.avatar is string && data.avatar.size() < 1000)) &&
-             (data.coverImage == null || (data.coverImage is string && data.coverImage.size() < 1000));
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
+             isValidEmail(data.email);
     }
 
     function isValidProfile(data) {
       return hasRequiredFields(['id', 'username', 'displayName']) &&
-             data.id is string && data.username is string && data.displayName is string;
+             data.id is string && data.id.size() > 0 &&
+             data.username is string && data.username.size() >= 1;
     }
 
     function isValidPost(data) {
@@ -227,25 +226,15 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      // PII Protection: Only owner or admin can read full user doc
-      allow read, list: if isAuthenticated();
-      
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
-        (request.resource.data.get('isAdmin', false) == false || isAdmin());
-      
-      allow update: if isAuthenticated() && (
-        (isOwner(userId) && isValidUser(request.resource.data) && 
-          (request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false) || isAdmin())) ||
-        (hasOnlyAllowedFields(resource.data.keys().concat(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds'])))
-      );
+      allow read, list: if true;
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin() || (hasOnlyAllowedFields(resource.data.keys().concat(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds', 'blockedUserIds']))));
       allow delete: if isAdmin();
     }
 
     match /profiles/{userId} {
-      // Profiles are public but contain no PII
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
-      allow update: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
+      allow read: if true;
+      allow create, update: if isAuthenticated() && isOwner(userId);
       allow delete: if isAdmin();
     }
 

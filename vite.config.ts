@@ -11,11 +11,19 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react(), tailwindcss()],
+      build: {
+        outDir: 'dist',
+        emptyOutDir: true,
+        sourcemap: true,
+        rollupOptions: {
+          input: {
+            main: path.resolve(process.cwd(), 'index.html'),
+          },
+        },
+      },
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
         'global': 'window',
-        'process': { env: {} }
       },
       resolve: {
         alias: {

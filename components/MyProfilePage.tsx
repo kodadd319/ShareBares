@@ -21,13 +21,12 @@ interface MyProfilePageProps {
   onSendFwbRequest: (userId: string) => void;
   onAcceptFwbRequest: (userId: string) => void;
   onRejectFwbRequest: (userId: string) => void;
-  onUnblockUser: (userId: string) => void;
 }
 
 const MyProfilePage: React.FC<MyProfilePageProps> = ({ 
   me, users, onUploadPhoto, onDeletePhoto, onAcceptFriendRequest, 
   onRejectFriendRequest, onDeleteFriend, onBlockUser, onSendFwbRequest,
-  onAcceptFwbRequest, onRejectFwbRequest, onUnblockUser
+  onAcceptFwbRequest, onRejectFwbRequest
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'photos' | 'friends' | 'fwb'>('photos');
   const [fwbSearchTerm, setFwbSearchTerm] = useState('');

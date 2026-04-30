@@ -1992,6 +1992,29 @@ const AppContent: React.FC = () => {
 
   const [useFrontCamera, setUseFrontCamera] = useState(true);
 
+  const blockedIds = me.blockedUserIds || [];
+  const filteredUsers = users.filter(u => 
+    !blockedIds.includes(u.id) && 
+    !(u.blockedUserIds || []).includes(currentUserId)
+  );
+  const filteredPosts = posts.filter(p => 
+    !blockedIds.includes(p.userId) && 
+    !(users.find(u => u.id === p.userId)?.blockedUserIds || []).includes(currentUserId)
+  );
+  
+  const filteredChatMessages: Record<string, Message[]> = {};
+  Object.keys(chatMessages || {}).forEach(id => {
+    if (!blockedIds.includes(id) && !(users.find(u => u.id === id)?.blockedUserIds || []).includes(currentUserId)) {
+      filteredChatMessages[id] = chatMessages[id];
+    }
+  });
+
+  const filteredComments = comments.filter(c => {
+    const commenter = users.find(u => u.id === c.userId);
+    if (!commenter) return false;
+    return !blockedIds.includes(commenter.id) && !(commenter.blockedUserIds || []).includes(currentUserId);
+  });
+
   const switchCamera = useCallback(async () => {
     if (!stream || callType !== 'video') return;
     
@@ -2865,7 +2888,11 @@ const AppContent: React.FC = () => {
       }
       setActiveTab('profile-edit');
     } catch (error: any) {
-      console.error('Registration failed:', error);
+      console.error('Registration failed full error:', error);
+      if (error.code === 'permission-denied' || (error.message && error.message.includes('Missing or insufficient permissions'))) {
+        console.error('Firestore Permission Denied during registration operation');
+        addNotification(NotificationType.SYSTEM, 'Security Error', 'Database permissions denied. Please contact support.');
+      }
       if (error.code === 'auth/operation-not-allowed') {
         const helpMsg = 'Email/Password registration is currently disabled in your Firebase Console. As the project owner, you must enable it to allow this login method.';
         addNotification(NotificationType.SYSTEM, 'Action Required', helpMsg);
@@ -3404,24 +3431,41 @@ const AppContent: React.FC = () => {
 
   const handleBlockUser = async (targetUserId: string) => {
     try {
-      const updates = { 
-        blockedUserIds: [...me.blockedUserIds, targetUserId],
-        friendIds: me.friendIds.filter(id => id !== targetUserId),
-        fwbIds: me.fwbIds.filter(id => id !== targetUserId)
+      // 1. Update current user's blocked list and remove friends/fwb
+      const myUpdates = { 
+        blockedUserIds: [...(me.blockedUserIds || []), targetUserId],
+        friendIds: (me.friendIds || []).filter(id => id !== targetUserId),
+        fwbIds: (me.fwbIds || []).filter(id => id !== targetUserId),
+        pendingFriendRequestsSent: (me.pendingFriendRequestsSent || []).filter(id => id !== targetUserId),
+        pendingFriendRequestsReceived: (me.pendingFriendRequestsReceived || []).filter(id => id !== targetUserId),
+        pendingFwbRequestsSent: (me.pendingFwbRequestsSent || []).filter(id => id !== targetUserId),
+        pendingFwbRequestsReceived: (me.pendingFwbRequestsReceived || []).filter(id => id !== targetUserId),
       };
-      await updateDoc(doc(db, 'users', currentUserId), updates);
-      addNotification(NotificationType.FOLLOW, 'User Blocked', 'You will no longer see content from this user.');
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
-    }
-  };
+      
+      // 2. Update target user's blocked list and remove friends/fwb
+      const targetUser = users.find(u => u.id === targetUserId);
+      if (targetUser) {
+        const targetUpdates = {
+          blockedUserIds: [...(targetUser.blockedUserIds || []), currentUserId],
+          friendIds: (targetUser.friendIds || []).filter(id => id !== currentUserId),
+          fwbIds: (targetUser.fwbIds || []).filter(id => id !== currentUserId),
+          pendingFriendRequestsSent: (targetUser.pendingFriendRequestsSent || []).filter(id => id !== currentUserId),
+          pendingFriendRequestsReceived: (targetUser.pendingFriendRequestsReceived || []).filter(id => id !== currentUserId),
+          pendingFwbRequestsSent: (targetUser.pendingFwbRequestsSent || []).filter(id => id !== currentUserId),
+          pendingFwbRequestsReceived: (targetUser.pendingFwbRequestsReceived || []).filter(id => id !== currentUserId),
+        };
+        await updateDoc(doc(db, 'users', targetUserId), targetUpdates);
+      }
 
-  const handleUnblockUser = async (targetUserId: string) => {
-    try {
-      const updates = { 
-        blockedUserIds: me.blockedUserIds.filter(id => id !== targetUserId)
-      };
-      await updateDoc(doc(db, 'users', currentUserId), updates);
+      await updateDoc(doc(db, 'users', currentUserId), myUpdates);
+      
+      addNotification(NotificationType.SYSTEM, 'User Blocked', 'Mutual block applied. You and this user will no longer see each other.');
+      
+      // Navigate away from the blocked user's profile
+      if (viewingUserId === targetUserId) {
+        setViewingUserId(null);
+        setActiveTab('home');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
     }
@@ -3840,8 +3884,8 @@ const AppContent: React.FC = () => {
   const renderFeed = () => (
     <HomePage 
       me={me}
-      users={users}
-      posts={posts}
+      users={filteredUsers}
+      posts={filteredPosts}
       comments={comments}
       searchQuery={searchQuery}
       onSelectUser={navigateToProfile}
@@ -3860,8 +3904,8 @@ const AppContent: React.FC = () => {
   const renderMessages = () => (
     <ChatPage 
       me={me}
-      users={users}
-      chatMessages={chatMessages}
+      users={filteredUsers}
+      chatMessages={filteredChatMessages}
       selectedUserId={selectedUserId}
       notifications={appNotifications
         .filter(n => n.type === NotificationType.MESSAGE && !n.isRead)
@@ -4239,6 +4283,20 @@ const AppContent: React.FC = () => {
               <Ban size={18} />
             </button>
           )}
+          {!isOwnProfile && (
+            <button 
+              onClick={() => {
+                if (window.confirm("Are you sure? Blocking is PERMANENT. You and this user will never see each other again.")) {
+                  handleBlockUser(user.id);
+                }
+              }}
+              className="p-3.5 rounded-2xl shadow-lg transition-all border border-red-500/30 hover:bg-red-500/10 text-red-500"
+              style={profileButtonStyle}
+              title="Block User Permanently"
+            >
+              <ShieldAlert size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -4376,8 +4434,8 @@ const AppContent: React.FC = () => {
                       onComment={() => handleCommentPost(post)}
                       onDelete={() => handleDeletePost(post.id)}
                       onProfileClick={navigateToProfile}
-                      comments={comments}
-                      users={users}
+                      comments={filteredComments}
+                      users={filteredUsers}
                     />
                   ))
                 ) : (
@@ -4522,6 +4580,13 @@ const AppContent: React.FC = () => {
     </motion.div>
   );
 
+  if (viewingUserId && (blockedIds.includes(viewingUserId) || (users.find(u => u.id === viewingUserId)?.blockedUserIds || []).includes(currentUserId))) {
+    setTimeout(() => {
+      setViewingUserId(null);
+      setActiveTab('home');
+    }, 0);
+  }
+
   return (
     <div className="min-h-screen bg-black text-slate-300">
       {/* Offline Banner */}
@@ -4543,7 +4608,7 @@ const AppContent: React.FC = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenCreate={() => setIsCreating(true)}
-        users={users}
+        users={filteredUsers}
         storeItems={storeItems}
         stableListings={stableListings}
         navigateToProfile={navigateToProfile}
@@ -4565,7 +4630,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'messages' && renderMessages()}
         {activeTab === 'profile' && renderProfile(me, true)}
         {activeTab === 'user-profile' && viewingUserId && (
-          renderProfile(users.find(u => u.id === viewingUserId), (viewingUserId === currentUserId) && !isViewingAsPublic)
+          renderProfile(filteredUsers.find(u => u.id === viewingUserId), (viewingUserId === currentUserId) && !isViewingAsPublic)
         )}
         {activeTab === 'profile-edit' && (
           <ProfileEditPage 
@@ -4595,7 +4660,7 @@ const AppContent: React.FC = () => {
         )}
         {activeTab === 'media-store' && viewingUserId && (
           <MediaStore 
-            user={users.find(u => u.id === viewingUserId) || me}
+            user={filteredUsers.find(u => u.id === viewingUserId) || me}
             items={storeItems}
             stableListings={stableListings.filter(l => l.userId === viewingUserId)}
             isOwnStore={viewingUserId === currentUserId}
@@ -4740,14 +4805,14 @@ const AppContent: React.FC = () => {
           <GameRoom 
             user={me} 
             socket={socket} 
-            users={users} 
+            users={filteredUsers} 
             setActiveTab={setActiveTab} 
           />
         )}
         {activeTab === 'more' && (
           <MyProfilePage 
             me={me}
-            users={users}
+            users={filteredUsers}
             onUploadPhoto={handleUploadPhoto}
             onDeletePhoto={handleDeletePhoto}
             onAcceptFriendRequest={handleAcceptFriendRequest}
@@ -4757,7 +4822,6 @@ const AppContent: React.FC = () => {
             onSendFwbRequest={handleSendFwbRequest}
             onAcceptFwbRequest={handleAcceptFwbRequest}
             onRejectFwbRequest={handleDeclineFwbRequest}
-            onUnblockUser={handleUnblockUser}
           />
         )}
         {(['explore', 'trending'].includes(activeTab)) && (
@@ -4890,7 +4954,7 @@ const AppContent: React.FC = () => {
           isOpen={isFriendsListOpen}
           onClose={() => setIsFriendsListOpen(false)}
           user={users.find(u => u.id === friendsListUserId)!}
-          allUsers={users}
+          allUsers={filteredUsers}
           onProfileClick={navigateToProfile}
           isOwnProfile={friendsListUserId === currentUserId}
           onDeleteFriend={handleUnfriend}
