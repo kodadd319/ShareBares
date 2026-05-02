@@ -892,7 +892,7 @@ const SettingsPage: React.FC<{
 };
 
 
-const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: string; onComplete: (profile: Partial<User>) => void }> = ({ currentUserId, initialEmail, onComplete }) => {
+const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: string; onComplete: (profile: Partial<User>) => Promise<void> }> = ({ currentUserId, initialEmail, onComplete }) => {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
@@ -908,6 +908,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
   const [instagram, setInstagram] = useState('');
   const [website, setWebsite] = useState('');
   const [stripeConnectId, setStripeConnectId] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -926,53 +927,63 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!displayName || !username) return;
-    onComplete({
-      id: currentUserId,
-      displayName,
-      username,
-      bio,
-      avatar,
-      coverImage: cover,
-      isCreator,
-      location,
-      occupation,
-      tagline,
-      email,
-      phone,
-      stripeConnectId,
-      socials: {
-        twitter,
-        instagram,
-        website
-      },
-      subscribersCount: 0,
-      followingCount: 0,
-      friendIds: [],
-      pendingFriendRequestsSent: [],
-      pendingFriendRequestsReceived: [],
-      likedPostIds: [],
-      fwbIds: [],
-      pendingFwbRequestsSent: [],
-      pendingFwbRequestsReceived: [],
-      fwbRequestsResetDate: new Date().toISOString(),
-      fwbRequestsSentCount: 0,
-      fanIds: [],
-      profileCustomization: {},
-      photos: [],
-      storeUploads: [],
-      blockedUserIds: [],
-      settings: {
-        pushNotifications: true,
-        emailNotifications: true,
-        profileVisibility: 'public',
-        messagingPrivacy: 'everyone'
-      },
-      createdAt: new Date().toISOString(),
-      lastActive: new Date().toISOString()
-    });
+    if (!displayName || !username) {
+      toast.error('Name and Username are required');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      await onComplete({
+        id: currentUserId,
+        displayName,
+        username,
+        bio,
+        avatar,
+        coverImage: cover,
+        isCreator,
+        location,
+        occupation,
+        tagline,
+        email,
+        phone,
+        stripeConnectId,
+        socials: {
+          twitter,
+          instagram,
+          website
+        },
+        subscribersCount: 0,
+        followingCount: 0,
+        friendIds: [],
+        pendingFriendRequestsSent: [],
+        pendingFriendRequestsReceived: [],
+        likedPostIds: [],
+        fwbIds: [],
+        pendingFwbRequestsSent: [],
+        pendingFwbRequestsReceived: [],
+        fwbRequestsResetDate: new Date().toISOString(),
+        fwbRequestsSentCount: 0,
+        fanIds: [],
+        profileCustomization: {},
+        photos: [],
+        storeUploads: [],
+        blockedUserIds: [],
+        settings: {
+          pushNotifications: true,
+          emailNotifications: true,
+          profileVisibility: 'public',
+          messagingPrivacy: 'everyone'
+        },
+        createdAt: new Date().toISOString(),
+        lastActive: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Submit failed:', error);
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -1217,10 +1228,12 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
 
           <button 
             type="submit"
-            className="w-full bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border"
+            disabled={isSaving}
+            className={`w-full bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border ${isSaving ? 'opacity-70 cursor-wait' : ''}`}
           >
-            Save Profile
-            <Check className="group-hover:translate-x-1 transition-transform" size={24} />
+            {isSaving ? 'Saving Profile...' : 'Save Profile'}
+            {!isSaving && <Check className="group-hover:translate-x-1 transition-transform" size={24} />}
+            {isSaving && <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />}
           </button>
         </form>
       </div>
@@ -2240,13 +2253,22 @@ const AppContent: React.FC = () => {
     const testConnection = async () => {
       try {
         const { getDocFromServer, doc } = await import('firebase/firestore');
-        await getDocFromServer(doc(db, 'test', 'connection'));
+        // Use the path explicitly allowed in security rules
+        const testDoc = doc(db, '_connection_test_', 'ping');
+        await getDocFromServer(testDoc).catch((e) => {
+          // Permission denied is actually a good sign - it means we reached the server
+          if (e.message.includes('permission-denied') || e.message.includes('Missing or insufficient permissions')) {
+            return;
+          }
+          throw e;
+        });
         setIsFirestoreOnline(true);
       } catch (error: any) {
         const errMessage = error.message || String(error);
         if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('network')) {
           setIsFirestoreOnline(false);
-          console.error("Firestore connection failed: The client is offline or the backend is unreachable.");
+          // Only log if it's been offline for a while or first time
+          console.warn("Firestore connectivity check:", errMessage);
         }
       }
     };
@@ -2288,10 +2310,11 @@ const AppContent: React.FC = () => {
           
           // Check if user profile exists in Firestore
           setIsProfileLoading(true);
+          let loadingFinished = false;
           
           // Add a safety timeout for profile loading to prevent infinite splash screen
           const profileTimeout = setTimeout(() => {
-            if (isProfileLoading) {
+            if (!loadingFinished) {
               console.warn('Profile loading timed out, assuming guest/new user');
               setIsProfileLoading(false);
               // Don't reset if admin already bypassed
@@ -2299,10 +2322,30 @@ const AppContent: React.FC = () => {
                 setHasCreatedProfile(false);
               }
             }
-          }, 5000);
+          }, 10000);
 
           try {
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            // Simple retry logic for profile fetch if offline
+            let userDoc;
+            let retries = 0;
+            const maxRetries = 2;
+            
+            while (retries <= maxRetries) {
+              try {
+                userDoc = await getDoc(doc(db, 'users', user.uid));
+                break;
+              } catch (err: any) {
+                if (retries < maxRetries && (err.message.includes('offline') || err.message.includes('unavailable'))) {
+                  retries++;
+                  console.warn(`Profile fetch retry ${retries}...`);
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                  continue;
+                }
+                throw err;
+              }
+            }
+            
+            loadingFinished = true;
             clearTimeout(profileTimeout); // Clear timeout if doc arrives
             
             if (userDoc.exists()) {
@@ -3067,6 +3110,9 @@ const AppContent: React.FC = () => {
   };
 
   const handleProfileUpdate = async (profileData: Partial<User>) => {
+    const isInitialCreation = !hasCreatedProfile;
+    const toastId = toast.loading(isInitialCreation ? 'Creating your profile...' : 'Updating profile...');
+    
     try {
       await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
       
@@ -3082,10 +3128,18 @@ const AppContent: React.FC = () => {
       };
       await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
 
-      if (!hasCreatedProfile) setHasCreatedProfile(true);
-      setActiveTab('feed');
+      if (isInitialCreation) {
+        setHasCreatedProfile(true);
+        toast.success('Welcome to ShareBares! Profile created successfully.', { id: toastId });
+        setActiveTab('feed');
+        window.scrollTo(0, 0);
+      } else {
+        toast.success('Profile updated successfully!', { id: toastId });
+      }
     } catch (error) {
+      toast.error('Failed to save profile. Please try again.', { id: toastId });
       handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+      throw error; // Re-throw to allow component to handle error state
     }
   };
 

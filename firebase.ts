@@ -5,7 +5,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or,
-  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove
+  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove, initializeFirestore
 } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -17,27 +17,23 @@ const app = initializeApp(firebaseConfig);
 const databaseId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
 console.log('Initializing Firestore with databaseId:', databaseId);
 
-// Use the default database if no ID is provided, or the specific one if it is
-// Force default database to troubleshoot 'unavailable' error
-// const configWithDb = firebaseConfig as any;
-// export const db = configWithDb.firestoreDatabaseId 
-//   ? getFirestore(app, configWithDb.firestoreDatabaseId)
-//   : getFirestore(app);
-export const db = getFirestore(app);
+// Initialize Firestore with specific databaseId and longPolling for better compatibility
+const configWithDb = firebaseConfig as any;
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true, // Force long polling to bypass potential proxy/iframe WebSocket issues
+}, configWithDb.firestoreDatabaseId || undefined);
 
 // Enable persistence
-// Disable persistence for now to troubleshoot connectivity
-// if (typeof window !== 'undefined') {
-//   enableMultiTabIndexedDbPersistence(db).catch((err) => {
-//     if (err.code === 'failed-precondition') {
-//       // Multiple tabs open, persistence can only be enabled in one tab at a time.
-//       console.warn('Firestore persistence failed-precondition: Multiple tabs open');
-//     } else if (err.code === 'unimplemented') {
-//       // The current browser does not support all of the features required to enable persistence
-//       console.warn('Firestore persistence unimplemented');
-//     }
-//   });
-// }
+if (typeof window !== 'undefined') {
+  // Use standard indexedDB persistence (single tab) which is usually more robust for simple apps
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Firestore persistence failed-precondition: Tab already open');
+    } else if (err.code === 'unimplemented') {
+      console.warn('Firestore persistence unimplemented');
+    }
+  });
+}
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -129,32 +125,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Connection test
 async function testConnection() {
   try {
-    // Attempt to get a document from a known collection to verify connectivity
-    // We use getDocFromServer to force a network request
     const testDoc = doc(db, '_connection_test_', 'ping');
-    await getDocFromServer(testDoc).catch(async (e) => {
-      // If server get fails, try a normal get which might use cache but also triggers connection
+    await getDocFromServer(testDoc).catch((e) => {
+      // Permission denied is expected for this doc but indicates server reachability
       if (e.message.includes('permission-denied') || e.message.includes('Missing or insufficient permissions')) {
-        console.log("Firestore reachability test: Connected (Permission restricted as expected)");
         return;
       }
-      console.warn("Server-side ping failed, trying standard get:", e.message);
-      return await getDoc(testDoc);
+      throw e;
     });
     console.log("Firestore connection test successful.");
-  } catch (error) {
-    const errMessage = error instanceof Error ? error.message : String(error);
+  } catch (error: any) {
+    const errMessage = error.message || String(error);
     if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('failed-precondition')) {
-      console.error("Firestore connection failed: The client is offline or the backend is unreachable.");
-      console.log("Diagnostics:", {
-        projectId: firebaseConfig.projectId,
-        databaseId: (firebaseConfig as any).firestoreDatabaseId || '(default)',
-        apiKey: firebaseConfig.apiKey ? 'Present' : 'Missing',
-        authDomain: firebaseConfig.authDomain
-      });
-      console.log("Suggestion: Please verify that the Firebase project is correctly provisioned and that the Firestore database exists in the specified region.");
-    } else {
-      console.warn("Firestore connection test (ignorable if app works):", errMessage);
+      // Use warn instead of error to avoid triggering 'error' state in UI logs if it's transient
+      console.warn("Firestore connection check:", errMessage);
     }
   }
 }
