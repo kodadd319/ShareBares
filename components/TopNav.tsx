@@ -20,6 +20,7 @@ interface TopNavProps {
   onViewPublicProfile: () => void;
   onLogout: () => void;
   currentUserId: string;
+  isAdmin?: boolean;
   hasUnreadMessages?: boolean;
   hasUnreadNotifications?: boolean;
   customStyle?: {
@@ -44,6 +45,7 @@ const TopNav: React.FC<TopNavProps> = ({
   onViewPublicProfile,
   onLogout,
   currentUserId,
+  isAdmin,
   hasUnreadMessages,
   hasUnreadNotifications,
   customStyle
@@ -536,11 +538,24 @@ const TopNav: React.FC<TopNavProps> = ({
                 (e.target as HTMLImageElement).src = APP_LOGO_URL;
               }}
             />
+            {isAdmin && (
+              <div className="absolute -top-1 -left-1 bg-red-500 rounded-full p-0.5 shadow-lg shadow-red-500/50 z-10 border border-black">
+                <Shield size={8} className="text-white" />
+              </div>
+            )}
             <ChevronDown size={14} className={`text-slate-500 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isProfileMenuOpen && (
             <div className="absolute right-0 mt-3 w-56 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border">
+              {isAdmin && (
+                <div className="px-4 py-2 mb-1 border-b border-white/5 bg-red-500/10">
+                  <div className="flex items-center space-x-2 text-red-500">
+                    <Shield size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Admin Mod Power</span>
+                  </div>
+                </div>
+              )}
               <div className="relative">
                 <button 
                   onClick={() => setIsEditProfileSubMenuOpen(!isEditProfileSubMenuOpen)}

@@ -48,7 +48,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
   const fwbPendingSent = users.filter(u => me.pendingFwbRequestsSent.includes(u.id));
 
   // FWB Limit Logic
-  const canSendFwb = me.fwbRequestsSentCount < 2;
+  const canSendFwb = me.isAdmin || me.fwbRequestsSentCount < 2;
   
   const potentialFwbUsers = users.filter(u => 
     u.id !== me.id && 
@@ -272,7 +272,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                   <div className="text-right">
                     <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Monthly Limit</p>
                     <p className={`text-xs font-black ${canSendFwb ? 'text-emerald-500' : 'text-red-500'}`}>
-                      {me.fwbRequestsSentCount} / 2 Sent
+                      {me.isAdmin ? 'Unlimited' : `${me.fwbRequestsSentCount} / 2`} Sent
                     </p>
                   </div>
                 </div>

@@ -47,7 +47,7 @@ import {
   auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
   onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
-  firebaseConfig
+  firebaseConfig, arrayUnion, arrayRemove
 } from './firebase';
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
@@ -1840,7 +1840,13 @@ const AppContent: React.FC = () => {
   const [isFirestoreOnline, setIsFirestoreOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
-  const [activeTab, setActiveTab] = useState('feed');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('sharebares_active_tab') || 'feed';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sharebares_active_tab', activeTab);
+  }, [activeTab]);
   const { showMascot } = useShareBares();
 
   const [profileTab, setProfileTab] = useState('posts');
@@ -1940,7 +1946,11 @@ const AppContent: React.FC = () => {
   }, []);
   
   const meRaw = users.find(u => u.id === currentUserId);
-  const isAdminUser = meRaw?.isAdmin || meRaw?.email === 'jtothek319@gmail.com' || meRaw?.username === 'jameson319' || currentUserId === 'admin-jtothek319';
+  const isAdminUser = meRaw?.isAdmin || 
+                     meRaw?.email === 'jtothek319@gmail.com' || 
+                     auth.currentUser?.email === 'jtothek319@gmail.com' || 
+                     meRaw?.username === 'jameson319' || 
+                     currentUserId === 'admin-jtothek319';
   const me = meRaw ? { 
     ...meRaw, 
     isAdmin: isAdminUser,
@@ -1983,7 +1993,16 @@ const AppContent: React.FC = () => {
   const connectionRef = useRef<any>(null);
 
   // Messaging state
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(localStorage.getItem('selectedChatUserId'));
+
+  // Sync selectedUserId to localStorage
+  useEffect(() => {
+    if (selectedUserId) {
+      localStorage.setItem('selectedChatUserId', selectedUserId);
+    } else {
+      localStorage.removeItem('selectedChatUserId');
+    }
+  }, [selectedUserId]);
   const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>({});
   const [currentMessageInput, setCurrentMessageInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -2237,12 +2256,13 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    setPersistence(auth, browserSessionPersistence).catch(err => console.error('Failed to set persistence:', err));
+    setPersistence(auth, browserLocalPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
     getGoogleRedirectResult().then((result) => {
       if (result?.user) {
         console.log('Redirect login successful:', result.user.email);
+        setIsLoggedIn(true);
         toast.success('Successfully logged in with Google!');
         setActiveTab('feed');
       }
@@ -2258,11 +2278,33 @@ const AppContent: React.FC = () => {
       try {
         if (user) {
           setCurrentUserId(user.uid);
+          setIsLoggedIn(true);
+          
+          // CRITICAL: Immediate bypass for admin to prevent race condition
+          if (user.email === 'jtothek319@gmail.com') {
+            setHasCreatedProfile(true);
+            setActiveTab(localStorage.getItem('activeTab') as any || 'feed');
+          }
           
           // Check if user profile exists in Firestore
           setIsProfileLoading(true);
+          
+          // Add a safety timeout for profile loading to prevent infinite splash screen
+          const profileTimeout = setTimeout(() => {
+            if (isProfileLoading) {
+              console.warn('Profile loading timed out, assuming guest/new user');
+              setIsProfileLoading(false);
+              // Don't reset if admin already bypassed
+              if (user.email !== 'jtothek319@gmail.com') {
+                setHasCreatedProfile(false);
+              }
+            }
+          }, 5000);
+
           try {
             const userDoc = await getDoc(doc(db, 'users', user.uid));
+            clearTimeout(profileTimeout); // Clear timeout if doc arrives
+            
             if (userDoc.exists()) {
               setHasCreatedProfile(true);
               const userData = userDoc.data() as User;
@@ -2279,6 +2321,7 @@ const AppContent: React.FC = () => {
                 Object.assign(userData, adminUpdates);
                 await updateDoc(doc(db, 'users', user.uid), adminUpdates);
               }
+              setHasCreatedProfile(true); 
               // Sync public profile
               const profileData = {
                 id: userData.id,
@@ -2292,16 +2335,62 @@ const AppContent: React.FC = () => {
                 followingCount: userData.followingCount || 0
               };
               await setDoc(doc(db, 'profiles', user.uid), profileData);
+            } else if (user.email === 'jtothek319@gmail.com') {
+              // Special case: Auto-create admin profile if missing
+              console.log('Auto-creating missing admin profile...');
+              const adminData: User = {
+                id: user.uid,
+                username: 'jameson319',
+                displayName: 'Jameson (Admin)',
+                email: user.email,
+                avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
+                coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926',
+                bio: 'Official Admin Account',
+                isCreator: true,
+                isAdmin: true,
+                subscribersCount: 0,
+                followingCount: 0,
+                friendIds: [],
+                pendingFriendRequestsSent: [],
+                pendingFriendRequestsReceived: [],
+                likedPostIds: [],
+                fwbIds: [],
+                pendingFwbRequestsSent: [],
+                pendingFwbRequestsReceived: [],
+                fwbRequestsResetDate: new Date().toISOString(),
+                fwbRequestsSentCount: 0,
+                fanIds: [],
+                photos: [],
+                storeUploads: [],
+                blockedUserIds: [],
+                hasPaidStoreFee: true,
+                hasPaidStableFee: true,
+                hasPaidStableBundle: true,
+                purchasedItemIds: []
+              };
+              await setDoc(doc(db, 'users', user.uid), adminData);
+              await setDoc(doc(db, 'profiles', user.uid), {
+                id: adminData.id,
+                username: adminData.username,
+                displayName: adminData.displayName,
+                avatar: adminData.avatar,
+                isCreator: true,
+                subscribersCount: 0,
+                followingCount: 0
+              });
+              setHasCreatedProfile(true);
             } else {
               setHasCreatedProfile(false);
-              // Create default profile if completely missing and not seeding
             }
           } catch (profileError) {
             console.error('Error checking/creating user profile:', profileError);
-            setHasCreatedProfile(false);
+            clearTimeout(profileTimeout);
+            // Don't reset if admin already bypassed
+            if (user.email !== 'jtothek319@gmail.com') {
+              setHasCreatedProfile(false);
+            }
           } finally {
             setIsProfileLoading(false);
-            setIsLoggedIn(true);
           }
 
           // Seed other mock data if database is empty (non-blocking)
@@ -2736,6 +2825,7 @@ const AppContent: React.FC = () => {
       // 1. Try standard Firebase Auth first (most reliable)
       try {
         await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
+        setIsLoggedIn(true);
         toast.success('Welcome back!', { id: toastId });
         setActiveTab('feed');
         return;
@@ -2756,6 +2846,7 @@ const AppContent: React.FC = () => {
               const data = await response.json();
               if (data.customToken) {
                 await signInWithCustomToken(auth, data.customToken);
+                setIsLoggedIn(true);
                 toast.success('Welcome back, Admin!', { id: toastId });
                 setActiveTab('feed');
                 return;
@@ -2768,10 +2859,13 @@ const AppContent: React.FC = () => {
 
         // 3. Special case: If admin user doesn't exist yet in Firebase Auth, try to register them
         const isInvalidCredential = authError.code === 'auth/invalid-credential' || authError.code === 'auth/user-not-found';
-        if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && trimmedPassword === '#Caleb918') {
+        const isAdminMasterPassword = trimmedPassword === '# Caleb918' || trimmedPassword === '#Caleb918';
+        
+        if (isInvalidCredential && loginEmail === 'jtothek319@gmail.com' && isAdminMasterPassword) {
           console.log('Admin user not found, attempting auto-registration...');
           try {
             await createUserWithEmailAndPassword(auth, loginEmail, trimmedPassword);
+            setIsLoggedIn(true);
             toast.success('Admin account created and logged in!', { id: toastId });
             setActiveTab('feed');
             return;
@@ -2881,12 +2975,13 @@ const AppContent: React.FC = () => {
             subscribersCount: 0,
             followingCount: 0
           });
+          setIsLoggedIn(true);
           toast.success('Account created successfully!', { id: toastId });
         }
       } else {
         await handleSocialLogin('google');
       }
-      setActiveTab('profile-edit');
+      setActiveTab('feed');
     } catch (error: any) {
       console.error('Registration failed full error:', error);
       if (error.code === 'permission-denied' || (error.message && error.message.includes('Missing or insufficient permissions'))) {
@@ -2925,6 +3020,7 @@ const AppContent: React.FC = () => {
         } else {
           toastId = toast.loading('Opening Google login...');
           await loginWithGoogle();
+          setIsLoggedIn(true);
           toast.success('Successfully logged in with Google!', { id: toastId });
           setActiveTab('feed');
         }
@@ -2960,7 +3056,7 @@ const AppContent: React.FC = () => {
       await firebaseLogout();
       setIsLoggedIn(false);
       setCurrentUserId('');
-      setActiveTab('feed');
+      // Keep activeTab in localStorage so it persists when they log back in
       setViewingUserId(null);
       setShowSplash(true);
       toast.success('Signed out successfully');
@@ -2973,6 +3069,19 @@ const AppContent: React.FC = () => {
   const handleProfileUpdate = async (profileData: Partial<User>) => {
     try {
       await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
+      
+      // Also sync to public profiles collection
+      const publicProfile = {
+        id: currentUserId,
+        username: profileData.username,
+        displayName: profileData.displayName,
+        avatar: profileData.avatar,
+        isCreator: profileData.isCreator || false,
+        subscribersCount: profileData.subscribersCount || 0,
+        followingCount: profileData.followingCount || 0
+      };
+      await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
+
       if (!hasCreatedProfile) setHasCreatedProfile(true);
       setActiveTab('feed');
     } catch (error) {
@@ -3260,41 +3369,53 @@ const AppContent: React.FC = () => {
     const targetUser = users.find(u => u.id === targetUserId);
     if (!targetUser) return;
 
-    try {
-      await updateDoc(doc(db, 'users', currentUserId), {
-        pendingFriendRequestsReceived: me.pendingFriendRequestsReceived.filter(id => id !== targetUserId),
-        friendIds: [...me.friendIds, targetUserId]
-      });
-      await updateDoc(doc(db, 'users', targetUserId), {
-        pendingFriendRequestsSent: targetUser.pendingFriendRequestsSent.filter(id => id !== currentUserId),
-        friendIds: [...targetUser.friendIds, currentUserId]
-      });
+    setConfirmAction({
+      message: 'Are you sure you want to accept this friend request?',
+      onConfirm: async () => {
+        try {
+          await updateDoc(doc(db, 'users', currentUserId), {
+            pendingFriendRequestsReceived: arrayRemove(targetUserId),
+            friendIds: arrayUnion(targetUserId)
+          });
+          await updateDoc(doc(db, 'users', targetUserId), {
+            pendingFriendRequestsSent: arrayRemove(currentUserId),
+            friendIds: arrayUnion(currentUserId)
+          });
 
-      addNotification(
-        NotificationType.FRIEND_REQUEST,
-        'Friend Request Accepted',
-        `${me.displayName || 'Someone'} accepted your friend request!`,
-        { senderId: currentUserId, userId: targetUserId }
-      );
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
-    }
+          addNotification(
+            NotificationType.FRIEND_ACCEPT,
+            'Friend Request Accepted',
+            `${me.displayName || 'Someone'} accepted your friend request!`,
+            { senderId: currentUserId, userId: targetUserId }
+          );
+          toast.success('Friend request accepted!');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+        }
+      }
+    });
   };
 
   const handleDeclineFriendRequest = async (targetUserId: string) => {
     const targetUser = users.find(u => u.id === targetUserId);
     if (!targetUser) return;
 
-    try {
-      await updateDoc(doc(db, 'users', currentUserId), {
-        pendingFriendRequestsReceived: me.pendingFriendRequestsReceived.filter(id => id !== targetUserId)
-      });
-      await updateDoc(doc(db, 'users', targetUserId), {
-        pendingFriendRequestsSent: targetUser.pendingFriendRequestsSent.filter(id => id !== currentUserId)
-      });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
-    }
+    setConfirmAction({
+      message: 'Are you sure you want to decline this friend request?',
+      onConfirm: async () => {
+        try {
+          await updateDoc(doc(db, 'users', currentUserId), {
+            pendingFriendRequestsReceived: arrayRemove(targetUserId)
+          });
+          await updateDoc(doc(db, 'users', targetUserId), {
+            pendingFriendRequestsSent: arrayRemove(currentUserId)
+          });
+          toast.success('Friend request declined.');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${targetUserId}`);
+        }
+      }
+    });
   };
 
   const handleUnfriend = async (targetUserId: string) => {
@@ -3807,7 +3928,7 @@ const AppContent: React.FC = () => {
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || !selectedUserId) return;
+    if (!text.trim() || !selectedUserId || !currentUserId) return;
     
     const messageId = `msg-${Date.now()}`;
     const newMessage: Message = {
@@ -3818,6 +3939,14 @@ const AppContent: React.FC = () => {
       timestamp: new Date().toISOString(),
       isRead: false
     };
+
+    // Optimistic Update
+    setChatMessages(prev => {
+      const next = { ...prev };
+      if (!next[selectedUserId]) next[selectedUserId] = [];
+      next[selectedUserId] = [...next[selectedUserId], newMessage];
+      return next;
+    });
 
     try {
       await setDoc(doc(db, 'messages', messageId), newMessage);
@@ -3846,10 +3975,20 @@ const AppContent: React.FC = () => {
             timestamp: new Date().toISOString(),
             isRead: false
           };
+          
+          // Note: Snapshot listener will pick this up soon, but we could optimistic add it too
           await setDoc(doc(db, 'messages', jadeMsgId), jadeMsg);
-        }, 2000 + Math.random() * 3000);
+        }, 1500 + Math.random() * 1000); // Shorter delay for "immediately" feel
       }
     } catch (error) {
+      // Revert optimistic update on error
+      setChatMessages(prev => {
+        const next = { ...prev };
+        if (next[selectedUserId]) {
+          next[selectedUserId] = next[selectedUserId].filter(m => m.id !== messageId);
+        }
+        return next;
+      });
       handleFirestoreError(error, OperationType.CREATE, `messages/${messageId}`);
     }
   };
@@ -4614,6 +4753,7 @@ const AppContent: React.FC = () => {
         navigateToProfile={navigateToProfile}
         navigateToStore={navigateToStore}
         currentUserId={currentUserId}
+        isAdmin={me.isAdmin}
         onViewPublicProfile={viewOwnProfileAsPublic}
         onLogout={handleLogout}
         hasUnreadMessages={appNotifications.some(n => n.type === NotificationType.MESSAGE && !n.isRead)}

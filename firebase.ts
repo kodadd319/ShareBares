@@ -5,7 +5,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or,
-  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence
+  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove
 } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -115,6 +115,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     }
   } else {
     console.error('Firestore Error: ', JSON.stringify(errInfo));
+    // Also don't throw for transient connection errors in readers to avoid crashing
+    if ((errMessage.includes('unavailable') || errMessage.includes('offline')) && 
+        (operationType === OperationType.LIST || operationType === OperationType.GET)) {
+      console.warn('Suppressing throw for transient Firestore connectivity error');
+      return;
+    }
   }
   
   throw new Error(JSON.stringify(errInfo));
@@ -156,5 +162,6 @@ testConnection();
 
 export { 
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken
+  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
+  arrayUnion, arrayRemove
 };
