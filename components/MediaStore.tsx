@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
+import { StoreItemSkeleton } from './Skeleton';
 import { APP_LOGO_URL } from '../constants';
 import AdPlaceholder from './AdPlaceholder';
 import VideoPlayer from './VideoPlayer';
@@ -11,6 +12,7 @@ interface MediaStoreProps {
   stableListings?: StableListing[];
   isOwnStore: boolean;
   isAdmin?: boolean;
+  isLoading?: boolean;
   purchasedItemIds?: string[];
   storeOwnerId?: string;
   onBack: () => void;
@@ -20,7 +22,7 @@ interface MediaStoreProps {
   onProfileClick?: (userId: string) => void;
 }
 
-const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [], isOwnStore, isAdmin, purchasedItemIds = [], storeOwnerId, onBack, onPurchase, onDeleteItem, onAddItem, onProfileClick }) => {
+const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [], isOwnStore, isAdmin, isLoading, purchasedItemIds = [], storeOwnerId, onBack, onPurchase, onDeleteItem, onAddItem, onProfileClick }) => {
   const customization = user.storeCustomization || {
     backgroundColor: '#000000',
     accentColor: '#967bb6',
@@ -46,16 +48,20 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
       if (newItemType === 'video') {
         const videoFile = selectedFiles[0];
         if (videoFile && videoFile.type.startsWith('video')) {
+          setNewItemFiles([videoFile]);
+          
+          // Background duration check
           const video = document.createElement('video');
           video.preload = 'metadata';
           video.onloadedmetadata = () => {
             window.URL.revokeObjectURL(video.src);
             if (video.duration > 480) {
-              setUploadError('Video must be 8 minutes or less.');
-              setNewItemFiles([]);
-            } else {
-              setNewItemFiles([videoFile]);
+              setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
             }
+          };
+          video.onerror = () => {
+            console.warn('Could not read video metadata for duration check');
+            window.URL.revokeObjectURL(video.src);
           };
           video.src = URL.createObjectURL(videoFile);
         } else {
@@ -216,8 +222,17 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
           )}
         </div>
 
-        {/* Videos Section */}
-        {(activeSection === 'all' || activeSection === 'videos') && (
+        {/* Content Sections */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {[...Array(8)].map((_, i) => (
+              <StoreItemSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Videos Section */}
+            {(activeSection === 'all' || activeSection === 'videos') && (
           <div className="mb-16">
             <div className="flex items-center space-x-4 mb-8">
               <div className="p-3 rounded-2xl" style={{ backgroundColor: `${customization.accentColor}20`, color: customization.accentColor }}>
@@ -385,7 +400,9 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
             </div>
           </div>
         )}
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Add New Item Modal */}
       {isAddingItem && (
@@ -578,10 +595,10 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           customization.layout === 'list' ? 'w-48 h-48 rounded-3xl shrink-0' : 'aspect-[4/5] rounded-[2rem] mb-4'
         } ${canView ? 'cursor-pointer' : ''}`}
       >
-        {item.type === 'video' ? (
-          <div className={`w-full h-full relative ${!canView ? 'blur-sm grayscale' : ''}`}>
+        {item.type === 'video' && canView ? (
+          <div className="w-full h-full relative">
             <VideoPlayer 
-              src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
+              src={getMediaUrl(item.mediaUrls[0])} 
               poster={getMediaUrl(item.thumbnailUrl)}
               className="w-full h-full"
               muted

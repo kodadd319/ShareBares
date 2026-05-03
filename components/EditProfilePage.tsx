@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
-import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag, CreditCard } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag, CreditCard, Loader2 } from 'lucide-react';
 import { User } from '../types';
 import { APP_LOGO_URL } from '../constants';
+import { toast } from 'sonner';
 
 interface EditProfilePageProps {
   user: User;
-  onSave: (updatedUser: Partial<User>) => void;
+  onSave: (updatedUser: Partial<User>) => Promise<void>;
   onBack: () => void;
 }
 
@@ -26,35 +27,94 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
   const [avatar, setAvatar] = useState(user.avatar);
   const [coverImage, setCoverImage] = useState(user.coverImage);
   const [stripeConnectId, setStripeConnectId] = useState(user.stripeConnectId || '');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0];
+      setAvatar(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0];
+      setCoverImage(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      displayName,
-      username,
-      bio,
-      tagline,
-      occupation,
-      location,
-      phone,
-      email,
-      socials: {
-        twitter,
-        instagram,
-        website
-      },
-      isCreator,
-      avatar,
-      coverImage,
-      stripeConnectId
-    });
+    setIsSaving(true);
+    
+    try {
+      let finalAvatar = avatar;
+      let finalCover = coverImage;
+
+      // Handle Avatar Upload
+      if (avatar.startsWith('blob:')) {
+        const file = avatarInputRef.current?.files?.[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalAvatar = data.url;
+          }
+        }
+      }
+
+      // Handle Cover Upload
+      if (coverImage.startsWith('blob:')) {
+        const file = coverInputRef.current?.files?.[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalCover = data.url;
+          }
+        }
+      }
+
+      await onSave({
+        displayName,
+        username,
+        bio,
+        tagline,
+        occupation,
+        location,
+        phone,
+        email,
+        socials: {
+          twitter,
+          instagram,
+          website
+        },
+        isCreator,
+        avatar: finalAvatar,
+        coverImage: finalCover,
+        stripeConnectId
+      });
+    } catch (error) {
+      console.error('Save failed:', error);
+      toast.error('Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <button 
         onClick={onBack}
-        className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group"
+        disabled={isSaving}
+        className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group disabled:opacity-50"
       >
         <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
         <span className="text-xs font-black uppercase tracking-widest">Back</span>
@@ -72,47 +132,84 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
             <div className="space-y-4">
               <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">
                 <Camera size={14} className="mr-2" />
-                Profile Avatar URL
+                Profile Avatar
               </label>
               <div className="flex items-center space-x-4">
-                <img 
-                  src={avatar} 
-                  className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
-                  alt="Avatar Preview" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
-                  }}
-                />
-                <input 
-                  type="url" 
-                  value={avatar || ''}
-                  onChange={(e) => setAvatar(e.target.value)}
-                  placeholder="https://..." 
-                  className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
-                />
+                <div 
+                  className="relative group cursor-pointer"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <img 
+                    src={avatar} 
+                    className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
+                    alt="Avatar Preview" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera size={20} className="text-white" />
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={avatarInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleAvatarChange} 
+                  />
+                </div>
+                <div className="flex-grow">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">Upload or provide URL</p>
+                  <input 
+                    type="url" 
+                    value={avatar.startsWith('blob:') ? '' : (avatar || '')}
+                    onChange={(e) => setAvatar(e.target.value)}
+                    placeholder="https://..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-xs"
+                  />
+                </div>
               </div>
             </div>
+            
             <div className="space-y-4">
               <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center">
                 <Camera size={14} className="mr-2" />
-                Cover Image URL
+                Cover Image
               </label>
               <div className="flex items-center space-x-4">
-                <img 
-                  src={coverImage} 
-                  className="w-16 h-16 rounded-2xl object-cover border border-white/10" 
-                  alt="Cover Preview" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = APP_LOGO_URL;
-                  }}
-                />
-                <input 
-                  type="url" 
-                  value={coverImage || ''}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  placeholder="https://..." 
-                  className="flex-grow bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
-                />
+                <div 
+                  className="relative group cursor-pointer"
+                  onClick={() => coverInputRef.current?.click()}
+                >
+                  <img 
+                    src={coverImage} 
+                    className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
+                    alt="Cover Preview" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 rounded-3xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera size={20} className="text-white" />
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={coverInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleCoverChange} 
+                  />
+                </div>
+                <div className="flex-grow">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">Upload or provide URL</p>
+                  <input 
+                    type="url" 
+                    value={coverImage.startsWith('blob:') ? '' : (coverImage || '')}
+                    onChange={(e) => setCoverImage(e.target.value)}
+                    placeholder="https://..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-xs"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -293,10 +390,20 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
             <button 
               type="submit"
-              className="flex-grow bg-black text-[#967bb6] py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border"
+              disabled={isSaving}
+              className="flex-grow bg-black text-[#967bb6] py-5 rounded-2xl font-black text-lg shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border disabled:opacity-70 disabled:cursor-wait"
             >
-              Save Changes
-              <Check className="group-hover:translate-x-1 transition-transform" size={24} />
+              {isSaving ? (
+                <>
+                  <Loader2 className="animate-spin" size={24} />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  Save Changes
+                  <Check className="group-hover:translate-x-1 transition-transform" size={24} />
+                </>
+              )}
             </button>
             <button 
               type="button"

@@ -155,70 +155,83 @@ service cloud.firestore {
       return email is string && email.size() > 3 && email.size() < 256;
     }
 
-    function isValidDateString(dateStr) {
-      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    function isUpdateAction(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
     }
 
     // ===============================================================
     // Domain Validators
     // ===============================================================
 
-    function isValidUser(data) {
-      return hasRequiredFields(['id', 'username', 'email']) &&
-             data.id is string && data.id.size() > 0 &&
-             data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
-             isValidEmail(data.email);
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    function isValidProfile(data) {
-      return hasRequiredFields(['id', 'username', 'displayName']) &&
-             data.id is string && data.id.size() > 0 &&
-             data.username is string && data.username.size() >= 1;
+    function isValidUser(data) {
+      return hasRequiredFields(['id', 'username', 'email']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
+             isValidEmail(data.email) &&
+             (data.keys().size() <= 40); // Prevent shadow fields
     }
 
     function isValidPost(data) {
       return hasRequiredFields(['id', 'userId', 'content', 'createdAt']) &&
-             data.id is string && data.userId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
              data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
              isValidDateString(data.createdAt) &&
-             (data.visibility in ['PUBLIC', 'PRIVATE']);
+             (data.get('visibility', 'PUBLIC') in ['PUBLIC', 'PRIVATE']) &&
+             (data.keys().size() <= 20);
     }
 
     function isValidMessage(data) {
       return hasRequiredFields(['id', 'senderId', 'receiverId', 'text', 'timestamp']) &&
-             data.id is string && data.senderId is string && data.receiverId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.senderId is string && data.senderId.size() <= 128 &&
+             data.receiverId is string && data.receiverId.size() <= 128 &&
              data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
-             isValidDateString(data.timestamp);
+             isValidDateString(data.timestamp) &&
+             (data.keys().size() <= 10);
     }
 
     function isValidStoreItem(data) {
       return hasRequiredFields(['id', 'userId', 'title', 'price', 'createdAt']) &&
-             data.id is string && data.userId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
              data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
              data.price is number && data.price >= 0 &&
-             isValidDateString(data.createdAt);
+             isValidDateString(data.createdAt) &&
+             (data.keys().size() <= 15);
     }
 
     function isValidStableListing(data) {
       return hasRequiredFields(['id', 'userId', 'providerName', 'pricing', 'createdAt']) &&
-             data.id is string && data.userId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
              data.providerName is string && data.providerName.size() > 0 &&
              data.pricing is string &&
-             isValidDateString(data.createdAt);
+             isValidDateString(data.createdAt) &&
+             (data.keys().size() <= 15);
     }
 
     function isValidNotification(data) {
       return hasRequiredFields(['id', 'userId', 'title', 'message', 'timestamp']) &&
-             data.id is string && data.userId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
              data.title is string && data.message is string &&
-             isValidDateString(data.timestamp);
+             isValidDateString(data.timestamp) &&
+             (data.keys().size() <= 10);
     }
 
     function isValidAppComment(data) {
       return hasRequiredFields(['id', 'postId', 'userId', 'text', 'createdAt']) &&
-             data.id is string && data.postId is string && data.userId is string &&
+             data.id is string && data.id.size() <= 128 &&
+             data.postId is string && data.postId.size() <= 128 &&
+             data.userId is string && data.userId.size() <= 128 &&
              data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
-             isValidDateString(data.createdAt);
+             isValidDateString(data.createdAt) &&
+             (data.keys().size() <= 10);
     }
 
     // ===============================================================
@@ -227,59 +240,71 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read, list: if true;
-      allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin() || (hasOnlyAllowedFields(resource.data.keys().concat(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds', 'blockedUserIds']))));
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) && isValidUser(request.resource.data)) || 
+        isAdmin() || 
+        isUpdateAction(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds', 'blockedUserIds'])
+      );
       allow delete: if isAdmin();
     }
 
     match /profiles/{userId} {
       allow read: if true;
-      allow create, update: if isAuthenticated() && isOwner(userId);
+      allow create, update: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /_connection_test_/{docId} {
-      allow read: if true;
+      allow read: if isValidId(docId);
     }
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data);
-      // Allow others to update likes and commentsCount
+      allow create: if isAuthenticated() && 
+                    isValidId(postId) &&
+                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
+                    isValidPost(request.resource.data);
+      
       allow update: if isAuthenticated() && (
-        (resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data) ||
-        (hasOnlyAllowedFields(resource.data.keys().concat(['likes', 'likedBy', 'commentsCount'])))
+        ((resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data)) ||
+        isUpdateAction(['likes', 'likedBy', 'commentsCount'])
       );
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /messages/{messageId} {
-      // Allow read if user is sender or receiver. 
-      // For queries, this requires filtering by senderId or receiverId.
       allow read: if isAuthenticated() && (
         resource.data.senderId == request.auth.uid || 
         resource.data.receiverId == request.auth.uid || 
         isAdmin()
       );
       allow create: if isAuthenticated() && 
-        request.resource.data.senderId == request.auth.uid && 
-        isValidMessage(request.resource.data);
+                    isValidId(messageId) &&
+                    request.resource.data.senderId == request.auth.uid && 
+                    isValidMessage(request.resource.data);
       allow update: if isAuthenticated() && 
         (resource.data.receiverId == request.auth.uid || isAdmin()) && 
-        hasOnlyAllowedFields(resource.data.keys().concat(['isRead']));
+        isUpdateAction(['isRead']);
       allow delete: if isAdmin();
     }
 
     match /storeItems/{itemId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidStoreItem(request.resource.data);
+      allow create: if isAuthenticated() && 
+                    isValidId(itemId) && 
+                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
+                    isValidStoreItem(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStoreItem(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /stableListings/{listingId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidStableListing(request.resource.data);
+      allow create: if isAuthenticated() && 
+                    isValidId(listingId) &&
+                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
+                    isValidStableListing(request.resource.data);
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStableListing(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
@@ -287,15 +312,19 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthenticated() && 
-        (request.resource.data.userId == request.auth.uid || isAdmin()) &&
-        isValidNotification(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && hasOnlyAllowedFields(resource.data.keys().concat(['isRead']));
+                    isValidId(notificationId) &&
+                    (request.resource.data.userId == request.auth.uid || isAdmin()) &&
+                    isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isUpdateAction(['isRead']);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
     match /comments/{commentId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidAppComment(request.resource.data);
+      allow create: if isAuthenticated() && 
+                    isValidId(commentId) &&
+                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
+                    isValidAppComment(request.resource.data);
       allow update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidAppComment(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }

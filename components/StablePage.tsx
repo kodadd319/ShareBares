@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { StableListing } from '../types';
 import { User as UserIcon, MapPin, DollarSign, MessageSquare, Shield, ChevronDown, Filter, Navigation, X } from 'lucide-react';
 import { APP_LOGO_URL } from '../constants';
+import { StableSkeleton } from './Skeleton';
 
 interface StablePageProps {
   listings: StableListing[];
   onProfileClick?: (userId: string) => void;
+  isLoading?: boolean;
 }
 
 // Mock coordinates for cities in our system
@@ -33,7 +35,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return d;
 };
 
-const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => {
+const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick, isLoading }) => {
   const [selectedGender, setSelectedGender] = useState<string>('all');
   const [citySearch, setCitySearch] = useState<string>('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -171,7 +173,11 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick }) => 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {filteredListings.length > 0 ? (
+        {isLoading ? (
+          <div className="col-span-full">
+            <StableSkeleton />
+          </div>
+        ) : filteredListings.length > 0 ? (
           filteredListings.map((listing) => (
             <div key={listing.id} className="glass-panel rounded-[2.5rem] p-6 border-[#c0c0c0]/10 shadow-2xl relative overflow-hidden chrome-border group hover:border-[#967bb6]/30 transition-all duration-500 flex flex-col h-full">
               <div className="absolute top-0 right-0 p-4 z-10">

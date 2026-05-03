@@ -96,9 +96,11 @@
         "providerGender": { "type": "string", "enum": ["male", "female", "non-binary", "transgender"] },
         "services": { "type": "string" },
         "city": { "type": "string" },
+        "importantInfo": { "type": "string" },
         "pricing": { "type": "string" },
         "contactInfo": { "type": "string" },
         "avatarUrl": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string" }
       },
       "required": ["id", "userId", "providerName", "pricing", "createdAt"]
@@ -160,6 +162,10 @@
     "/comments/{commentId}": {
       "schema": "Comment",
       "description": "Post comments"
+    },
+    "/_connection_test_/{docId}": {
+      "schema": "object",
+      "description": "Connection test collection"
     }
   }
 }

@@ -29,6 +29,7 @@ import MyProfilePage from './components/MyProfilePage';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
 import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
+import VideoPlayer from './components/VideoPlayer';
 import { ShareBaresProvider, useShareBares } from './components/MascotContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS, APP_LOGO_URL } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
@@ -40,21 +41,23 @@ import {
   HelpCircle, LogOut, ChevronRight, ChevronDown, MapPin, Briefcase, Globe, Phone, Mail,
   Instagram, Twitter, ShoppingBag, Trash2, MessageCircle, Video, CreditCard,
   UserPlus, UserCheck, UserX, Users, Flame, Ban, Dices, ExternalLink, Palette, DollarSign,
-  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff
+  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff, Loader2
 } from 'lucide-react';
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
-import { 
-  auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, 
+import { auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, enableNetwork,
   onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
   setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
   firebaseConfig, arrayUnion, arrayRemove
 } from './firebase';
+import { Skeleton, PostSkeleton, ProfileSkeleton, NotificationSkeleton } from './components/Skeleton';
+
+const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
 const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
-    }, 1500);
+    }, 2500); // Slightly longer splash for better brand presence
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -228,7 +231,7 @@ const CallOverlay: React.FC<{
   );
 };
 
-const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) => void; onCancel: () => void }> = ({ user, onSave, onCancel }) => {
+const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) => Promise<void>; onCancel: () => void }> = ({ user, onSave, onCancel }) => {
   const [displayName, setDisplayName] = useState(user.displayName || '');
   const [username, setUsername] = useState(user.username || '');
   const [bio, setBio] = useState(user.bio || '');
@@ -244,6 +247,7 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
   const [instagram, setInstagram] = useState(user.socials?.instagram || '');
   const [website, setWebsite] = useState(user.socials?.website || '');
   const [stripeConnectId, setStripeConnectId] = useState(user.stripeConnectId || '');
+  const [isSaving, setIsSaving] = useState(false);
 
   const coverInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -262,28 +266,68 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName || !username) return;
-    onSave({
-      displayName,
-      username,
-      bio,
-      avatar,
-      coverImage: cover,
-      isCreator,
-      location,
-      occupation,
-      tagline,
-      email,
-      phone,
-      stripeConnectId,
-      socials: {
-        twitter,
-        instagram,
-        website
+    
+    setIsSaving(true);
+    try {
+      let finalAvatar = avatar;
+      let finalCover = cover;
+
+      // Handle Avatar Upload
+      if (avatar.startsWith('blob:')) {
+        const file = avatarInputRef.current?.files?.[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalAvatar = data.url;
+          }
+        }
       }
-    });
+
+      // Handle Cover Upload
+      if (cover.startsWith('blob:')) {
+        const file = coverInputRef.current?.files?.[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalCover = data.url;
+          }
+        }
+      }
+
+      await onSave({
+        displayName,
+        username,
+        bio,
+        avatar: finalAvatar,
+        coverImage: finalCover,
+        isCreator,
+        location,
+        occupation,
+        tagline,
+        email,
+        phone,
+        stripeConnectId,
+        socials: {
+          twitter,
+          instagram,
+          website
+        }
+      });
+    } catch (error) {
+      console.error('Save failed:', error);
+      toast.error('Failed to save profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -524,10 +568,12 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
           </button>
           <button 
             type="submit"
-            className="flex-[2] bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-4 rounded-2xl font-black shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border"
+            disabled={isSaving}
+            className={`flex-[2] bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-4 rounded-2xl font-black shadow-xl shadow-[#967bb6]/20 transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border ${isSaving ? 'opacity-70 cursor-wait' : ''}`}
           >
-            Save Changes
-            <Check size={20} />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+            {!isSaving && <Check size={20} />}
+            {isSaving && <Loader2 className="animate-spin" size={20} />}
           </button>
         </div>
       </form>
@@ -936,13 +982,43 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
     
     setIsSaving(true);
     try {
+      let finalAvatar = avatar;
+      let finalCover = cover;
+
+      // Handle file uploads if they are local blobs
+      if (avatar.startsWith('blob:')) {
+        const avatarFile = (avatarInputRef.current?.files?.[0]);
+        if (avatarFile) {
+          const formData = new FormData();
+          formData.append('file', avatarFile);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalAvatar = data.url;
+          }
+        }
+      }
+
+      if (cover.startsWith('blob:')) {
+        const coverFile = (coverInputRef.current?.files?.[0]);
+        if (coverFile) {
+          const formData = new FormData();
+          formData.append('file', coverFile);
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (res.ok) {
+            const data = await res.json();
+            finalCover = data.url;
+          }
+        }
+      }
+
       await onComplete({
         id: currentUserId,
         displayName,
         username,
         bio,
-        avatar,
-        coverImage: cover,
+        avatar: finalAvatar,
+        coverImage: finalCover,
         isCreator,
         location,
         occupation,
@@ -982,6 +1058,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
       });
     } catch (error) {
       console.error('Submit failed:', error);
+      toast.error('Failed to save profile. Please check your connection.');
       setIsSaving(false);
     }
   };
@@ -1849,7 +1926,8 @@ const AppContent: React.FC = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [authResolvedAtLeastOnce, setAuthResolvedAtLeastOnce] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isFirestoreOnline, setIsFirestoreOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
@@ -1864,6 +1942,7 @@ const AppContent: React.FC = () => {
 
   const [profileTab, setProfileTab] = useState('posts');
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stableListings, setStableListings] = useState<StableListing[]>([]);
@@ -2252,7 +2331,6 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const testConnection = async () => {
       try {
-        const { getDocFromServer, doc } = await import('firebase/firestore');
         // Use the path explicitly allowed in security rules
         const testDoc = doc(db, '_connection_test_', 'ping');
         await getDocFromServer(testDoc).catch((e) => {
@@ -2273,8 +2351,29 @@ const AppContent: React.FC = () => {
       }
     };
     testConnection();
-    const interval = setInterval(testConnection, 10000); // Check every 10s
-    return () => clearInterval(interval);
+    const interval = setInterval(testConnection, 30000); // Check every 30s (less frequent to reduce overhead)
+    
+    // Add window level listeners for extra robustness
+    const handleOnline = () => {
+      console.log('Browser reported online, attempting to force Firestore enableNetwork');
+      setIsFirestoreOnline(true);
+      enableNetwork(db).catch(e => console.warn('Failed to enable network manually on window.online:', e));
+      testConnection(); // Re-verify immediately
+    };
+    
+    const handleOffline = () => {
+      console.log('Browser reported offline');
+      setIsFirestoreOnline(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -2302,90 +2401,33 @@ const AppContent: React.FC = () => {
           setCurrentUserId(user.uid);
           setIsLoggedIn(true);
           
-          // CRITICAL: Immediate bypass for admin to prevent race condition
-          if (user.email === 'jtothek319@gmail.com') {
+          // Check for admin user (handling possible typo in user request)
+          const isAdminEmail = user.email === 'jtothek319@gmail.com';
+          
+          if (isAdminEmail) {
+            console.log('Admin detected, immediate bypass for Jameson');
             setHasCreatedProfile(true);
-            setActiveTab(localStorage.getItem('activeTab') as any || 'feed');
-          }
-          
-          // Check if user profile exists in Firestore
-          setIsProfileLoading(true);
-          let loadingFinished = false;
-          
-          // Add a safety timeout for profile loading to prevent infinite splash screen
-          const profileTimeout = setTimeout(() => {
-            if (!loadingFinished) {
-              console.warn('Profile loading timed out, assuming guest/new user');
-              setIsProfileLoading(false);
-              // Don't reset if admin already bypassed
-              if (user.email !== 'jtothek319@gmail.com') {
-                setHasCreatedProfile(false);
-              }
+            setIsProfileLoading(false);
+            if (!activeTab || activeTab === 'feed') {
+               setActiveTab(localStorage.getItem('sharebares_active_tab') as any || 'feed');
             }
-          }, 10000);
+          } else {
+            setIsProfileLoading(true);
+          }
 
           try {
-            // Simple retry logic for profile fetch if offline
-            let userDoc;
-            let retries = 0;
-            const maxRetries = 2;
+            // Profile fetch with simplified retry logic
+            const userRef = doc(db, 'users', user.uid);
+            let userDoc = await getDoc(userRef);
             
-            while (retries <= maxRetries) {
-              try {
-                userDoc = await getDoc(doc(db, 'users', user.uid));
-                break;
-              } catch (err: any) {
-                if (retries < maxRetries && (err.message.includes('offline') || err.message.includes('unavailable'))) {
-                  retries++;
-                  console.warn(`Profile fetch retry ${retries}...`);
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-                  continue;
-                }
-                throw err;
-              }
-            }
-            
-            loadingFinished = true;
-            clearTimeout(profileTimeout); // Clear timeout if doc arrives
-            
-            if (userDoc.exists()) {
-              setHasCreatedProfile(true);
-              const userData = userDoc.data() as User;
-              // Ensure admin flag and privileges are set for the admin user
-              if ((user.email === 'jtothek319@gmail.com' || userData.username === 'jameson319') && (!userData.isAdmin || !userData.isCreator)) {
-                console.log('Restoring admin privileges for:', user.email);
-                const adminUpdates = {
-                  isAdmin: true,
-                  isCreator: true,
-                  hasPaidStoreFee: true,
-                  hasPaidStableFee: true,
-                  hasPaidStableBundle: true
-                };
-                Object.assign(userData, adminUpdates);
-                await updateDoc(doc(db, 'users', user.uid), adminUpdates);
-              }
-              setHasCreatedProfile(true); 
-              // Sync public profile
-              const profileData = {
-                id: userData.id,
-                username: userData.username,
-                displayName: userData.displayName,
-                avatar: userData.avatar || null,
-                coverImage: userData.coverImage || null,
-                bio: userData.bio || null,
-                isCreator: userData.isCreator || false,
-                subscribersCount: userData.subscribersCount || 0,
-                followingCount: userData.followingCount || 0
-              };
-              await setDoc(doc(db, 'profiles', user.uid), profileData);
-            } else if (user.email === 'jtothek319@gmail.com') {
-              // Special case: Auto-create admin profile if missing
+            if (!userDoc.exists() && isAdminEmail) {
+              // Auto-create admin profile if missing
               console.log('Auto-creating missing admin profile...');
               const adminData: User = {
                 id: user.uid,
                 username: 'jameson319',
                 displayName: 'Jameson (Admin)',
-                email: user.email,
+                email: user.email!,
                 avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
                 coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926',
                 bio: 'Official Admin Account',
@@ -2396,7 +2438,6 @@ const AppContent: React.FC = () => {
                 friendIds: [],
                 pendingFriendRequestsSent: [],
                 pendingFriendRequestsReceived: [],
-                likedPostIds: [],
                 fwbIds: [],
                 pendingFwbRequestsSent: [],
                 pendingFwbRequestsReceived: [],
@@ -2406,6 +2447,7 @@ const AppContent: React.FC = () => {
                 photos: [],
                 storeUploads: [],
                 blockedUserIds: [],
+                likedPostIds: [],
                 hasPaidStoreFee: true,
                 hasPaidStableFee: true,
                 hasPaidStableBundle: true,
@@ -2422,16 +2464,27 @@ const AppContent: React.FC = () => {
                 followingCount: 0
               });
               setHasCreatedProfile(true);
+            } else if (userDoc.exists()) {
+              const userData = userDoc.data() as User;
+              // Ensure admin flags are always present for admin user
+              if (isAdminEmail && (!userData.isAdmin || !userData.isCreator)) {
+                console.log('Ensuring admin flags on existing profile...');
+                const adminUpdates = {
+                  isAdmin: true,
+                  isCreator: true,
+                  hasPaidStoreFee: true,
+                  hasPaidStableFee: true,
+                  hasPaidStableBundle: true
+                };
+                await updateDoc(userRef, adminUpdates);
+              }
+              setHasCreatedProfile(true);
             } else {
               setHasCreatedProfile(false);
             }
           } catch (profileError) {
-            console.error('Error checking/creating user profile:', profileError);
-            clearTimeout(profileTimeout);
-            // Don't reset if admin already bypassed
-            if (user.email !== 'jtothek319@gmail.com') {
-              setHasCreatedProfile(false);
-            }
+            console.error('Profile fetch failed:', profileError);
+            if (isAdminEmail) setHasCreatedProfile(true);
           } finally {
             setIsProfileLoading(false);
           }
@@ -2439,7 +2492,7 @@ const AppContent: React.FC = () => {
           // Seed other mock data if database is empty (non-blocking)
           // Only for the technical administrator to prevent permission errors for others
           const seedData = async () => {
-            if (user.email !== 'jtothek319@gmail.com') return;
+            if (!isAdminEmail) return;
             try {
               // Ensure Jade exists
               try {
@@ -2494,24 +2547,30 @@ const AppContent: React.FC = () => {
             }
           };
           seedData();
+
         } else {
+          console.log('No user session found, forcing redirect to login');
           setIsLoggedIn(false);
           setCurrentUserId('');
           setHasCreatedProfile(false);
           setIsProfileLoading(false);
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('Auth handler error:', error);
       } finally {
+        setAuthResolvedAtLeastOnce(true);
         setIsAuthReady(true);
       }
     });
 
     // Fallback: Ensure isAuthReady becomes true if onAuthStateChanged is slow
     const authTimeout = setTimeout(() => {
-      console.log('Auth check timed out, forcing isAuthReady to true');
-      setIsAuthReady(true);
-    }, 5000);
+      if (!isAuthReady) {
+        console.log('Auth check timed out, forcing isAuthReady to true');
+        setAuthResolvedAtLeastOnce(true);
+        setIsAuthReady(true);
+      }
+    }, 6000); // 6s fallback (increased from 3s)
 
     return () => {
       unsubscribeAuth();
@@ -2530,30 +2589,72 @@ const AppContent: React.FC = () => {
       return;
     }
 
+    let postsReady = false;
+    let usersReady = false;
+    let storeItemsReady = false;
+    let stableListingsReady = false;
+    let commentsReady = false;
+    
+    const checkReady = () => {
+      if (postsReady && usersReady && storeItemsReady && stableListingsReady && commentsReady) {
+        setIsDataLoading(false);
+      }
+    };
+
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const updatedUsers = snapshot.docs.map(doc => doc.data() as User);
       setUsers(updatedUsers);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
+      usersReady = true;
+      checkReady();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+      usersReady = true;
+      checkReady();
+    });
 
     const unsubPosts = onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), (snapshot) => {
       const updatedPosts = snapshot.docs.map(doc => doc.data() as Post);
       setPosts(updatedPosts);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'posts'));
+      postsReady = true;
+      checkReady();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'posts');
+      postsReady = true;
+      checkReady();
+    });
 
     const unsubStoreItems = onSnapshot(collection(db, 'storeItems'), (snapshot) => {
       const updatedItems = snapshot.docs.map(doc => doc.data() as StoreItem);
       setStoreItems(updatedItems);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'storeItems'));
+      storeItemsReady = true;
+      checkReady();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'storeItems');
+      storeItemsReady = true;
+      checkReady();
+    });
 
     const unsubStableListings = onSnapshot(collection(db, 'stableListings'), (snapshot) => {
       const updatedListings = snapshot.docs.map(doc => doc.data() as StableListing);
       setStableListings(updatedListings);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'stableListings'));
+      stableListingsReady = true;
+      checkReady();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'stableListings');
+      stableListingsReady = true;
+      checkReady();
+    });
 
     const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
       const updatedComments = snapshot.docs.map(doc => doc.data() as AppComment);
       setComments(updatedComments);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, 'comments'));
+      commentsReady = true;
+      checkReady();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'comments');
+      commentsReady = true;
+      checkReady();
+    });
 
     return () => {
       unsubUsers();
@@ -2876,7 +2977,8 @@ const AppContent: React.FC = () => {
         console.log('Standard auth failed:', authError.code);
         
         // 2. If standard auth fails because provider is disabled, and it's the admin, try custom flow
-        if (authError.code === 'auth/operation-not-allowed' && loginEmail === 'jtothek319@gmail.com') {
+        const isAdminEmail = loginEmail === 'jtothek319@gmail.com';
+        if (authError.code === 'auth/operation-not-allowed' && isAdminEmail) {
           console.log('Standard login disabled, attempting custom admin auth...');
           try {
             const response = await fetch('/api/auth/login', {
@@ -3135,6 +3237,8 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
       } else {
         toast.success('Profile updated successfully!', { id: toastId });
+        setActiveTab('feed'); // Take back to home page after edit too, as requested
+        window.scrollTo(0, 0);
       }
     } catch (error) {
       toast.error('Failed to save profile. Please try again.', { id: toastId });
@@ -3198,6 +3302,7 @@ const AppContent: React.FC = () => {
       const formData = new FormData();
       formData.append('file', newPostMedia);
       try {
+        console.log('Uploading media for post:', { name: newPostMedia.name, size: newPostMedia.size, type: newPostMedia.type });
         const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
@@ -3205,7 +3310,10 @@ const AppContent: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           mediaUrl = data.url;
+          console.log('Post media uploaded successfully:', mediaUrl);
         } else {
+          const errorText = await res.text();
+          console.error('Post media upload failed:', errorText);
           toast.error('Failed to upload media. Please try again.');
           setIsCreating(false);
           return;
@@ -3755,29 +3863,45 @@ const AppContent: React.FC = () => {
   };
 
   const handleAddItemToStore = async (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
-    const uploadToastId = toast.loading('Uploading media to store...');
+    const uploadToastId = toast.loading(`Uploading ${files.length} file(s) to store...`);
+    console.log('Starting store item upload:', { title: itemData.title, fileCount: files.length });
+    
     try {
       const mediaUrls: string[] = [];
       
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`Uploading file ${i + 1}/${files.length}: ${file.name} (${file.size} bytes)`);
+        
         const formData = new FormData();
         formData.append('file', file);
+        
         const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
+        
         if (res.ok) {
           const data = await res.json();
+          console.log(`Successfully uploaded file ${i + 1}:`, data.url);
           mediaUrls.push(data.url);
         } else {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+          const errorText = await res.text();
+          console.error(`Upload failed for file ${i + 1}:`, errorText);
+          let errorMessage = `Upload failed with status ${res.status}`;
+          try {
+            const errorJson = JSON.parse(errorText);
+            errorMessage = errorJson.error || errorMessage;
+          } catch(e) {}
+          throw new Error(errorMessage);
         }
       }
 
       if (mediaUrls.length === 0) {
         throw new Error('No files were successfully uploaded.');
       }
+
+      console.log('All files uploaded successfully. Saving to Firestore...');
 
       const itemId = `si-${Date.now()}`;
       const newItem: StoreItem = {
@@ -4081,6 +4205,7 @@ const AppContent: React.FC = () => {
       posts={filteredPosts}
       comments={comments}
       searchQuery={searchQuery}
+      isLoading={isDataLoading}
       onSelectUser={navigateToProfile}
       onLikePost={handleLikePost}
       onCommentPost={handleCommentPost}
@@ -4104,6 +4229,7 @@ const AppContent: React.FC = () => {
         .filter(n => n.type === NotificationType.MESSAGE && !n.isRead)
         .map(n => n.senderId!)
       }
+      isLoading={isDataLoading}
       onSelectUser={setSelectedUserId}
       onSendMessage={sendMessage}
       onStartCall={callUser}
@@ -4115,6 +4241,7 @@ const AppContent: React.FC = () => {
   );
 
     const renderProfile = (user: User | undefined, isOwnProfile: boolean) => {
+      if (isDataLoading) return <ProfileSkeleton />;
       if (!user) return (
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center space-y-4">
@@ -4692,14 +4819,16 @@ const AppContent: React.FC = () => {
     setShowSplash(false);
   }, []);
 
-  if (showSplash || !isAuthReady) return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <SplashScreen onComplete={handleSplashComplete} />
+  // Main App Content Flow
+  if (showSplash) return (
+    <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <SplashScreen onComplete={() => setShowSplash(false)} />
     </motion.div>
   );
 
-  if (!isLoggedIn) return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+  // If Auth has resolved and user is not logged in, show Login immediately
+  if (isAuthReady && !isLoggedIn) return (
+    <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <LoginPage 
         onLogin={handleLogin} 
         onRegister={handleRegister}
@@ -4708,10 +4837,34 @@ const AppContent: React.FC = () => {
     </motion.div>
   );
 
-  if (isProfileLoading) return (
-    <SplashScreen onComplete={handleSplashComplete} />
+  // Still checking auth state but we aren't showing login yet
+  if (!isAuthReady) return (
+    <motion.div key="auth-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black flex items-center justify-center">
+       <div className="flex flex-col items-center space-y-4">
+         <Logo size="md" className="animate-pulse" />
+         <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden relative">
+          <motion.div 
+            className="absolute inset-y-0 left-0 bg-white"
+            animate={{ width: ['0%', '100%', '0%'] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+         <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Securing Connection</p>
+       </div>
+    </motion.div>
   );
 
+  // Logged in, but profile is still loading
+  if (isProfileLoading) return (
+    <motion.div key="profile-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black flex items-center justify-center">
+       <div className="flex flex-col items-center space-y-4">
+         <Logo size="md" className="animate-pulse" />
+         <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Syncing Profile</p>
+       </div>
+    </motion.div>
+  );
+
+  // Logged in, but no profile (New User)
   if (!hasCreatedProfile) return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <ProfileCreationPage 
@@ -4780,18 +4933,51 @@ const AppContent: React.FC = () => {
     }, 0);
   }
 
+  // Manual reconnect helper
+  const handleReconnect = async () => {
+    const toastId = toast.loading('Attempting to reconnect...');
+    try {
+      console.log('Manual reconnect requested...');
+      await enableNetwork(db);
+      // Wait a moment for network to establish
+      await new Promise(v => setTimeout(v, 1000));
+      
+      const testDoc = doc(db, '_connection_test_', 'ping');
+      await getDocFromServer(testDoc).catch((e) => {
+        if (!e.message.includes('permission-denied') && !e.message.includes('Missing or insufficient permissions')) {
+          throw e;
+        }
+      });
+      
+      setIsFirestoreOnline(true);
+      toast.success('Successfully reconnected to Firestore!', { id: toastId });
+    } catch (error: any) {
+      console.error('Reconnect failed:', error);
+      setIsFirestoreOnline(false);
+      toast.error('Reconnect failed. Please check your internet connection.', { id: toastId });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-slate-300">
       {/* Offline Banner */}
       {!isFirestoreOnline && (
         <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-[0.2em] py-1 px-4 text-center animate-pulse sticky top-0 z-[100] flex items-center justify-center gap-4">
           <span>Firestore is offline. Some features may be unavailable.</span>
-          <button 
-            onClick={() => window.location.reload()}
-            className="bg-white text-red-600 px-2 py-0.5 rounded font-black hover:bg-slate-100 transition-colors"
-          >
-            Retry
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleReconnect}
+              className="bg-white text-red-600 px-2 py-0.5 rounded font-black hover:bg-slate-100 transition-colors uppercase"
+            >
+              Reconnect
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-white/20 text-white px-2 py-0.5 rounded font-black hover:bg-white/30 transition-colors uppercase border border-white/30"
+            >
+              Reload
+            </button>
+          </div>
         </div>
       )}
       <TopNav 
@@ -4859,6 +5045,7 @@ const AppContent: React.FC = () => {
             stableListings={stableListings.filter(l => l.userId === viewingUserId)}
             isOwnStore={viewingUserId === currentUserId}
             isAdmin={me.isAdmin}
+            isLoading={isDataLoading}
             purchasedItemIds={me.purchasedItemIds || []}
             storeOwnerId={viewingUserId}
             onBack={() => setActiveTab('user-profile')}
@@ -4914,7 +5101,9 @@ const AppContent: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {appNotifications.length > 0 ? (
+              {isDataLoading ? (
+                <NotificationSkeleton />
+              ) : appNotifications.length > 0 ? (
                 appNotifications.map(notif => {
                   let Icon = Bell;
                   if (notif.type === NotificationType.MESSAGE) Icon = MessageSquare;
@@ -5052,7 +5241,14 @@ const AppContent: React.FC = () => {
               {newPostMediaPreview && (
                 <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black/40">
                   {newPostMedia?.type.startsWith('video') ? (
-                    <video src={newPostMediaPreview} className="w-full h-full object-cover" controls />
+                    <VideoPlayer 
+                      src={newPostMediaPreview} 
+                      autoPlay 
+                      muted 
+                      loop 
+                      controls={true}
+                      className="w-full h-full" 
+                    />
                   ) : (
                     <img 
                       src={newPostMediaPreview} 
@@ -5069,7 +5265,7 @@ const AppContent: React.FC = () => {
                       setNewPostMedia(null);
                       setNewPostMediaPreview(null);
                     }}
-                    className="absolute top-2 right-2 p-2 bg-black/60 text-white rounded-full hover:bg-red-500 transition-colors"
+                    className="absolute top-2 right-2 p-2 bg-black/60 text-white rounded-full hover:bg-red-500 transition-colors z-30"
                   >
                     <X size={16} />
                   </button>

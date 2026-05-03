@@ -5,6 +5,7 @@ import PostCard from './PostCard';
 import AdPlaceholder from './AdPlaceholder';
 import { Star, TrendingUp, Users, ChevronRight, Sparkles, Flame } from 'lucide-react';
 import { APP_LOGO_URL } from '../constants';
+import { PostSkeleton } from './Skeleton';
 
 interface HomePageProps {
   me: User;
@@ -12,6 +13,7 @@ interface HomePageProps {
   posts: Post[];
   comments: AppComment[];
   searchQuery: string;
+  isLoading?: boolean;
   onSelectUser: (userId: string) => void;
   onLikePost?: (post: Post) => void;
   onCommentPost?: (post: Post, commenterId: string, text: string) => void;
@@ -30,6 +32,7 @@ const HomePage: React.FC<HomePageProps> = ({
   posts, 
   comments,
   searchQuery, 
+  isLoading,
   onSelectUser, 
   onLikePost,
   onCommentPost,
@@ -243,7 +246,13 @@ const HomePage: React.FC<HomePageProps> = ({
             <h2 className="text-sm font-black uppercase tracking-widest text-white">Recent Activity</h2>
           </div>
           
-          {feedPosts.length > 0 ? (
+          {isLoading ? (
+            <div className="space-y-6">
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
+            </div>
+          ) : feedPosts.length > 0 ? (
             <div className="space-y-6">
               {feedPosts.map((post, index) => {
                 const author = users.find(u => u.id === post.userId);

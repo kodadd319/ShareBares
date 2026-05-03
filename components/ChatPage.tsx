@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '../types';
+import { ProfileSkeleton, MessageSkeleton } from './Skeleton';
 import { APP_LOGO_URL } from '../constants';
 import { 
   Plus, Send, MessageSquare, Search, MoreVertical, 
@@ -14,6 +15,7 @@ interface ChatPageProps {
   chatMessages: Record<string, Message[]>;
   selectedUserId: string | null;
   notifications: string[];
+  isLoading?: boolean;
   onSelectUser: (userId: string | null) => void;
   onSendMessage: (text: string) => void;
   onStartCall: (userId: string, type: 'voice' | 'video') => void;
@@ -29,6 +31,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
   chatMessages, 
   selectedUserId, 
   notifications,
+  isLoading,
   onSelectUser, 
   onSendMessage,
   onStartCall,
@@ -146,7 +149,13 @@ const ChatPage: React.FC<ChatPageProps> = ({
         </div>
 
         <div className="flex-grow overflow-y-auto space-y-1 p-2 scrollbar-hide">
-          {filteredUsers.map(user => {
+          {isLoading ? (
+            <div className="space-y-2 p-2">
+              {[...Array(6)].map((_, i) => (
+                <ProfileSkeleton key={i} />
+              ))}
+            </div>
+          ) : filteredUsers.map(user => {
             const lastMsg = chatMessages[user.id]?.[chatMessages[user.id].length - 1];
             const isActive = selectedUserId === user.id;
             const hasUnread = notifications.includes(user.id);
@@ -291,61 +300,67 @@ const ChatPage: React.FC<ChatPageProps> = ({
             
             {/* Messages List */}
             <div className="flex-grow overflow-y-auto p-4 md:p-8 space-y-6 scrollbar-hide">
-              <div className="flex justify-center mb-8">
-                <div className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Today</span>
-                </div>
-              </div>
-              
-              {activeMessages.map((msg, idx) => {
-                const isMe = msg.senderId === me.id;
-                const showAvatar = idx === 0 || activeMessages[idx-1].senderId !== msg.senderId;
-                
-                return (
-                  <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end space-x-2`}>
-                    {!isMe && (
-                      <div className="w-8 h-8 shrink-0 mb-1 cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
-                        {showAvatar ? (
-                          <img 
-                            src={selectedUser.avatar || APP_LOGO_URL} 
-                            className="w-full h-full rounded-lg object-cover border border-white/10" 
-                            alt="" 
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              if (target.src !== APP_LOGO_URL) {
-                                target.src = APP_LOGO_URL;
-                              }
-                            }}
-                          />
-                        ) : <div className="w-8" />}
-                      </div>
-                    )}
-                    
-                    <div className={`group relative max-w-[85%] md:max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
-                      <div className={`p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-xl break-words overflow-hidden ${
-                        isMe 
-                          ? 'bg-gradient-to-br from-[#967bb6] to-[#6b46c1] text-white rounded-br-none chrome-border' 
-                          : 'bg-white/5 text-slate-100 border border-white/10 rounded-bl-none'
-                      }`}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                      </div>
-                      
-                      <div className={`flex items-center mt-1.5 space-x-2 px-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {isMe && (
-                          msg.isRead ? (
-                            <CheckCheck size={12} className="text-[#967bb6]" />
-                          ) : (
-                            <Check size={12} className="text-slate-500" />
-                          )
-                        )}
-                      </div>
+              {isLoading ? (
+                <MessageSkeleton />
+              ) : (
+                <>
+                  <div className="flex justify-center mb-8">
+                    <div className="bg-white/5 px-4 py-1.5 rounded-full border border-white/5">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Today</span>
                     </div>
                   </div>
-                );
-              })}
+                  
+                  {activeMessages.map((msg, idx) => {
+                    const isMe = msg.senderId === me.id;
+                    const showAvatar = idx === 0 || activeMessages[idx-1].senderId !== msg.senderId;
+                    
+                    return (
+                      <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} items-end space-x-2`}>
+                        {!isMe && (
+                          <div className="w-8 h-8 shrink-0 mb-1 cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
+                            {showAvatar ? (
+                              <img 
+                                src={selectedUser.avatar || APP_LOGO_URL} 
+                                className="w-full h-full rounded-lg object-cover border border-white/10" 
+                                alt="" 
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  if (target.src !== APP_LOGO_URL) {
+                                    target.src = APP_LOGO_URL;
+                                  }
+                                }}
+                              />
+                            ) : <div className="w-8" />}
+                          </div>
+                        )}
+                        
+                        <div className={`group relative max-w-[85%] md:max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                          <div className={`p-3 md:p-4 rounded-[1.5rem] md:rounded-[2rem] shadow-xl break-words overflow-hidden ${
+                            isMe 
+                              ? 'bg-gradient-to-br from-[#967bb6] to-[#6b46c1] text-white rounded-br-none chrome-border' 
+                              : 'bg-white/5 text-slate-100 border border-white/10 rounded-bl-none'
+                          }`}>
+                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                          </div>
+                          
+                          <div className={`flex items-center mt-1.5 space-x-2 px-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isMe && (
+                              msg.isRead ? (
+                                <CheckCheck size={12} className="text-[#967bb6]" />
+                              ) : (
+                                <Check size={12} className="text-slate-500" />
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
               
               {isTyping && (
                 <div className="flex justify-start items-end space-x-2">

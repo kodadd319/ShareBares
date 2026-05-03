@@ -2,12 +2,14 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, DollarSign, Edit3, Search, X, Palette } from 'lucide-react';
 import { User, StoreItem } from '../types';
+import { StoreItemSkeleton } from './Skeleton';
 import { toast } from 'sonner';
 import { APP_LOGO_URL } from '../constants';
 
 interface StoreManagementPageProps {
   user: User;
   items: StoreItem[];
+  isLoading?: boolean;
   onAddItem: (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onUpdateItem: (itemId: string, updates: Partial<StoreItem>) => void;
   onDeleteItem: (itemId: string) => void;
@@ -18,6 +20,7 @@ interface StoreManagementPageProps {
 const StoreManagementPage: React.FC<StoreManagementPageProps> = ({ 
   user, 
   items,
+  isLoading,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
@@ -53,17 +56,20 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       if (type === 'video') {
         const videoFile = selectedFiles[0];
         if (videoFile && videoFile.type.startsWith('video')) {
-          // Check duration
+          setFiles([videoFile]);
+          
+          // Background duration check
           const video = document.createElement('video');
           video.preload = 'metadata';
           video.onloadedmetadata = () => {
             window.URL.revokeObjectURL(video.src);
-            if (video.duration > 480) { // 8 minutes = 480 seconds
-              setUploadError('Video must be 8 minutes or less.');
-              setFiles([]);
-            } else {
-              setFiles([videoFile]);
+            if (video.duration > 480) {
+              setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
             }
+          };
+          video.onerror = () => {
+             console.warn('Could not read video metadata for duration check');
+             window.URL.revokeObjectURL(video.src);
           };
           video.src = URL.createObjectURL(videoFile);
         } else {

@@ -5,34 +5,47 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or,
-  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove, initializeFirestore
+  enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove, initializeFirestore, enableNetwork, disableNetwork
 } from 'firebase/firestore';
 
 // Import the Firebase configuration
 import firebaseConfig from './firebase-applet-config.json';
-export { firebaseConfig };
 
 // Initialize Firebase SDK
 const app = initializeApp(firebaseConfig);
-const databaseId = (firebaseConfig as any).firestoreDatabaseId || '(default)';
-console.log('Initializing Firestore with databaseId:', databaseId);
+const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId;
 
-// Initialize Firestore with specific databaseId and longPolling for better compatibility
-const configWithDb = firebaseConfig as any;
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true, // Force long polling to bypass potential proxy/iframe WebSocket issues
-}, configWithDb.firestoreDatabaseId || undefined);
+// Initialize Firestore with specific settings for better compatibility in iframe environments
+export const db = firestoreDbId 
+  ? initializeFirestore(app, { experimentalForceLongPolling: true }, firestoreDbId)
+  : initializeFirestore(app, { experimentalForceLongPolling: true });
 
-// Enable persistence
+// Enable persistence for better offline resilience once connected
 if (typeof window !== 'undefined') {
-  // Use standard indexedDB persistence (single tab) which is usually more robust for simple apps
-  enableIndexedDbPersistence(db).catch((err) => {
-    if (err.code === 'failed-precondition') {
-      console.warn('Firestore persistence failed-precondition: Tab already open');
-    } else if (err.code === 'unimplemented') {
-      console.warn('Firestore persistence unimplemented');
+  // Use non-blocking persistence initialization
+  const tryPersistence = async () => {
+    try {
+      await enableMultiTabIndexedDbPersistence(db);
+      console.log('Firestore multi-tab persistence enabled');
+    } catch (err: any) {
+      if (err.code === 'failed-precondition') {
+        // Multiple tabs open, persistence can only be enabled in one tab at a a time.
+        console.warn('Firestore persistence not enabled: Multiple tabs open');
+      } else if (err.code === 'unimplemented') {
+        // The current browser does not support all of the features required to enable persistence
+        console.warn('Firestore persistence not supported by browser');
+      } else {
+        // Fallback to single tab persistence
+        try {
+          await enableIndexedDbPersistence(db);
+          console.log('Firestore single-tab persistence enabled');
+        } catch (innerErr) {
+          console.warn('Firestore persistence initialization failed completely:', innerErr);
+        }
+      }
     }
-  });
+  };
+  tryPersistence();
 }
 
 export const auth = getAuth(app);
@@ -110,42 +123,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       return;
     }
   } else {
-    console.error('Firestore Error: ', JSON.stringify(errInfo));
-    // Also don't throw for transient connection errors in readers to avoid crashing
-    if ((errMessage.includes('unavailable') || errMessage.includes('offline')) && 
-        (operationType === OperationType.LIST || operationType === OperationType.GET)) {
-      console.warn('Suppressing throw for transient Firestore connectivity error');
-      return;
+    // Only log connectivity errors as warnings but DO throw them so callers can handle retries/UI
+    if (errMessage.includes('unavailable') || errMessage.includes('offline')) {
+      console.warn('Firestore connectivity issue (transient):', errMessage);
     }
+    console.error('Firestore Error: ', JSON.stringify(errInfo));
   }
   
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Connection test
-async function testConnection() {
-  try {
-    const testDoc = doc(db, '_connection_test_', 'ping');
-    await getDocFromServer(testDoc).catch((e) => {
-      // Permission denied is expected for this doc but indicates server reachability
-      if (e.message.includes('permission-denied') || e.message.includes('Missing or insufficient permissions')) {
-        return;
-      }
-      throw e;
-    });
-    console.log("Firestore connection test successful.");
-  } catch (error: any) {
-    const errMessage = error.message || String(error);
-    if (errMessage.includes('the client is offline') || errMessage.includes('unavailable') || errMessage.includes('failed-precondition')) {
-      // Use warn instead of error to avoid triggering 'error' state in UI logs if it's transient
-      console.warn("Firestore connection check:", errMessage);
-    }
-  }
-}
-testConnection();
-
 export { 
-  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
-  arrayUnion, arrayRemove
+  collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or, getDocFromServer,
+  enableNetwork, disableNetwork, setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
+  arrayUnion, arrayRemove, firebaseConfig
 };
