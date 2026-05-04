@@ -41,7 +41,7 @@ import {
   HelpCircle, LogOut, ChevronRight, ChevronDown, MapPin, Briefcase, Globe, Phone, Mail,
   Instagram, Twitter, ShoppingBag, Trash2, MessageCircle, Video, CreditCard,
   UserPlus, UserCheck, UserX, Users, Flame, Ban, Dices, ExternalLink, Palette, DollarSign,
-  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff, Loader2
+  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff, Loader2, Play
 } from 'lucide-react';
 import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
 import { auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, enableNetwork,
@@ -1931,6 +1931,9 @@ const AppContent: React.FC = () => {
   const [isFirestoreOnline, setIsFirestoreOnline] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
+  const [isSessionAuthenticated, setIsSessionAuthenticated] = useState(() => {
+    return sessionStorage.getItem('sharebares_session_auth') === 'true';
+  });
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('sharebares_active_tab') || 'feed';
   });
@@ -1952,6 +1955,7 @@ const AppContent: React.FC = () => {
   const [newPostMedia, setNewPostMedia] = useState<File | null>(null);
   const [newPostMediaPreview, setNewPostMediaPreview] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const postFileInputRef = useRef<HTMLInputElement>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -2383,6 +2387,8 @@ const AppContent: React.FC = () => {
     getGoogleRedirectResult().then((result) => {
       if (result?.user) {
         console.log('Redirect login successful:', result.user.email);
+        sessionStorage.setItem('sharebares_session_auth', 'true');
+        setIsSessionAuthenticated(true);
         setIsLoggedIn(true);
         toast.success('Successfully logged in with Google!');
         setActiveTab('feed');
@@ -2399,18 +2405,14 @@ const AppContent: React.FC = () => {
       try {
         if (user) {
           setCurrentUserId(user.uid);
-          setIsLoggedIn(true);
           
-          // Check for admin user (handling possible typo in user request)
+          // Check for admin user
           const isAdminEmail = user.email === 'jtothek319@gmail.com';
           
           if (isAdminEmail) {
-            console.log('Admin detected, immediate bypass for Jameson');
+            console.log('Admin detected, prepared for session authorization');
             setHasCreatedProfile(true);
             setIsProfileLoading(false);
-            if (!activeTab || activeTab === 'feed') {
-               setActiveTab(localStorage.getItem('sharebares_active_tab') as any || 'feed');
-            }
           } else {
             setIsProfileLoading(true);
           }
@@ -2969,6 +2971,8 @@ const AppContent: React.FC = () => {
       // 1. Try standard Firebase Auth first (most reliable)
       try {
         await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
+        sessionStorage.setItem('sharebares_session_auth', 'true');
+        setIsSessionAuthenticated(true);
         setIsLoggedIn(true);
         toast.success('Welcome back!', { id: toastId });
         setActiveTab('feed');
@@ -3120,6 +3124,8 @@ const AppContent: React.FC = () => {
             subscribersCount: 0,
             followingCount: 0
           });
+          sessionStorage.setItem('sharebares_session_auth', 'true');
+          setIsSessionAuthenticated(true);
           setIsLoggedIn(true);
           toast.success('Account created successfully!', { id: toastId });
         }
@@ -3165,6 +3171,8 @@ const AppContent: React.FC = () => {
         } else {
           toastId = toast.loading('Opening Google login...');
           await loginWithGoogle();
+          sessionStorage.setItem('sharebares_session_auth', 'true');
+          setIsSessionAuthenticated(true);
           setIsLoggedIn(true);
           toast.success('Successfully logged in with Google!', { id: toastId });
           setActiveTab('feed');
@@ -3199,6 +3207,8 @@ const AppContent: React.FC = () => {
   const handleLogout = async () => {
     try {
       await firebaseLogout();
+      sessionStorage.removeItem('sharebares_session_auth');
+      setIsSessionAuthenticated(false);
       setIsLoggedIn(false);
       setCurrentUserId('');
       // Keep activeTab in localStorage so it persists when they log back in
@@ -3293,10 +3303,16 @@ const AppContent: React.FC = () => {
   };
 
   const handlePost = async () => {
-    if (!newPostContent.trim() && !newPostMedia) return;
+    if ((!newPostContent.trim() && !newPostMedia) || isPosting) {
+      if (!isPosting) {
+        toast.error('Please enter some text or select an image/video for your post.');
+      }
+      return;
+    }
     
-    setIsCreating(true);
-    let mediaUrl = undefined;
+    setIsPosting(true);
+    console.log('Post creation sequence started...');
+    let mediaUrl: string | undefined = undefined;
     
     if (newPostMedia) {
       const formData = new FormData();
@@ -3315,18 +3331,20 @@ const AppContent: React.FC = () => {
           const errorText = await res.text();
           console.error('Post media upload failed:', errorText);
           toast.error('Failed to upload media. Please try again.');
-          setIsCreating(false);
+          setIsPosting(false);
           return;
         }
       } catch (err) {
         console.error('Failed to upload media:', err);
         toast.error('Error uploading media.');
-        setIsCreating(false);
+        setIsPosting(false);
         return;
       }
     }
     
     const postId = `post-${Date.now()}`;
+    const authorDoc = users.find(u => u.id === currentUserId);
+    
     const newPost: Post = {
       id: postId,
       userId: currentUserId,
@@ -3339,25 +3357,27 @@ const AppContent: React.FC = () => {
       mediaUrl: mediaUrl,
       mediaType: mediaUrl ? (
         (newPostMedia?.type.startsWith('video') || 
-         mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi)$/i) || 
-         mediaUrl.includes('video') ||
-         mediaUrl.startsWith('blob:') ||
-         mediaUrl.startsWith('data:video/')) ? 'video' : 'image'
+         mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || 
+         mediaUrl.toLowerCase().includes('video')) ? 'video' : 'image'
       ) : undefined,
     };
     
     try {
+      console.log('Creating post in Firestore:', postId, 'for user:', currentUserId);
       await setDoc(doc(db, 'posts', postId), newPost);
+      console.log('Post document created successfully');
       setNewPostContent('');
       setNewPostVisibility(PostVisibility.PUBLIC);
       setNewPostMedia(null);
       setNewPostMediaPreview(null);
+      setIsPosting(false);
       setIsCreating(false);
       toast.success('Post created successfully!');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Post creation error:', error);
       handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
-      setIsCreating(false);
-      toast.error('Failed to create post. Please try again.');
+      setIsPosting(false);
+      toast.error(`Failed to create post: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -3771,7 +3791,7 @@ const AppContent: React.FC = () => {
       const newPhoto: MediaItem = {
         id: photoId,
         url: data.url,
-        type: 'image',
+        type: file.type.startsWith('video') ? 'video' : 'image',
         isNSFW: false,
         createdAt: new Date().toISOString()
       };
@@ -3786,12 +3806,30 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleDeletePhoto = async (photoId: string) => {
-    try {
-      await updateDoc(doc(db, 'users', currentUserId), { photos: me.photos.filter(p => p.id !== photoId) });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
+  const handleDeletePhoto = async (photoId: string, targetUserId?: string) => {
+    const userIdToUpdate = targetUserId || currentUserId;
+    const userToUpdate = users.find(u => u.id === userIdToUpdate) || (userIdToUpdate === currentUserId ? me : undefined);
+    
+    if (!userToUpdate) {
+      toast.error('User not found for deletion');
+      return;
     }
+
+    setConfirmAction({
+      message: 'Are you sure you want to delete this media? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          const updatedPhotos = userToUpdate.photos.filter(p => p.id !== photoId);
+          await updateDoc(doc(db, 'users', userIdToUpdate), { 
+            photos: updatedPhotos 
+          });
+          setConfirmAction(null);
+          toast.success('Media deleted successfully');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${userIdToUpdate}`);
+        }
+      }
+    });
   };
 
   const handleDeletePost = async (postId: string) => {
@@ -3810,11 +3848,18 @@ const AppContent: React.FC = () => {
   };
 
   const handleDeleteStoreItem = async (itemId: string) => {
-    try {
-      await deleteDoc(doc(db, 'storeItems', itemId));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `storeItems/${itemId}`);
-    }
+    setConfirmAction({
+      message: 'Are you sure you want to delete this store item? This cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'storeItems', itemId));
+          setConfirmAction(null);
+          toast.success('Store item deleted successfully');
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, `storeItems/${itemId}`);
+        }
+      }
+    });
   };
 
   const handleUpdateStoreItem = async (itemId: string, updates: Partial<StoreItem>) => {
@@ -3904,10 +3949,15 @@ const AppContent: React.FC = () => {
       console.log('All files uploaded successfully. Saving to Firestore...');
 
       const itemId = `si-${Date.now()}`;
+      
+      // Determine if this item contains video
+      const isVideo = itemData.type === 'video' || files.some(f => f.type.startsWith('video'));
+      
       const newItem: StoreItem = {
         id: itemId,
         userId: currentUserId,
         ...itemData,
+        type: isVideo ? 'video' : itemData.type,
         thumbnailUrl: mediaUrls[0], // Use first uploaded item as thumb
         mediaUrls: mediaUrls,
         createdAt: new Date().toISOString()
@@ -3915,13 +3965,16 @@ const AppContent: React.FC = () => {
       
       await setDoc(doc(db, 'storeItems', itemId), newItem);
       
-      const newMediaItems: MediaItem[] = mediaUrls.map((url, index) => ({
-        id: `${itemId}-${index}`,
-        url,
-        type: itemData.type === 'video' ? 'video' : 'image',
-        createdAt: new Date().toISOString(),
-        isNSFW: true
-      }));
+      const newMediaItems: MediaItem[] = mediaUrls.map((url, index) => {
+        const file = files[index];
+        return {
+          id: `${itemId}-${index}`,
+          url,
+          type: (file?.type.startsWith('video') || isVideo) ? 'video' : 'image',
+          createdAt: new Date().toISOString(),
+          isNSFW: true
+        };
+      });
       
       const updatedStoreUploads = [...(me.storeUploads || []), ...newMediaItems];
       await updateDoc(doc(db, 'users', currentUserId), { 
@@ -3981,6 +4034,8 @@ const AppContent: React.FC = () => {
 
       if (postToStore) {
         const itemId = `si-stable-${Date.now()}`;
+        const isVideo = photoFiles.some(f => f.type.startsWith('video'));
+        
         const newStoreItem: StoreItem = {
           id: itemId,
           userId: currentUserId,
@@ -3989,7 +4044,7 @@ const AppContent: React.FC = () => {
           price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
           thumbnailUrl: newListing.avatarUrl,
           mediaUrls: newListing.photos,
-          type: 'other',
+          type: isVideo ? 'video' : 'other',
           createdAt: new Date().toISOString()
         };
         await setDoc(doc(db, 'storeItems', itemId), newStoreItem);
@@ -4778,15 +4833,45 @@ const AppContent: React.FC = () => {
                 {user.photos.length > 0 ? (
                   user.photos.map(photo => (
                     <div key={photo.id} className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/5 group cursor-pointer relative chrome-border shadow-2xl">
-                      <img 
-                        src={photo.url} 
-                        referrerPolicy="no-referrer" 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                        alt="" 
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = APP_LOGO_URL;
-                        }}
-                      />
+                      {photo.type === 'video' || photo.url.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) ? (
+                        <div className="w-full h-full relative">
+                          <VideoPlayer 
+                            src={photo.url} 
+                            className="w-full h-full object-cover" 
+                            muted
+                            autoPlay={false}
+                            controls={false}
+                            showPlayIcon={false}
+                          />
+                          <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
+                            <Play size={32} className="text-white opacity-50" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img 
+                          src={photo.url} 
+                          referrerPolicy="no-referrer" 
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                          alt="" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = APP_LOGO_URL;
+                          }}
+                        />
+                      )}
+                      
+                      {(isOwnProfile || me.isAdmin) && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeletePhoto(photo.id, user.id);
+                          }}
+                          className="absolute top-4 right-4 z-10 p-2 bg-red-500 text-white rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 active:scale-95"
+                          title="Delete Photo"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                         <div className="flex items-center space-x-2 text-white/60">
                           <ImageIcon size={16} />
@@ -4826,8 +4911,8 @@ const AppContent: React.FC = () => {
     </motion.div>
   );
 
-  // If Auth has resolved and user is not logged in, show Login immediately
-  if (isAuthReady && !isLoggedIn) return (
+  // If Auth has resolved and user is not logged in OR has not explicitly authenticated this session
+  if (isAuthReady && (!isLoggedIn || !isSessionAuthenticated)) return (
     <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <LoginPage 
         onLogin={handleLogin} 
@@ -5313,10 +5398,11 @@ const AppContent: React.FC = () => {
               </div>
               <button 
                 onClick={handlePost}
-                className="bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white px-8 py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-xl shadow-[#967bb6]/20 transition-all flex items-center space-x-2 chrome-border"
+                disabled={isPosting}
+                className="bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white px-8 py-3 rounded-xl font-black uppercase text-sm tracking-widest shadow-xl shadow-[#967bb6]/20 transition-all flex items-center space-x-2 chrome-border disabled:opacity-70 disabled:cursor-wait"
               >
-                <span>Post</span>
-                <Send size={18} />
+                <span>{isPosting ? 'Posting...' : 'Post'}</span>
+                {isPosting ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
               </button>
             </div>
           </div>

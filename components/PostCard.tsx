@@ -78,6 +78,8 @@ const PostCard: React.FC<PostCardProps> = ({
   const postComments = comments.filter(c => c.postId === post.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+  const isVideo = post.mediaType === 'video' || (post.mediaUrl && post.mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i));
+
   return (
     <div className="glass-panel rounded-2xl overflow-hidden mb-6 shadow-xl transition-all hover:border-[#967bb6]/40 chrome-border">
       {/* Header */}
@@ -136,13 +138,15 @@ const PostCard: React.FC<PostCardProps> = ({
           className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
           onClick={isLocked ? handleLockedClick : undefined}
         >
-          {post.mediaType === 'video' ? (
+          {isVideo ? (
             <VideoPlayer 
               src={post.mediaUrl}
               className={`w-full h-full transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`}
               controls={!isLocked}
               loop
               muted
+              autoPlay={false}
+              clickToPlay={!isLocked}
             />
           ) : (
             <img 

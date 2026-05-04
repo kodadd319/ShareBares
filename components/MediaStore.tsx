@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle, Lock } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
 import { StoreItemSkeleton } from './Skeleton';
 import { APP_LOGO_URL } from '../constants';
@@ -256,7 +256,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                       isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                       customization={customization} 
                       onPurchase={() => onPurchase?.(item)} 
-                      onDelete={() => onDeleteItem?.(item.id)} 
+                      onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
                     />
                     {index === 3 && customization.layout === 'grid' && <AdPlaceholder size="md" className="sm:col-span-2 lg:col-span-1" />}
                   </React.Fragment>
@@ -295,7 +295,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                     customization={customization} 
                     onPurchase={() => onPurchase?.(item)} 
-                    onDelete={() => onDeleteItem?.(item.id)} 
+                    onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
                   />
                 ))}
               </div>
@@ -332,7 +332,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
                     customization={customization} 
                     onPurchase={() => onPurchase?.(item)} 
-                    onDelete={() => onDeleteItem?.(item.id)} 
+                    onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
                   />
                 ))}
               </div>
@@ -572,12 +572,28 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
     item.mediaUrls?.forEach((url, index) => {
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${item.title}_${index + 1}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const absoluteUrl = getMediaUrl(url);
+      fetch(absoluteUrl)
+        .then(response => response.blob())
+        .then(blob => {
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = `${item.title.replace(/\s+/g, '_')}_${index + 1}${absoluteUrl.match(/\.[0-9a-z]+$/i)?.[0] || ''}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+        })
+        .catch(err => {
+          console.error('Download failed:', err);
+          // Fallback to simple link
+          const link = document.createElement('a');
+          link.href = absoluteUrl;
+          link.target = '_blank';
+          link.download = item.title;
+          link.click();
+        });
     });
   };
 
@@ -587,6 +603,8 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
     return url.startsWith('/') ? url : `/${url}`;
   };
 
+  const isVideo = item.type === 'video' || (item.mediaUrls?.[0] && item.mediaUrls[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i));
+
   return (
     <div className={`group ${customization.layout === 'list' ? 'flex items-center space-x-8 p-6 rounded-[2.5rem] border border-white/5 bg-white/[0.02]' : ''}`}>
       <div 
@@ -595,21 +613,26 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           customization.layout === 'list' ? 'w-48 h-48 rounded-3xl shrink-0' : 'aspect-[4/5] rounded-[2rem] mb-4'
         } ${canView ? 'cursor-pointer' : ''}`}
       >
-        {item.type === 'video' && canView ? (
+        {isVideo ? (
           <div className="w-full h-full relative">
             <VideoPlayer 
-              src={getMediaUrl(item.mediaUrls[0])} 
+              src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
               poster={getMediaUrl(item.thumbnailUrl)}
               className="w-full h-full"
               muted
               autoPlay={false}
               controls={false}
               showPlayIcon={false}
-              clickToPlay={false}
+              clickToPlay={canView}
             />
             <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
               <Play size={32} className="text-white opacity-50" />
             </div>
+            {!canView && (
+              <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                <Lock size={32} className="text-white/30" />
+              </div>
+            )}
           </div>
         ) : (
           <img 
@@ -650,20 +673,20 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
               </button>
             </div>
           )}
-          {isAdmin && (
+          {onDelete && (
             <button 
-              onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
               className="p-2 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors"
-              title="Delete Item (Admin)"
+              title={isAdmin ? "Delete Item (Admin)" : "Delete Item"}
             >
               <Trash2 size={14} />
             </button>
           )}
         </div>
 
-        {(item.type === 'video' || canView) && (
+        {(isVideo || canView) && (
           <div className={`absolute inset-0 flex items-center justify-center ${canView ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-            {item.type === 'video' ? (
+            {isVideo ? (
               <div 
                 onClick={() => canView && setShowFull(true)}
                 className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl ${canView ? 'cursor-pointer hover:scale-110' : ''}`} 
@@ -716,7 +739,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-[3rem] overflow-hidden chrome-border shadow-2xl flex flex-col">
             <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-4">
-              {item.type === 'video' ? (
+              {item.type === 'video' || isVideo ? (
                 <VideoPlayer 
                   src={getMediaUrl(item.mediaUrls[0])} 
                   poster={getMediaUrl(item.thumbnailUrl)}
