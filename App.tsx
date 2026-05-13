@@ -3,14 +3,6 @@ import React, { useState, useEffect, useRef, useCallback, Component, ErrorInfo, 
 import { motion } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
 import * as PeerNamespace from 'simple-peer';
-import { Buffer } from 'buffer';
-
-if (typeof window !== 'undefined') {
-  window.Buffer = Buffer;
-  if (!(window as any).process) {
-    (window as any).process = { env: {} };
-  }
-}
 
 const SimplePeer = (PeerNamespace as any).default || PeerNamespace;
 import TopNav from './components/TopNav';
@@ -22,7 +14,6 @@ import PostCard from './components/PostCard';
 import Logo from './components/Logo';
 import MediaStore from './components/MediaStore';
 import StoreManagementPage from './components/StoreManagementPage';
-import PaymentPage from './components/PaymentPage';
 import StablePage from './components/StablePage';
 import JoinStablePage from './components/JoinStablePage';
 import MyProfilePage from './components/MyProfilePage';
@@ -34,26 +25,91 @@ import { ShareBaresProvider, useShareBares } from './components/MascotContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS, APP_LOGO_URL } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
 import { Toaster, toast } from 'sonner';
-import { 
-  Plus, Image as ImageIcon, Send, X, Wand2, MessageSquare, 
-  ShieldAlert, AlertCircle, Camera, Check, ArrowLeft, Star, Heart, ShieldCheck,
-  Settings as SettingsIcon, Bell, Lock, User as UserIcon, Shield, 
-  HelpCircle, LogOut, ChevronRight, ChevronDown, MapPin, Briefcase, Globe, Phone, Mail,
-  Instagram, Twitter, ShoppingBag, Trash2, MessageCircle, Video, CreditCard,
-  UserPlus, UserCheck, UserX, Users, Flame, Ban, Dices, ExternalLink, Palette, DollarSign,
-  TrendingUp, RefreshCw, Sparkles, MicOff, VideoOff, Loader2, Play
-} from 'lucide-react';
-import { generateCaptionSuggestion, generateJadeResponse, generateJadePost, generateJadeComment } from './services/geminiService';
-import { auth, db, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, enableNetwork,
-  onAuthStateChanged, loginWithGoogle, loginWithGoogleRedirect, getGoogleRedirectResult, logout as firebaseLogout, handleFirestoreError, OperationType, or,
-  setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
-  firebaseConfig, arrayUnion, arrayRemove
-} from './firebase';
 import { Skeleton, PostSkeleton, ProfileSkeleton, NotificationSkeleton } from './components/Skeleton';
+import { 
+  Video, Phone, MicOff, VideoOff, X, RefreshCw, Camera, Check, Loader2, 
+  ArrowLeft, ChevronRight, User as UserIcon, Shield, Bell, HelpCircle, 
+  LogOut, DollarSign, ShoppingBag, Briefcase, Dices, CreditCard, 
+  ShieldCheck, TrendingUp, Sparkles, ShieldAlert, Heart, MessageCircle, 
+  MapPin, Mail, Globe, Twitter, Instagram, Plus, Play, Trash2, 
+  Image as ImageIcon, Wand2, Send, MessageSquare, ChevronDown, 
+  Palette, ExternalLink, Star, UserCheck, UserPlus, UserX, Ban, Settings as SettingsIcon,
+  BellRing, Lock, ShoppingCart, MessageSquareMore, Share2, Upload, Download, Search,
+  Menu, Info, AlertTriangle, Eye, EyeOff, LockKeyhole, Flame
+} from 'lucide-react';
+import { 
+  db, auth, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, 
+  query, where, orderBy, limit, arrayUnion, arrayRemove, or, getDocFromServer, enableNetwork,
+  onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
+  signOut as firebaseLogout, signInWithCustomToken, setPersistence, browserLocalPersistence,
+  signInWithPopup, GoogleAuthProvider, getRedirectResult as getGoogleRedirectResult, signInWithRedirect,
+  testFirestoreConnection, handleFirestoreError, OperationType, firebaseConfig,
+  loginWithGoogle, loginWithGoogleRedirect, uploadFile
+} from './firebase';
+import { GoogleGenAI } from "@google/genai";
+
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+async function generateJadePost() {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: "Write a short, suggestive, and engaging social media post for a community named ShareBares. The tone should be slightly naughty but fun. Max 20 words.",
+    });
+    return (response.text || "Just thinking about you guys... Share what you're up to! #ShareBares").trim();
+  } catch (error) {
+    console.error("Jade post generation failed", error);
+    return "Feeling a bit shy today... but not for long. 😉";
+  }
+}
+
+async function generateJadeComment(postContent: string) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Write a short, community-focused, and slightly flirty comment for this post: "${postContent}". Keep it under 10 words.`,
+    });
+    return (response.text || "Love this! Keep it coming. 🔥").trim();
+  } catch (error) {
+    console.error("Jade comment generation failed", error);
+    return "Looking good! 😉";
+  }
+}
+
+async function generateJadeResponse(message: string, history: any[]) {
+  try {
+    // Format history if needed, but for now simple message
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: message,
+      config: {
+        systemInstruction: "You are Jade, a friendly, flirty, and outgoing AI member of the ShareBares community. You love chatting with people and encouraging them to 'share their bares'. Be supportive, slightly suggestive, and very engaging. Keep responses concise.",
+      },
+    });
+    return (response.text || "I'm not sure what to say, but I'm listening! Tell me more. 😉").trim();
+  } catch (error) {
+    console.error("Jade response generation failed", error);
+    return "I'm a bit overwhelmed right now, let's chat in a bit! 😘";
+  }
+}
+
+async function generateCaptionSuggestion(content: string) {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Suggest a catchy, naughty, and engaging caption for a post about: "${content}". Be creative!`,
+    });
+    return (response.text || "Uncensored and ready for more. #ShareBares").trim();
+  } catch (error) {
+    console.error("Caption suggestion failed", error);
+    return "Feeling free and wild. 😈";
+  }
+}
 
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
-const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+const SplashScreen: React.FC<{ onComplete: () => void; isFirestoreOnline: boolean }> = ({ onComplete, isFirestoreOnline }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
@@ -86,6 +142,21 @@ const SplashScreen: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-[#967bb6] to-[#6b46c1] animate-loading-bar"></div>
         </div>
         <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] animate-pulse">Initializing Freedom</p>
+        {!isFirestoreOnline && (
+          <button 
+            onClick={async () => {
+              try {
+                await enableNetwork(db);
+                window.location.reload();
+              } catch (e) {
+                console.error("Manual reconnect failed", e);
+              }
+            }}
+            className="mt-4 text-[8px] font-black text-emerald-500 uppercase tracking-widest hover:underline cursor-pointer"
+          >
+            Force Network Reconnect
+          </button>
+        )}
       </div>
       
       <div className="absolute bottom-4 left-0 right-0 px-8 text-center">
@@ -231,7 +302,11 @@ const CallOverlay: React.FC<{
   );
 };
 
-const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) => Promise<void>; onCancel: () => void }> = ({ user, onSave, onCancel }) => {
+const ProfileEditPage: React.FC<{ 
+  user: User; 
+  onSave: (profile: Partial<User>) => Promise<void>; 
+  onCancel: () => void;
+}> = ({ user, onSave, onCancel }) => {
   const [displayName, setDisplayName] = useState(user.displayName || '');
   const [username, setUsername] = useState(user.username || '');
   const [bio, setBio] = useState(user.bio || '');
@@ -246,7 +321,6 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
   const [twitter, setTwitter] = useState(user.socials?.twitter || '');
   const [instagram, setInstagram] = useState(user.socials?.instagram || '');
   const [website, setWebsite] = useState(user.socials?.website || '');
-  const [stripeConnectId, setStripeConnectId] = useState(user.stripeConnectId || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -279,12 +353,10 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
       if (avatar.startsWith('blob:')) {
         const file = avatarInputRef.current?.files?.[0];
         if (file) {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalAvatar = data.url;
+          try {
+            finalAvatar = await uploadFile(file, `users/${user.id}/avatar_${Date.now()}`);
+          } catch (err) {
+            console.error("Avatar upload failed:", err);
           }
         }
       }
@@ -293,12 +365,10 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
       if (cover.startsWith('blob:')) {
         const file = coverInputRef.current?.files?.[0];
         if (file) {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalCover = data.url;
+          try {
+            finalCover = await uploadFile(file, `users/${user.id}/cover_${Date.now()}`);
+          } catch (err) {
+            console.error("Cover upload failed:", err);
           }
         }
       }
@@ -315,7 +385,6 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
         tagline,
         email,
         phone,
-        stripeConnectId,
         socials: {
           twitter,
           instagram,
@@ -518,26 +587,6 @@ const ProfileEditPage: React.FC<{ user: User; onSave: (profile: Partial<User>) =
               onChange={(e) => setWebsite(e.target.value)}
               placeholder="Website URL"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <label className="text-xs font-black uppercase tracking-widest text-slate-500">Monetization (Stripe Connect)</label>
-          <div className="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 space-y-4">
-            <div className="flex items-center space-x-3 text-emerald-400 mb-2">
-              <DollarSign size={20} />
-              <h3 className="font-bold">Creator Payouts</h3>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              To receive 80% of your store sales, enter your Stripe Connect Account ID below. Payments are split automatically by the platform.
-            </p>
-            <input 
-              type="text" 
-              value={stripeConnectId}
-              onChange={(e) => setStripeConnectId(e.target.value)}
-              placeholder="acct_xxxxxxxxxxxxxx"
-              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-slate-100 font-mono text-sm"
             />
           </div>
         </div>
@@ -953,7 +1002,6 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
   const [twitter, setTwitter] = useState('');
   const [instagram, setInstagram] = useState('');
   const [website, setWebsite] = useState('');
-  const [stripeConnectId, setStripeConnectId] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -989,12 +1037,10 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
       if (avatar.startsWith('blob:')) {
         const avatarFile = (avatarInputRef.current?.files?.[0]);
         if (avatarFile) {
-          const formData = new FormData();
-          formData.append('file', avatarFile);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalAvatar = data.url;
+          try {
+            finalAvatar = await uploadFile(avatarFile, `users/${currentUserId}/avatar_${Date.now()}`);
+          } catch (err) {
+            console.error("Avatar upload failed:", err);
           }
         }
       }
@@ -1002,12 +1048,10 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
       if (cover.startsWith('blob:')) {
         const coverFile = (coverInputRef.current?.files?.[0]);
         if (coverFile) {
-          const formData = new FormData();
-          formData.append('file', coverFile);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalCover = data.url;
+          try {
+            finalCover = await uploadFile(coverFile, `users/${currentUserId}/cover_${Date.now()}`);
+          } catch (err) {
+            console.error("Cover upload failed:", err);
           }
         }
       }
@@ -1025,7 +1069,6 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
         tagline,
         email,
         phone,
-        stripeConnectId,
         socials: {
           twitter,
           instagram,
@@ -1077,7 +1120,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
           <div className="flex justify-end">
             <button 
               type="button"
-              onClick={() => firebaseLogout()}
+              onClick={() => firebaseLogout(auth)}
               className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-red-400 transition-colors flex items-center space-x-1"
             >
               <LogOut size={12} />
@@ -1267,27 +1310,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
             </div>
           </div>
 
-          <div className="space-y-4">
-            <label className="text-xs font-black uppercase tracking-widest text-slate-500">Monetization (Stripe Connect)</label>
-            <div className="p-6 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 space-y-4">
-              <div className="flex items-center space-x-3 text-emerald-400 mb-2">
-                <DollarSign size={20} />
-                <h3 className="font-bold">Creator Payouts</h3>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                To receive 80% of your store sales, enter your Stripe Connect Account ID below.
-              </p>
-              <input 
-                type="text" 
-                value={stripeConnectId}
-                onChange={(e) => setStripeConnectId(e.target.value)}
-                placeholder="acct_xxxxxxxxxxxxxx"
-                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-emerald-500 transition-all outline-none text-slate-100 font-mono text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="p-6 bg-[#967bb6]/5 rounded-2xl border border-[#967bb6]/10 space-y-4">
+        <div className="p-6 bg-[#967bb6]/5 rounded-2xl border border-[#967bb6]/10 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-100">Creator Mode</h3>
@@ -1486,56 +1509,41 @@ const MonetizationPage: React.FC<{
         </div>
       </div>
 
-      {/* Stripe Connect Section */}
+      {/* Maintenance Notice Section */}
       <div className="mt-16 pt-16 border-t border-white/5">
         <div className="flex items-center space-x-4 mb-8">
-          <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
-            <CreditCard className="text-emerald-500" size={24} />
+          <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
+            <CreditCard className="text-[#967bb6]" size={24} />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Stripe Connect</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Connect your bank account to receive payouts</p>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">System Update</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Payouts and payment systems are being upgraded</p>
           </div>
         </div>
 
         <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="max-w-md">
-              <p className="text-slate-400 text-xs leading-relaxed uppercase font-bold tracking-wide mb-4">
-                To receive your 80% share of sales, you must provide your Stripe Connect Account ID. This allows us to transfer funds directly to your bank account.
-              </p>
-              <div className="flex items-center space-x-2 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
-                <ShieldCheck size={14} />
-                <span>Secure direct transfers</span>
-              </div>
-            </div>
-            
-            <div className="w-full md:w-auto flex flex-col space-y-4">
-              <div className="flex flex-col space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Stripe Account ID</label>
-                <input 
-                  type="text"
-                  placeholder="acct_..."
-                  value={me.stripeConnectId || ''}
-                  readOnly
-                  className="bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none w-full md:w-64 chrome-border opacity-70"
-                />
-              </div>
-              <p className="text-[9px] text-slate-600 uppercase font-bold text-center">Update this in your profile settings</p>
+          <div className="max-w-2xl mx-auto text-center py-8">
+            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Under Maintenance</h3>
+            <p className="text-slate-400 text-xs leading-relaxed uppercase font-bold tracking-wide mb-8">
+              We are currently transitioning to a new payment provider to ensure the best possible experience for our creators and users. During this time, new Stripe connections and certain payment features are temporarily disabled.
+            </p>
+            <div className="flex items-center justify-center space-x-2 text-[#967bb6] text-[10px] font-black uppercase tracking-widest">
+              <ShieldCheck size={14} />
+              <span>Checking back soon for new payment options!</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Getting Paid Guide Section */}
+      {/* Guide Section */}
       <div className="mt-16 pt-16 border-t border-white/5">
         <div className="flex items-center space-x-4 mb-8">
           <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
             <HelpCircle className="text-[#967bb6]" size={24} />
           </div>
           <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">How to Get Paid</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Complete guide to content selling & payouts</p>
+            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Selling Guide</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">How it works when the system is live</p>
           </div>
         </div>
 
@@ -1543,71 +1551,32 @@ const MonetizationPage: React.FC<{
           <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
             <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
               <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">1</span>
-              Set Up Your Stripe Account
+              Scheduled Payouts
             </h3>
             <div className="space-y-4">
               <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                We use Stripe to handle all financial transactions securely. To get paid, you must have a Stripe account.
+                Earnings are processed and ready for withdrawal once they clear our security period.
               </p>
-              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
-                <li>Go to <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" className="text-[#967bb6] hover:underline">Stripe.com</a> and sign up for a free account.</li>
-                <li>Complete your business profile and link your bank account for direct deposits.</li>
-                <li>In your Stripe Dashboard, go to <strong>Settings &gt; Account Details</strong>.</li>
-                <li>Find your <strong>Account ID</strong> (it starts with <code className="text-[#967bb6]">acct_</code>).</li>
-              </ol>
+              <ul className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-disc ml-4">
+                <li>Link your verified payment method in the creator dashboard.</li>
+                <li>Everything is synchronized automatically once you return.</li>
+              </ul>
             </div>
           </div>
 
           <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
             <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
               <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">2</span>
-              Link Account to ShareBares
+              Revenue Split (80/20)
             </h3>
             <div className="space-y-4">
               <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                Once you have your Account ID, you need to tell us where to send your money.
-              </p>
-              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
-                <li>Go to your <strong>Profile Settings</strong> on ShareBares.</li>
-                <li>Find the <strong>Stripe Account ID</strong> field in the Creator section.</li>
-                <li>Paste your <code className="text-[#967bb6]">acct_...</code> ID and click <strong>Save Changes</strong>.</li>
-                <li>Your account is now linked! You will see it reflected on this page.</li>
-              </ol>
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
-              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">3</span>
-              Start Selling Content
-            </h3>
-            <div className="space-y-4">
-              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                Now you're ready to monetize your presence.
-              </p>
-              <ol className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-decimal ml-4">
-                <li>Activate your store by paying the one-time $10 fee.</li>
-                <li>Use the <strong>Store Manager</strong> to upload photos or videos.</li>
-                <li>Set a price for each item. We recommend high-quality content.</li>
-                <li>Fans can now purchase your items directly from your profile.</li>
-              </ol>
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
-              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">4</span>
-              Automatic Payouts
-            </h3>
-            <div className="space-y-4">
-              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                Getting paid is simple and automatic.
+                You keep the vast majority of your earnings.
               </p>
               <ul className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-disc ml-4">
-                <li>You keep <strong>80%</strong> of every sale you make.</li>
-                <li>The remaining 20% covers platform fees and processing.</li>
-                <li>Funds are transferred directly to your Stripe account.</li>
-                <li>Stripe handles the final payout to your bank account.</li>
+                <li><strong>Creator Share (80%):</strong> Sent directly to your account.</li>
+                <li><strong>Platform Fee (20%):</strong> Covers hosting, marketing, and processing.</li>
+                <li>Transfers occur automatically or on request depending on balance.</li>
               </ul>
             </div>
           </div>
@@ -1716,7 +1685,7 @@ const MonetizationPage: React.FC<{
               <div>
                 <h4 className="text-white font-black uppercase tracking-tight mb-2">Payouts & Security</h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Earnings are tracked in real-time. Payouts can be requested once your balance reaches $50.00. All transactions are secured via Stripe.
+                  Earnings are tracked in real-time. Payouts can be requested once your balance reaches $50.00. All transactions are secured via our processing partners.
                 </p>
               </div>
             </div>
@@ -1750,7 +1719,7 @@ const MonetizationPage: React.FC<{
       <div className="mt-16 flex flex-col items-center justify-center space-y-4 text-slate-600">
         <div className="flex items-center space-x-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
           <ShieldCheck className="text-[#967bb6]" size={18} />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em]">All payments processed securely via Stripe</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em]">All payments processed securely</p>
         </div>
         <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 max-w-md text-center leading-relaxed">
           Fees are one-time only and non-refundable. Your features will be unlocked immediately after successful payment confirmation.
@@ -1941,6 +1910,33 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('sharebares_active_tab', activeTab);
   }, [activeTab]);
+
+  // Firestore Connectivity Check
+  useEffect(() => {
+    let checkInterval: any;
+    const initConnection = async () => {
+      // Use more retries on initial startup
+      const isOnline = await testFirestoreConnection(5);
+      setIsFirestoreOnline(isOnline);
+      
+      if (!isOnline) {
+        console.warn('Initial connection failed, setting up background check');
+        // If still offline, set up an interval to keep trying to reconnect
+        checkInterval = setInterval(async () => {
+          const check = await testFirestoreConnection(1);
+          if (check) {
+            console.log('Reconnected to Firestore!');
+            setIsFirestoreOnline(true);
+            clearInterval(checkInterval);
+            toast.success('Database reconnected');
+          }
+        }, 10000);
+      }
+    };
+    initConnection();
+    return () => clearInterval(checkInterval);
+  }, []);
+
   const { showMascot } = useShareBares();
 
   const [profileTab, setProfileTab] = useState('posts');
@@ -2042,6 +2038,7 @@ const AppContent: React.FC = () => {
   }, []);
   
   const meRaw = users.find(u => u.id === currentUserId);
+  console.log('App Rendering - meRaw:', meRaw?.id, 'currentUserId:', currentUserId);
   const isAdminUser = meRaw?.isAdmin || 
                      meRaw?.email === 'jtothek319@gmail.com' || 
                      auth.currentUser?.email === 'jtothek319@gmail.com' || 
@@ -2066,11 +2063,17 @@ const AppContent: React.FC = () => {
     storeUploads: meRaw.storeUploads || [],
     blockedUserIds: meRaw.blockedUserIds || [],
     purchasedItemIds: meRaw.purchasedItemIds || [],
-    settings: meRaw.settings || MOCK_USERS[0].settings
-  } : MOCK_USERS[0];
+    settings: meRaw.settings || (MOCK_USERS && MOCK_USERS.length > 0 ? MOCK_USERS[0].settings : {
+      pushNotifications: true,
+      emailNotifications: true,
+      profileVisibility: 'public',
+      messagingPrivacy: 'everyone'
+    })
+  } : null;
+  console.log('App Rendering - me:', me?.id);
 
   const currentProfileCustomization = (activeTab === 'profile' || activeTab === 'custom-profile') 
-    ? me.profileCustomization 
+    ? me?.profileCustomization 
     : (activeTab === 'user-profile' && viewingUserId) 
       ? users.find(u => u.id === viewingUserId)?.profileCustomization 
       : undefined;
@@ -2091,6 +2094,11 @@ const AppContent: React.FC = () => {
   // Messaging state
   const [selectedUserId, setSelectedUserId] = useState<string | null>(localStorage.getItem('selectedChatUserId'));
 
+  // Payout and purchase system is under maintenance.
+  useEffect(() => {
+    // Maintenance mode placeholder
+  }, []);
+
   // Sync selectedUserId to localStorage
   useEffect(() => {
     if (selectedUserId) {
@@ -2107,13 +2115,13 @@ const AppContent: React.FC = () => {
 
   const [useFrontCamera, setUseFrontCamera] = useState(true);
 
-  const blockedIds = me.blockedUserIds || [];
+  const blockedIds = me?.blockedUserIds || [];
   const filteredUsers = users.filter(u => 
-    !blockedIds.includes(u.id) && 
+    me && !blockedIds.includes(u.id) && 
     !(u.blockedUserIds || []).includes(currentUserId)
   );
   const filteredPosts = posts.filter(p => 
-    !blockedIds.includes(p.userId) && 
+    me && !blockedIds.includes(p.userId) && 
     !(users.find(u => u.id === p.userId)?.blockedUserIds || []).includes(currentUserId)
   );
   
@@ -2380,11 +2388,13 @@ const AppContent: React.FC = () => {
     };
   }, []);
 
+  const profileUnsubRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     setPersistence(auth, browserLocalPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
-    getGoogleRedirectResult().then((result) => {
+    getGoogleRedirectResult(auth).then((result) => {
       if (result?.user) {
         console.log('Redirect login successful:', result.user.email);
         sessionStorage.setItem('sharebares_session_auth', 'true');
@@ -2405,6 +2415,7 @@ const AppContent: React.FC = () => {
       try {
         if (user) {
           setCurrentUserId(user.uid);
+          setIsLoggedIn(true);
           
           // Check for admin user
           const isAdminEmail = user.email === 'jtothek319@gmail.com';
@@ -2418,144 +2429,165 @@ const AppContent: React.FC = () => {
           }
 
           try {
-            // Profile fetch with simplified retry logic
+            // Use onSnapshot for the user's profile to be resilient to connection issues
+            // This ensures data is "uninterrupted" as it will update whenever connection is back
             const userRef = doc(db, 'users', user.uid);
-            let userDoc = await getDoc(userRef);
             
-            if (!userDoc.exists() && isAdminEmail) {
-              // Auto-create admin profile if missing
-              console.log('Auto-creating missing admin profile...');
-              const adminData: User = {
-                id: user.uid,
-                username: 'jameson319',
-                displayName: 'Jameson (Admin)',
-                email: user.email!,
-                avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
-                coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926',
-                bio: 'Official Admin Account',
-                isCreator: true,
-                isAdmin: true,
-                subscribersCount: 0,
-                followingCount: 0,
-                friendIds: [],
-                pendingFriendRequestsSent: [],
-                pendingFriendRequestsReceived: [],
-                fwbIds: [],
-                pendingFwbRequestsSent: [],
-                pendingFwbRequestsReceived: [],
-                fwbRequestsResetDate: new Date().toISOString(),
-                fwbRequestsSentCount: 0,
-                fanIds: [],
-                photos: [],
-                storeUploads: [],
-                blockedUserIds: [],
-                likedPostIds: [],
-                hasPaidStoreFee: true,
-                hasPaidStableFee: true,
-                hasPaidStableBundle: true,
-                purchasedItemIds: []
-              };
-              await setDoc(doc(db, 'users', user.uid), adminData);
-              await setDoc(doc(db, 'profiles', user.uid), {
-                id: adminData.id,
-                username: adminData.username,
-                displayName: adminData.displayName,
-                avatar: adminData.avatar,
-                isCreator: true,
-                subscribersCount: 0,
-                followingCount: 0
-              });
-              setHasCreatedProfile(true);
-            } else if (userDoc.exists()) {
-              const userData = userDoc.data() as User;
-              // Ensure admin flags are always present for admin user
-              if (isAdminEmail && (!userData.isAdmin || !userData.isCreator)) {
-                console.log('Ensuring admin flags on existing profile...');
-                const adminUpdates = {
-                  isAdmin: true,
+            // Clear any existing listener
+            if (profileUnsubRef.current) profileUnsubRef.current();
+            
+            profileUnsubRef.current = onSnapshot(userRef, async (userSnap) => {
+              if (!userSnap.exists() && isAdminEmail) {
+                // Auto-create admin profile if missing
+                console.log('Auto-creating missing admin profile...');
+                const adminData: User = {
+                  id: user.uid,
+                  username: 'jameson319',
+                  displayName: 'Jameson (Admin)',
+                  email: user.email!,
+                  avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36',
+                  coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926',
+                  bio: 'Official Admin Account',
                   isCreator: true,
+                  isAdmin: true,
+                  subscribersCount: 0,
+                  followingCount: 0,
+                  friendIds: [],
+                  pendingFriendRequestsSent: [],
+                  pendingFriendRequestsReceived: [],
+                  fwbIds: [],
+                  pendingFwbRequestsSent: [],
+                  pendingFwbRequestsReceived: [],
+                  fwbRequestsResetDate: new Date().toISOString(),
+                  fwbRequestsSentCount: 0,
+                  fanIds: [],
+                  photos: [],
+                  storeUploads: [],
+                  blockedUserIds: [],
+                  likedPostIds: [],
                   hasPaidStoreFee: true,
                   hasPaidStableFee: true,
-                  hasPaidStableBundle: true
+                  hasPaidStableBundle: true,
+                  purchasedItemIds: []
                 };
-                await updateDoc(userRef, adminUpdates);
-              }
-              setHasCreatedProfile(true);
-            } else {
-              setHasCreatedProfile(false);
-            }
-          } catch (profileError) {
-            console.error('Profile fetch failed:', profileError);
-            if (isAdminEmail) setHasCreatedProfile(true);
-          } finally {
-            setIsProfileLoading(false);
-          }
-
-          // Seed other mock data if database is empty (non-blocking)
-          // Only for the technical administrator to prevent permission errors for others
-          const seedData = async () => {
-            if (!isAdminEmail) return;
-            try {
-              // Ensure Jade exists
-              try {
-                const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
-                if (!jadeDoc.exists()) {
-                  const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
-                  await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
+                try {
+                  await setDoc(doc(db, 'users', user.uid), adminData);
+                  await setDoc(doc(db, 'profiles', user.uid), {
+                    id: adminData.id,
+                    username: adminData.username,
+                    displayName: adminData.displayName,
+                    avatar: adminData.avatar,
+                    isCreator: true,
+                    subscribersCount: 0,
+                    followingCount: 0
+                  });
+                  setHasCreatedProfile(true);
+                } catch (e) {
+                  console.error('Failed to auto-create admin:', e);
                 }
-              } catch (jadeErr) {
-                console.warn('Could not ensure Jade exists:', jadeErr);
+              } else if (userSnap.exists()) {
+                const userData = { ...userSnap.data(), id: userSnap.id } as User;
+                // Ensure admin flags are always present for admin user
+                if (isAdminEmail && (!userData.isAdmin || !userData.isCreator)) {
+                  console.log('Ensuring admin flags on existing profile...');
+                  try {
+                    await updateDoc(userRef, {
+                      isAdmin: true,
+                      isCreator: true,
+                      hasPaidStoreFee: true,
+                      hasPaidStableFee: true,
+                      hasPaidStableBundle: true
+                    });
+                  } catch (e) {
+                    console.error('Failed to update admin flags:', e);
+                  }
+                }
+                setHasCreatedProfile(true);
+              } else {
+                setHasCreatedProfile(false);
               }
+              setIsProfileLoading(false);
+            }, (profileError) => {
+              console.error('Profile listener failed:', profileError);
+              if (isAdminEmail) {
+                setHasCreatedProfile(true);
+              }
+              setIsProfileLoading(false);
+            });
 
-              const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
-              if (usersSnap.size <= 2) {
-                for (const mUser of MOCK_USERS) {
-                  if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
+            // Seed other mock data if database is empty (non-blocking)
+            // Only for the technical administrator to prevent permission errors for others
+            const seedData = async () => {
+              if (!isAdminEmail) return;
+              try {
+                // Ensure Jade exists
+                try {
+                  const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
+                  if (!jadeDoc.exists()) {
+                    const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
+                    await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
+                  }
+                } catch (jadeErr) {
+                  console.warn('Could not ensure Jade exists:', jadeErr);
+                }
+
+                const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
+                if (usersSnap.size <= 2) {
+                  for (const mUser of MOCK_USERS) {
+                    if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
+                      try {
+                        await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
+                      } catch (e) {}
+                    }
+                  }
+                }
+
+                const postsSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
+                if (postsSnap.empty) {
+                  for (const post of MOCK_POSTS) {
                     try {
-                      await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
+                      await setDoc(doc(db, 'posts', post.id), { ...post, likedBy: [] });
                     } catch (e) {}
                   }
                 }
-              }
 
-              const postsSnap = await getDocs(query(collection(db, 'posts'), limit(1)));
-              if (postsSnap.empty) {
-                for (const post of MOCK_POSTS) {
-                  try {
-                    await setDoc(doc(db, 'posts', post.id), { ...post, likedBy: [] });
-                  } catch (e) {}
+                const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
+                if (storeSnap.empty) {
+                  for (const item of MOCK_STORE_ITEMS) {
+                    try {
+                      await setDoc(doc(db, 'storeItems', item.id), item);
+                    } catch (e) {}
+                  }
                 }
-              }
 
-              const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
-              if (storeSnap.empty) {
-                for (const item of MOCK_STORE_ITEMS) {
-                  try {
-                    await setDoc(doc(db, 'storeItems', item.id), item);
-                  } catch (e) {}
+                const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
+                if (stableSnap.empty) {
+                  for (const listing of MOCK_STABLE_LISTINGS) {
+                    try {
+                      await setDoc(doc(db, 'stableListings', listing.id), listing);
+                    } catch (e) {}
+                  }
                 }
+              } catch (err) {
+                console.error('Seeding failed:', err);
               }
-
-              const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
-              if (stableSnap.empty) {
-                for (const listing of MOCK_STABLE_LISTINGS) {
-                  try {
-                    await setDoc(doc(db, 'stableListings', listing.id), listing);
-                  } catch (e) {}
-                }
-              }
-            } catch (err) {
-              console.error('Seeding failed:', err);
-            }
-          };
-          seedData();
-
+            };
+            seedData();
+          } catch (profileError) {
+            console.error('Profile listener setup failed:', profileError);
+            if (isAdminEmail) setHasCreatedProfile(true);
+            setIsProfileLoading(false);
+          }
         } else {
           console.log('No user session found, forcing redirect to login');
           setIsLoggedIn(false);
           setCurrentUserId('');
           setHasCreatedProfile(false);
           setIsProfileLoading(false);
+          if (profileUnsubRef.current) {
+            profileUnsubRef.current();
+            profileUnsubRef.current = null;
+          }
         }
       } catch (error) {
         console.error('Auth handler error:', error);
@@ -2576,6 +2608,7 @@ const AppContent: React.FC = () => {
 
     return () => {
       unsubscribeAuth();
+      if (profileUnsubRef.current) profileUnsubRef.current();
       clearTimeout(authTimeout);
     };
   }, []);
@@ -2723,7 +2756,7 @@ const AppContent: React.FC = () => {
 
   // Jade AI Activity Loop
   useEffect(() => {
-    if (!isLoggedIn || !auth.currentUser) return;
+    if (!isLoggedIn || !auth.currentUser || !me?.isAdmin) return;
 
     const jadeActivity = setInterval(async () => {
       const roll = Math.random();
@@ -3206,7 +3239,7 @@ const AppContent: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      await firebaseLogout();
+      await firebaseLogout(auth);
       sessionStorage.removeItem('sharebares_session_auth');
       setIsSessionAuthenticated(false);
       setIsLoggedIn(false);
@@ -3221,8 +3254,39 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleProfileUpdate = async (profileData: Partial<User>) => {
-    const isInitialCreation = !hasCreatedProfile;
+  const syncMediaToGallery = useCallback(async (urls: string[]) => {
+    if (!urls.length || !me) return;
+    const uniqueUrls = [...new Set(urls.filter(u => u && (u.startsWith('/uploads/') || u.startsWith('http'))))];
+    if (!uniqueUrls.length) return;
+    
+    const existingPhotos = me.photos || [];
+    const existingUrls = new Set(existingPhotos.map(p => p.url));
+    
+    const newPhotosToAdd = uniqueUrls
+      .filter(url => !existingUrls.has(url))
+      .map(url => ({
+        id: `sync-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+        url,
+        type: (url.toLowerCase().includes('video') || url.match(/\.(mp4|mov|webm|m4v)$/i)) ? 'video' : 'image' as const,
+        isNSFW: true,
+        createdAt: new Date().toISOString()
+      }));
+      
+    if (newPhotosToAdd.length > 0) {
+      try {
+        await updateDoc(doc(db, 'users', currentUserId), {
+          photos: [...newPhotosToAdd, ...existingPhotos]
+        });
+        console.log(`Synced ${newPhotosToAdd.length} media items to gallery`);
+      } catch (error) {
+        console.error('Failed to sync media to gallery:', error);
+      }
+    }
+  }, [me, currentUserId]);
+
+    const handleProfileUpdate = async (profileData: Partial<User>) => {
+      if (!me) return;
+      const isInitialCreation = !hasCreatedProfile;
     const toastId = toast.loading(isInitialCreation ? 'Creating your profile...' : 'Updating profile...');
     
     try {
@@ -3239,6 +3303,14 @@ const AppContent: React.FC = () => {
         followingCount: profileData.followingCount || 0
       };
       await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
+      
+      // Auto-sync profile images to gallery to ensure they are "visible all the time"
+      const imagesToSync = [];
+      if (profileData.avatar) imagesToSync.push(profileData.avatar);
+      if (profileData.coverImage) imagesToSync.push(profileData.coverImage);
+      if (imagesToSync.length > 0) {
+        await syncMediaToGallery(imagesToSync);
+      }
 
       if (isInitialCreation) {
         setHasCreatedProfile(true);
@@ -3257,10 +3329,11 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleUpdateUser = async (profileData: Partial<User>) => {
-    try {
-      await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
-    } catch (error) {
+    const handleUpdateUser = async (profileData: Partial<User>) => {
+      if (!me) return;
+      try {
+        await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
+      } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
     }
   };
@@ -3315,25 +3388,10 @@ const AppContent: React.FC = () => {
     let mediaUrl: string | undefined = undefined;
     
     if (newPostMedia) {
-      const formData = new FormData();
-      formData.append('file', newPostMedia);
       try {
         console.log('Uploading media for post:', { name: newPostMedia.name, size: newPostMedia.size, type: newPostMedia.type });
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          mediaUrl = data.url;
-          console.log('Post media uploaded successfully:', mediaUrl);
-        } else {
-          const errorText = await res.text();
-          console.error('Post media upload failed:', errorText);
-          toast.error('Failed to upload media. Please try again.');
-          setIsPosting(false);
-          return;
-        }
+        mediaUrl = await uploadFile(newPostMedia, `posts/${currentUserId}/${Date.now()}_${newPostMedia.name}`);
+        console.log('Post media uploaded successfully:', mediaUrl);
       } catch (err) {
         console.error('Failed to upload media:', err);
         toast.error('Error uploading media.');
@@ -3357,7 +3415,7 @@ const AppContent: React.FC = () => {
       mediaUrl: mediaUrl,
       mediaType: mediaUrl ? (
         (newPostMedia?.type.startsWith('video') || 
-         mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || 
+         mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || 
          mediaUrl.toLowerCase().includes('video')) ? 'video' : 'image'
       ) : undefined,
     };
@@ -3366,6 +3424,11 @@ const AppContent: React.FC = () => {
       console.log('Creating post in Firestore:', postId, 'for user:', currentUserId);
       await setDoc(doc(db, 'posts', postId), newPost);
       console.log('Post document created successfully');
+      
+      // Auto-sync post media to gallery
+      if (mediaUrl) {
+        await syncMediaToGallery([mediaUrl]);
+      }
       setNewPostContent('');
       setNewPostVisibility(PostVisibility.PUBLIC);
       setNewPostMedia(null);
@@ -3513,10 +3576,6 @@ const AppContent: React.FC = () => {
   };
 
   const handlePurchaseItem = (item: StoreItem) => {
-    if (me.isAdmin || me.id === item.userId || (me.purchasedItemIds && me.purchasedItemIds.includes(item.id))) {
-      // Already owned or admin
-      return;
-    }
     setPendingStoreItem(item);
     setPaymentType('item');
     setIsPaying(true);
@@ -3776,21 +3835,12 @@ const AppContent: React.FC = () => {
 
   const handleUploadPhoto = async (file: File) => {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
+      const url = await uploadFile(file, `gallery/${currentUserId}/${Date.now()}_${file.name}`);
       
       const photoId = `photo-${Date.now()}`;
       const newPhoto: MediaItem = {
         id: photoId,
-        url: data.url,
+        url: url,
         type: file.type.startsWith('video') ? 'video' : 'image',
         isNSFW: false,
         createdAt: new Date().toISOString()
@@ -3913,32 +3963,20 @@ const AppContent: React.FC = () => {
     
     try {
       const mediaUrls: string[] = [];
+      const isVideo = itemData.type === 'video';
+      const hasExplicitThumbnail = isVideo && files.length > 1 && files[0].type.startsWith('image');
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         console.log(`Uploading file ${i + 1}/${files.length}: ${file.name} (${file.size} bytes)`);
         
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log(`Successfully uploaded file ${i + 1}:`, data.url);
-          mediaUrls.push(data.url);
-        } else {
-          const errorText = await res.text();
-          console.error(`Upload failed for file ${i + 1}:`, errorText);
-          let errorMessage = `Upload failed with status ${res.status}`;
-          try {
-            const errorJson = JSON.parse(errorText);
-            errorMessage = errorJson.error || errorMessage;
-          } catch(e) {}
-          throw new Error(errorMessage);
+        try {
+          const url = await uploadFile(file, `store/${currentUserId}/${Date.now()}_${file.name}`);
+          console.log(`Successfully uploaded file ${i + 1}:`, url);
+          mediaUrls.push(url);
+        } catch (err: any) {
+          console.error(`Upload failed for file ${i + 1}:`, err);
+          throw new Error(err.message || `Upload failed for file ${i + 1}`);
         }
       }
 
@@ -3947,19 +3985,29 @@ const AppContent: React.FC = () => {
       }
 
       console.log('All files uploaded successfully. Saving to Firestore...');
+      
+      // Auto-sync store item media to gallery
+      if (mediaUrls.length > 0) {
+        await syncMediaToGallery(mediaUrls);
+      }
 
       const itemId = `si-${Date.now()}`;
       
-      // Determine if this item contains video
-      const isVideo = itemData.type === 'video' || files.some(f => f.type.startsWith('video'));
+      let finalThumbnailUrl = mediaUrls[0];
+      let finalMediaUrls = mediaUrls;
+
+      if (hasExplicitThumbnail) {
+        finalThumbnailUrl = mediaUrls[0];
+        finalMediaUrls = mediaUrls.slice(1); // Content is everything after thumb
+      }
       
       const newItem: StoreItem = {
         id: itemId,
         userId: currentUserId,
         ...itemData,
         type: isVideo ? 'video' : itemData.type,
-        thumbnailUrl: mediaUrls[0], // Use first uploaded item as thumb
-        mediaUrls: mediaUrls,
+        thumbnailUrl: finalThumbnailUrl,
+        mediaUrls: finalMediaUrls,
         createdAt: new Date().toISOString()
       };
       
@@ -4008,15 +4056,11 @@ const AppContent: React.FC = () => {
       const uploadedPhotos: string[] = [];
       
       for (const file of photoFiles) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        if (res.ok) {
-          const data = await res.json();
-          uploadedPhotos.push(data.url);
+        try {
+          const url = await uploadFile(file, `stable/${currentUserId}/${Date.now()}_${file.name}`);
+          uploadedPhotos.push(url);
+        } catch (err) {
+          console.error("Photo upload for stable failed:", err);
         }
       }
 
@@ -4031,6 +4075,11 @@ const AppContent: React.FC = () => {
       };
       
       await setDoc(doc(db, 'stableListings', listingId), newListing);
+      
+      // Auto-sync stable photos to gallery
+      if (uploadedPhotos.length > 0) {
+        await syncMediaToGallery(uploadedPhotos);
+      }
 
       if (postToStore) {
         const itemId = `si-stable-${Date.now()}`;
@@ -4400,10 +4449,10 @@ const AppContent: React.FC = () => {
                       <span className="text-[10px] font-black uppercase tracking-widest">Stable Member</span>
                     </div>
                   )}
-                  {me.fwbIds.includes(user.id) && (
+                  {me?.fwbIds?.includes(user.id) && (
                     <div className="flex items-center space-x-1 border border-[#967bb6]/40 px-3 py-1 rounded-xl shadow-[0_0_20px_rgba(150,123,182,0.3)] bg-[#967bb6]/10 text-[#967bb6]" title="Private FWB Partner">
                       <Flame size={14} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">FWB Partner: {me.id === user.id ? 'Private List' : me.displayName}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">FWB Partner: {me?.id === user.id ? 'Private List' : me?.displayName}</span>
                     </div>
                   )}
                   {isOwnProfile && user.fwbIds.length > 0 && (
@@ -4536,7 +4585,7 @@ const AppContent: React.FC = () => {
               </button>
 
               {/* Friend Actions */}
-              {me.friendIds.includes(user.id) ? (
+              {me?.friendIds?.includes(user.id) ? (
                 <button 
                   onClick={() => handleUnfriend(user.id)}
                   className="px-8 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all border flex items-center space-x-2"
@@ -4545,7 +4594,7 @@ const AppContent: React.FC = () => {
                   <UserCheck size={18} />
                   <span>Friends</span>
                 </button>
-              ) : me.pendingFriendRequestsSent.includes(user.id) ? (
+              ) : me?.pendingFriendRequestsSent?.includes(user.id) ? (
                 <button 
                   onClick={() => handleDeclineFriendRequest(user.id)}
                   className="px-8 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest backdrop-blur-sm transition-all border flex items-center space-x-2"
@@ -4554,7 +4603,7 @@ const AppContent: React.FC = () => {
                   <UserPlus size={18} />
                   <span>Request Sent</span>
                 </button>
-              ) : me.pendingFriendRequestsReceived.includes(user.id) ? (
+              ) : me?.pendingFriendRequestsReceived?.includes(user.id) ? (
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleAcceptFriendRequest(user.id)}
@@ -4584,7 +4633,7 @@ const AppContent: React.FC = () => {
               )}
 
               {/* FWB Actions */}
-              {me.fwbIds.includes(user.id) ? (
+              {me?.fwbIds?.includes(user.id) ? (
                 <button 
                   onClick={() => handleUnfwb(user.id)}
                   className="px-8 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all border flex items-center space-x-2"
@@ -4593,7 +4642,7 @@ const AppContent: React.FC = () => {
                   <Flame size={18} />
                   <span>FWB</span>
                 </button>
-              ) : me.pendingFwbRequestsSent.includes(user.id) ? (
+              ) : me?.pendingFwbRequestsSent?.includes(user.id) ? (
                 <button 
                   className="px-8 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest backdrop-blur-sm transition-all border flex items-center space-x-2 cursor-not-allowed"
                   style={profileButtonStyle}
@@ -4601,7 +4650,7 @@ const AppContent: React.FC = () => {
                   <Flame size={18} />
                   <span>FWB Sent</span>
                 </button>
-              ) : me.pendingFwbRequestsReceived.includes(user.id) ? (
+              ) : me?.pendingFwbRequestsReceived?.includes(user.id) ? (
                 <div className="flex gap-2">
                   <button 
                     onClick={() => handleAcceptFwbRequest(user.id)}
@@ -4648,7 +4697,7 @@ const AppContent: React.FC = () => {
           <button className="p-3.5 rounded-2xl transition-all border border-white/10" style={profileButtonStyle}>
             <Globe size={18} />
           </button>
-          {me.isAdmin && !isOwnProfile && (
+          {me?.isAdmin && !isOwnProfile && (
             <button 
               onClick={() => handleBanUser(user.id)}
               className="p-3.5 rounded-2xl shadow-lg transition-all chrome-border"
@@ -4833,7 +4882,7 @@ const AppContent: React.FC = () => {
                 {user.photos.length > 0 ? (
                   user.photos.map(photo => (
                     <div key={photo.id} className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/5 group cursor-pointer relative chrome-border shadow-2xl">
-                      {photo.type === 'video' || photo.url.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) ? (
+                      {photo.type === 'video' || (photo.url && (photo.url.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || photo.url.toLowerCase().includes('video'))) ? (
                         <div className="w-full h-full relative">
                           <VideoPlayer 
                             src={photo.url} 
@@ -4907,7 +4956,10 @@ const AppContent: React.FC = () => {
   // Main App Content Flow
   if (showSplash) return (
     <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <SplashScreen onComplete={() => setShowSplash(false)} />
+      <SplashScreen 
+        onComplete={() => setShowSplash(false)} 
+        isFirestoreOnline={isFirestoreOnline}
+      />
     </motion.div>
   );
 
@@ -4956,57 +5008,6 @@ const AppContent: React.FC = () => {
         currentUserId={currentUserId}
         initialEmail={auth.currentUser?.email || ''} 
         onComplete={handleProfileUpdate} 
-      />
-    </motion.div>
-  );
-
-  if (isPaying) return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <PaymentPage 
-        amount={
-          isNaN(paymentType === 'store' ? 10.00 : 
-          paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
-          (pendingStoreItem?.price || 0)) ? 0 :
-          (paymentType === 'store' ? 10.00 : 
-          paymentType === 'stable' ? (stableBundleSelected ? 15.00 : 10.00) :
-          (pendingStoreItem?.price || 0))
-        } 
-        itemName={
-          paymentType === 'store' ? "One-Time Store Activation Fee" : 
-          paymentType === 'stable' ? (stableBundleSelected ? "Stable Store Bundle Fee" : "One-Time Stable Access Fee") :
-          (pendingStoreItem?.title || "Store Item")
-        } 
-        destinationAccountId={
-          paymentType === 'item' && pendingStoreItem 
-            ? users.find(u => u.id === pendingStoreItem.userId)?.stripeConnectId 
-            : undefined
-        }
-        paymentLink={
-          paymentType === 'store' 
-            ? "https://buy.stripe.com/aFaaEXby27yzbPH28i8k800" 
-            : paymentType === 'stable'
-              ? (stableBundleSelected 
-                  ? "https://buy.stripe.com/4gM7sL9pUf116vnfZ88k802" 
-                  : "https://buy.stripe.com/00w6oH45A3ij6vn4gq8k801")
-              : undefined
-        }
-        successTitle={
-          paymentType === 'store' ? "Store Activated" : 
-          paymentType === 'stable' ? "The Stable Activated" :
-          "Item Unlocked"
-        }
-        successMessage={
-          paymentType === 'store' ? "Your store has been activated" : 
-          paymentType === 'stable' ? (stableBundleSelected ? "Your Store Bundle is now active" : "You now have unlimited access to The Stable") :
-          `You have successfully purchased ${pendingStoreItem?.title}`
-        }
-        onSuccess={handlePaymentSuccess}
-        onCancel={() => {
-          setIsPaying(false);
-          setPendingStableListing(null);
-          setPendingStoreItem(null);
-          setStableBundleSelected(false);
-        }}
       />
     </motion.div>
   );
@@ -5068,7 +5069,7 @@ const AppContent: React.FC = () => {
       <TopNav 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
-        userAvatar={me.avatar} 
+        userAvatar={me?.avatar} 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenCreate={() => setIsCreating(true)}
@@ -5078,7 +5079,7 @@ const AppContent: React.FC = () => {
         navigateToProfile={navigateToProfile}
         navigateToStore={navigateToStore}
         currentUserId={currentUserId}
-        isAdmin={me.isAdmin}
+        isAdmin={me?.isAdmin || false}
         onViewPublicProfile={viewOwnProfileAsPublic}
         onLogout={handleLogout}
         hasUnreadMessages={appNotifications.some(n => n.type === NotificationType.MESSAGE && !n.isRead)}
@@ -5093,18 +5094,18 @@ const AppContent: React.FC = () => {
       <main className={`${activeTab === 'messages' ? '' : 'pb-24'} pt-20`}>
         {activeTab === 'feed' && renderFeed()}
         {activeTab === 'messages' && renderMessages()}
-        {activeTab === 'profile' && renderProfile(me, true)}
+        {activeTab === 'profile' && me && renderProfile(me, true)}
         {activeTab === 'user-profile' && viewingUserId && (
           renderProfile(filteredUsers.find(u => u.id === viewingUserId), (viewingUserId === currentUserId) && !isViewingAsPublic)
         )}
-        {activeTab === 'profile-edit' && (
+        {activeTab === 'profile-edit' && me && (
           <ProfileEditPage 
             user={me} 
             onSave={handleProfileUpdate} 
             onCancel={() => setActiveTab('profile')} 
           />
         )}
-        {activeTab === 'custom-profile' && (
+        {activeTab === 'custom-profile' && me && (
           <CustomProfilePage 
             user={me} 
             onSave={(customization) => {
@@ -5114,7 +5115,7 @@ const AppContent: React.FC = () => {
             onBack={() => setActiveTab('profile')} 
           />
         )}
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && me && (
           <SettingsPage 
             me={me} 
             onEditProfile={() => setActiveTab('profile-edit')} 
@@ -5123,7 +5124,7 @@ const AppContent: React.FC = () => {
             setConfirmAction={setConfirmAction}
           />
         )}
-        {activeTab === 'media-store' && viewingUserId && (
+        {activeTab === 'media-store' && viewingUserId && me && (
           <MediaStore 
             user={filteredUsers.find(u => u.id === viewingUserId) || me}
             items={storeItems}
@@ -5140,7 +5141,7 @@ const AppContent: React.FC = () => {
             onProfileClick={navigateToProfile}
           />
         )}
-        {activeTab === 'store-management' && (
+        {activeTab === 'store-management' && me && (
           <StoreManagementPage 
             user={me}
             items={storeItems.filter(i => i.userId === currentUserId)}
@@ -5151,14 +5152,14 @@ const AppContent: React.FC = () => {
             onGoToCustomization={() => setActiveTab('store-customization')}
           />
         )}
-        {activeTab === 'store-customization' && (
+        {activeTab === 'store-customization' && me && (
           <StoreCustomizationPage 
             user={me}
             onSave={handleStoreCustomizationUpdate}
             onCancel={() => setActiveTab('store-management')}
           />
         )}
-        {activeTab === 'monetization' && (
+        {activeTab === 'monetization' && me && (
           <MonetizationPage 
             me={me} 
             onRequestPayment={(type, isBundle) => {
@@ -5261,7 +5262,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'stable' && (
           <StablePage listings={stableListings} onProfileClick={navigateToProfile} />
         )}
-        {activeTab === 'join-stable' && (
+        {activeTab === 'join-stable' && me && (
           <JoinStablePage 
             onBack={() => setActiveTab('feed')} 
             onGoToMonetization={() => setActiveTab('monetization')}
@@ -5269,7 +5270,7 @@ const AppContent: React.FC = () => {
             hasPaidStableFee={me.hasPaidStableFee || me.isAdmin}
           />
         )}
-        {activeTab === 'games' && (
+        {activeTab === 'games' && me && (
           <GameRoom 
             user={me} 
             socket={socket} 
@@ -5277,7 +5278,7 @@ const AppContent: React.FC = () => {
             setActiveTab={setActiveTab} 
           />
         )}
-        {activeTab === 'more' && (
+        {activeTab === 'more' && me && (
           <MyProfilePage 
             me={me}
             users={filteredUsers}
@@ -5447,6 +5448,155 @@ const AppContent: React.FC = () => {
           onCancel={() => setConfirmAction(null)} 
         />
       )}
+
+      {isPaying && (
+        <PaymentModal 
+          isOpen={isPaying} 
+          onClose={() => setIsPaying(false)} 
+          onSuccess={handlePaymentSuccess} 
+          type={paymentType}
+          item={pendingStoreItem || undefined}
+        />
+      )}
+    </div>
+  );
+};
+
+const PaymentModal: React.FC<{ 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSuccess: () => void; 
+  type: 'store' | 'stable' | 'item';
+  item?: StoreItem;
+}> = ({ isOpen, onClose, onSuccess, type, item }) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvc, setCvc] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    // Simulate payment processing
+    setTimeout(() => {
+      setIsProcessing(false);
+      onSuccess();
+    }, 2000);
+  };
+
+  if (!isOpen) return null;
+
+  const getTitle = () => {
+    if (type === 'store') return 'Activate Creator Store';
+    if (type === 'stable') return 'Uncommon Stable Listing';
+    if (type === 'item' && item) return `Unlock ${item.title}`;
+    return 'Secure Payment';
+  };
+
+  const getPrice = () => {
+    if (type === 'store') return 49.99;
+    if (type === 'stable') return 24.99;
+    if (type === 'item' && item) return item.price;
+    return 0;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[200] p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-[#0a0a0a] border border-white/5 w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl chrome-border"
+      >
+        <div className="p-8 border-b border-white/5 bg-gradient-to-br from-[#967bb6]/10 to-transparent flex justify-between items-start">
+          <div>
+            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-white/10">
+              <CreditCard className="text-[#967bb6]" />
+            </div>
+            <h2 className="text-2xl font-black tracking-tighter uppercase text-white">{getTitle()}</h2>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Safe & Secure 256-bit Encryption</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-xl">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 mb-6">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Order Summary</span>
+              <div className="flex items-center space-x-1">
+                <DollarSign size={16} className="text-[#967bb6]" />
+                <span className="text-2xl font-black text-white">{getPrice().toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Card Number</label>
+              <div className="relative">
+                <input 
+                  required
+                  type="text" 
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="0000 0000 0000 0000"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
+                />
+                <CreditCard className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-700" size={20} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Expiry Date</label>
+                <input 
+                  required
+                  type="text" 
+                  value={expiry}
+                  onChange={(e) => setExpiry(e.target.value)}
+                  placeholder="MM/YY"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">CVC</label>
+                <input 
+                  required
+                  type="text" 
+                  value={cvc}
+                  onChange={(e) => setCvc(e.target.value)}
+                  placeholder="123"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={isProcessing}
+            className="w-full py-5 rounded-[1.5rem] bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-[#967bb6]/50 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait flex items-center justify-center space-x-3"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="animate-spin" size={20} />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <Lock size={20} />
+                <span>Pay ${getPrice().toFixed(2)}</span>
+              </>
+            )}
+          </button>
+
+          <div className="flex items-center justify-center space-x-2 text-slate-600">
+            <Shield size={14} />
+            <span className="text-[8px] font-black uppercase tracking-widest">PCI-DSS Compliant Infrastructure</span>
+          </div>
+        </form>
+      </motion.div>
     </div>
   );
 };

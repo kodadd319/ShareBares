@@ -72,7 +72,8 @@ export interface User {
   hasPaidStableFee?: boolean;
   hasPaidStableBundle?: boolean;
   isAdmin?: boolean;
-  stripeConnectId?: string;
+  stripeConnectId?: string; // Kept for DB compatibility, but unused in UI
+  payoutsEnabled?: boolean; // Generic flag for the future
   purchasedItemIds?: string[];
   storeCustomization?: StoreCustomization;
   profileCustomization?: ProfileCustomization;

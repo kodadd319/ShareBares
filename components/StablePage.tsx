@@ -193,6 +193,7 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick, isLoa
                       <img 
                         key={idx} 
                         src={photo} 
+                        referrerPolicy="no-referrer"
                         className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
                         alt="" 
                         onError={(e) => {
@@ -206,6 +207,7 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick, isLoa
                   ) : (
                     <img 
                       src={listing.avatarUrl} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover col-span-2" 
                       alt="" 
                       onError={(e) => {

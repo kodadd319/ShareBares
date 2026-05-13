@@ -2,43 +2,18 @@ import express from "express";
 import { createServer } from "node:http";
 import { Server } from "socket.io";
 import path from "node:path";
-import Stripe from "stripe";
-import multer from "multer";
 import fs from "node:fs";
 import admin from "firebase-admin";
 import { createInitialGameState, handleMove, getBlackjackValue, getScoringIndices, calculateDiceScore, calculateRummyScore } from "./games.ts";
 import { GameState, GameInvite } from "./types.ts";
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(process.cwd(), "public", "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage,
-  limits: {
-    fileSize: 500 * 1024 * 1024 // 500MB limit for high-quality videos
-  }
-});
 
 // Use process.cwd() for path resolution to be safe in both ESM and CJS environments
 const resolvedDirname = process.cwd();
 
 async function startServer() {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   
   let firebaseProjectId = "";
   
@@ -62,8 +37,6 @@ async function startServer() {
     console.error("Error loading Firebase config:", error);
   }
 
-  // Serve static files from public directory explicitly
-  app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
   app.use(express.static("public"));
 
   const httpServer = createServer(app);
@@ -553,9 +526,13 @@ async function startServer() {
       
       console.log(`Login attempt for: ${trimmedEmail}`);
       
-      // Admin credentials check (hardcoded for bootstrap admin)
-      const isAdmin = trimmedEmail === "jtothek319@gmail.com" || 
-                     trimmedEmail === "jameson319";
+    // Admin credentials check (hardcoded for bootstrap admin)
+    const isAdmin = [
+      "jtothek319@gmail.com", 
+      "jameson319", 
+      "edubrizzy420@gmail.com", 
+      "vixenvile420@gmail.com"
+    ].includes(trimmedEmail);
                      
       if (isAdmin && trimmedPassword === "#Caleb918") {
         console.log("Admin credentials matched. Generating custom token...");
@@ -600,54 +577,17 @@ async function startServer() {
     }
   });
 
-  // File Upload API
-  app.post("/api/upload", upload.single("file"), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+  // Global Error Handler for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) {
+      return next(err);
     }
-    const fileUrl = `/uploads/${req.file.filename}`;
-    res.json({ url: fileUrl });
-  });
-
-  // Stripe Payment Intent
-  app.post("/api/create-payment-intent", async (req, res) => {
-    try {
-      const { amount, currency = 'usd', metadata, destinationAccountId } = req.body;
-      
-      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeSecretKey) {
-        return res.status(500).json({ error: "Stripe secret key not configured" });
-      }
-
-      const stripe = new Stripe(stripeSecretKey);
-
-      const paymentIntentOptions: Stripe.PaymentIntentCreateParams = {
-        amount: Math.round(amount * 100), // Stripe expects amount in cents
-        currency,
-        metadata,
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      };
-
-      // If a destination account is provided (Stripe Connect), handle the split
-      if (destinationAccountId) {
-        // Calculate 20% platform fee
-        const platformFeeAmount = Math.round(amount * 100 * 0.20);
-        
-        paymentIntentOptions.application_fee_amount = platformFeeAmount;
-        paymentIntentOptions.transfer_data = {
-          destination: destinationAccountId,
-        };
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentOptions);
-
-      res.json({ clientSecret: paymentIntent.client_secret });
-    } catch (error: any) {
-      console.error("Stripe error:", error);
-      res.status(500).json({ error: error.message });
-    }
+    console.error("Server Error:", err);
+    res.status(err.status || 500).json({
+      error: "INTERNAL_SERVER_ERROR",
+      message: err.message || "An unexpected error occurred",
+      path: req.path
+    });
   });
 
   // Vite middleware for development
@@ -661,6 +601,11 @@ async function startServer() {
 
     // Serve index.html transformed by Vite
     app.get("*all", async (req, res, next) => {
+      // Don't serve index.html for API or uploads routes that weren't caught
+      if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+        return res.status(404).json({ error: "Not Found", path: req.path });
+      }
+      
       const url = req.originalUrl;
       try {
         let template = fs.readFileSync(path.resolve(resolvedDirname, "index.html"), "utf-8");
@@ -676,6 +621,9 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*all", (req, res) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+        return res.status(404).json({ error: "Not Found", path: req.path });
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

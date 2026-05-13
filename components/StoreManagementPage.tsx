@@ -35,9 +35,11 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     description: '',
     price: ''
   });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
 
   // Edit mode state
   const [searchTitle, setSearchTitle] = useState('');
@@ -94,27 +96,38 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     }
   };
 
+  const handleThumbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.type.startsWith('image')) {
+        setThumbnailFile(file);
+      } else {
+        toast.error('Please select an image for the thumbnail.');
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || !details.title || !details.price || uploadError) return;
 
     setIsUploading(true);
     
-    // Simulate upload delay
-    setTimeout(() => {
-      onAddItem({
-        title: details.title,
-        description: details.description,
-        price: parseFloat(details.price),
-        thumbnailUrl: '', // Handled by App.tsx
-        mediaUrls: [], // Handled by App.tsx
-        type: type
-      }, files);
+    const allFiles = thumbnailFile ? [thumbnailFile, ...files] : files;
 
-      setFiles([]);
-      setDetails({ title: '', description: '', price: '' });
-      setIsUploading(false);
-    }, 1000);
+    onAddItem({
+      title: details.title,
+      description: details.description,
+      price: parseFloat(details.price),
+      thumbnailUrl: '', // Handled by App.tsx
+      mediaUrls: [], // Handled by App.tsx
+      type: type
+    }, allFiles);
+
+    setFiles([]);
+    setThumbnailFile(null);
+    setDetails({ title: '', description: '', price: '' });
+    setIsUploading(false);
   };
 
   const handleSearch = () => {
@@ -186,20 +199,20 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
       <div className="grid grid-cols-1 gap-8">
         {!user.hasPaidStoreFee && !user.isAdmin ? (
-          <div className="glass-panel rounded-[2.5rem] p-12 text-center border-[#967bb6]/30 bg-[#967bb6]/5 chrome-border relative overflow-hidden">
+          <div className="glass-panel rounded-[2.5rem] p-12 text-center border-slate-500/30 bg-slate-500/5 chrome-border relative overflow-hidden">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#967bb6]/10 blur-[100px] pointer-events-none"></div>
-            <div className="w-20 h-20 bg-[#967bb6]/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <Lock size={40} className="text-[#967bb6]" />
+            <div className="w-20 h-20 bg-slate-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <Lock size={40} className="text-slate-500" />
             </div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Must Monetize First</h2>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Under Maintenance</h2>
             <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8 max-w-md mx-auto leading-relaxed">
-              Access to the Store Manager is blocked. You must pay the store fee on the monetization page to unlock your store.
+              Our payment and store systems are currently undergoing maintenance. We are transitioning to a new payment provider to ensure your privacy and security. Please check back soon!
             </p>
             <button 
-              onClick={onGoToMonetization}
-              className="bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-[#967bb6]/20 transition-all hover:scale-105 active:scale-95 chrome-border"
+              onClick={() => window.history.back()}
+              className="bg-gradient-to-r from-slate-700 to-slate-900 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl transition-all hover:scale-105 active:scale-95 chrome-border"
             >
-              Go to Monetization
+              Go Back
             </button>
           </div>
         ) : (
@@ -240,54 +253,97 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                   </div>
 
                   {/* File Upload Area */}
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
-                      files.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
-                    } ${uploadError ? 'border-red-500/50 bg-red-500/5' : ''}`}
-                  >
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept={type === 'video' ? 'video/*' : type === 'picture_pack' ? 'image/*' : '*/*'}
-                      multiple={type === 'picture_pack'}
-                      className="hidden"
-                    />
-                    
-                    {files.length > 0 ? (
-                      <div className="flex flex-col items-center animate-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
-                          {type === 'video' ? <Video size={40} className="text-emerald-500" /> : <ImageIcon size={40} className="text-emerald-500" />}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
+                        files.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
+                      } ${uploadError ? 'border-red-500/50 bg-red-500/5' : ''}`}
+                    >
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept={type === 'video' ? 'video/*' : type === 'picture_pack' ? 'image/*' : '*/*'}
+                        multiple={type === 'picture_pack'}
+                        className="hidden"
+                      />
+                      
+                      {files.length > 0 ? (
+                        <div className="flex flex-col items-center animate-in zoom-in duration-300">
+                          <div className="w-20 h-20 bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4">
+                            {type === 'video' ? <Video size={40} className="text-emerald-500" /> : <ImageIcon size={40} className="text-emerald-500" />}
+                          </div>
+                          <p className="text-white font-black uppercase tracking-widest text-sm mb-1">
+                            {type === 'picture_pack' ? `${files.length} Photos Selected` : files[0].name}
+                          </p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold">
+                            {type === 'picture_pack' 
+                              ? `${(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB Total`
+                              : `${(files[0].size / (1024 * 1024)).toFixed(2)} MB`
+                            } • Click to change
+                          </p>
                         </div>
-                        <p className="text-white font-black uppercase tracking-widest text-sm mb-1">
-                          {type === 'picture_pack' ? `${files.length} Photos Selected` : files[0].name}
-                        </p>
-                        <p className="text-slate-500 text-[10px] uppercase font-bold">
-                          {type === 'picture_pack' 
-                            ? `${(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB Total`
-                            : `${(files[0].size / (1024 * 1024)).toFixed(2)} MB`
-                          } • Click to change
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                          {type === 'video' ? <Video size={32} className="text-slate-600 group-hover:text-[#967bb6]" /> : <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />}
-                        </div>
-                        <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
-                          {type === 'video' ? 'Select Video File' : type === 'picture_pack' ? 'Select 5 Photos' : 'Select Media File'}
-                        </p>
-                        <p className="text-slate-600 text-[10px] uppercase font-bold">Drag and drop or click to browse device</p>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            {type === 'video' ? <Video size={32} className="text-slate-600 group-hover:text-[#967bb6]" /> : <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />}
+                          </div>
+                          <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
+                            {type === 'video' ? 'Select Video File' : type === 'picture_pack' ? 'Select 5 Photos' : 'Select Media File'}
+                          </p>
+                          <p className="text-slate-600 text-[10px] uppercase font-bold">Drag and drop or click to browse device</p>
+                        </>
+                      )}
 
-                    {uploadError && (
-                      <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center space-x-2 text-red-500 animate-in fade-in slide-in-from-bottom-2">
-                        <AlertCircle size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
-                      </div>
-                    )}
+                      {uploadError && (
+                        <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center space-x-2 text-red-500 animate-in fade-in slide-in-from-bottom-2">
+                          <AlertCircle size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Thumbnail Upload (Only for Video) */}
+                    <div 
+                      onClick={() => thumbInputRef.current?.click()}
+                      className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
+                        thumbnailFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
+                      }`}
+                    >
+                      <input 
+                        type="file" 
+                        ref={thumbInputRef}
+                        onChange={handleThumbChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      
+                      {thumbnailFile ? (
+                        <div className="flex flex-col items-center animate-in zoom-in duration-300 w-full h-full">
+                          <div className="w-full h-full rounded-2xl overflow-hidden relative">
+                            <img 
+                              src={URL.createObjectURL(thumbnailFile)} 
+                              alt="Thumbnail" 
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-white font-black uppercase tracking-widest text-xs">Change Thumbnail</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />
+                          </div>
+                          <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
+                            Thumbnail Image {type === 'video' ? '(Required)' : '(Optional)'}
+                          </p>
+                          <p className="text-slate-600 text-[10px] uppercase font-bold">Show fans what's inside</p>
+                        </>
+                      )}
+                    </div>
                   </div>
 
                   {/* Details Grid */}
@@ -388,6 +444,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/20">
                           <img 
                             src={editingItem.thumbnailUrl} 
+                            referrerPolicy="no-referrer"
                             alt="" 
                             className="w-full h-full object-cover" 
                             onError={(e) => {

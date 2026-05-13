@@ -361,6 +361,7 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                   <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shrink-0">
                     <img 
                       src={listing.photos?.[0] || listing.avatarUrl} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
@@ -603,50 +604,57 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
     return url.startsWith('/') ? url : `/${url}`;
   };
 
-  const isVideo = item.type === 'video' || (item.mediaUrls?.[0] && item.mediaUrls[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i));
+  const isVideo = item.type === 'video' || (item.mediaUrls?.[0] && (item.mediaUrls[0].split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || item.mediaUrls[0].toLowerCase().includes('video')));
 
   return (
     <div className={`group ${customization.layout === 'list' ? 'flex items-center space-x-8 p-6 rounded-[2.5rem] border border-white/5 bg-white/[0.02]' : ''}`}>
       <div 
-        onClick={() => canView && setShowFull(true)}
+        onClick={() => canView ? setShowFull(true) : onPurchase?.()}
         className={`relative overflow-hidden border border-white/5 chrome-border bg-[#0a0a0a] transition-all duration-500 ${
           customization.layout === 'list' ? 'w-48 h-48 rounded-3xl shrink-0' : 'aspect-[4/5] rounded-[2rem] mb-4'
-        } ${canView ? 'cursor-pointer' : ''}`}
+        } cursor-pointer`}
       >
-        {isVideo ? (
+        {isVideo && canView ? (
           <div className="w-full h-full relative">
             <VideoPlayer 
-              src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
+              src={getMediaUrl(item.mediaUrls[0])} 
               poster={getMediaUrl(item.thumbnailUrl)}
               className="w-full h-full"
               muted
               autoPlay={false}
               controls={false}
               showPlayIcon={false}
-              clickToPlay={canView}
+              clickToPlay={true}
             />
             <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
               <Play size={32} className="text-white opacity-50" />
             </div>
+          </div>
+        ) : (
+          <div className="w-full h-full relative">
+            <img 
+              src={getMediaUrl(item.thumbnailUrl)} 
+              alt={item.title}
+              referrerPolicy="no-referrer"
+              className={`w-full h-full object-cover transition-transform duration-700 ${canView ? 'group-hover:scale-110' : ''} ${!canView ? 'blur-sm grayscale' : ''}`}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                if (target.src !== APP_LOGO_URL) {
+                  target.src = APP_LOGO_URL;
+                }
+              }}
+            />
+            {isVideo && (
+              <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
+                <Play size={32} className="text-white opacity-50" />
+              </div>
+            )}
             {!canView && (
               <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
                 <Lock size={32} className="text-white/30" />
               </div>
             )}
           </div>
-        ) : (
-          <img 
-            src={getMediaUrl(canView ? item.mediaUrls[0] : item.thumbnailUrl)} 
-            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${!canView ? 'blur-sm grayscale' : ''}`} 
-            alt={item.title} 
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (target.src !== APP_LOGO_URL) {
-                target.src = APP_LOGO_URL;
-              }
-            }}
-          />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
         
@@ -706,16 +714,23 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           <div className="absolute bottom-6 left-6 right-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
             <button 
               onClick={onPurchase}
-              className="w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all hover:scale-105 shadow-xl"
+              className="w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 shadow-xl flex items-center justify-center gap-2 group/btn"
               style={{ backgroundColor: '#000000', color: '#967bb6' }}
             >
-              Unlock Now
+              <Lock size={12} className="group-hover/btn:rotate-12 transition-transform" />
+              Unlock for ${isNaN(item.price) ? '0.00' : item.price.toFixed(2)}
             </button>
           </div>
         )}
       </div>
       <div className={`px-2 ${customization.layout === 'list' ? 'flex-grow' : ''}`}>
-        <h4 className="font-black uppercase tracking-tight text-sm mb-1 line-clamp-1" style={{ color: customization.fontColor }}>{item.title}</h4>
+        <h4 
+          onClick={() => !canView && onPurchase?.()}
+          className={`font-black uppercase tracking-tight text-sm mb-1 line-clamp-1 ${!canView ? 'cursor-pointer hover:underline' : ''}`} 
+          style={{ color: customization.fontColor }}
+        >
+          {item.title}
+        </h4>
         {item.description && (
           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2 line-clamp-2 leading-relaxed">
             {item.description}
@@ -727,10 +742,11 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
         {customization.layout === 'list' && !canView && (
           <button 
             onClick={onPurchase}
-            className="mt-4 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105"
+            className="mt-4 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 flex items-center gap-2"
             style={{ backgroundColor: '#000000', color: '#967bb6' }}
           >
-            Unlock Now
+            <Lock size={12} />
+            Unlock for ${isNaN(item.price) ? '0.00' : item.price.toFixed(2)}
           </button>
         )}
       </div>
@@ -738,20 +754,26 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
       {showFull && canView && (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
           <div className="relative w-full max-w-5xl max-h-[90vh] bg-black rounded-[3rem] overflow-hidden chrome-border shadow-2xl flex flex-col">
-            <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-4">
-              {item.type === 'video' || isVideo ? (
-                <VideoPlayer 
-                  src={getMediaUrl(item.mediaUrls[0])} 
-                  poster={getMediaUrl(item.thumbnailUrl)}
-                  autoPlay 
-                  className="w-full h-full"
-                />
-              ) : (
-                item.mediaUrls.map((url, idx) => (
+            <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-8">
+              {item.mediaUrls.map((url, idx) => {
+                const absoluteUrl = getMediaUrl(url);
+                const isItemVideo = absoluteUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || absoluteUrl.toLowerCase().includes('video');
+                
+                return isItemVideo ? (
+                  <div key={idx} className="w-full max-w-4xl aspect-video rounded-2xl overflow-hidden shadow-2xl">
+                    <VideoPlayer 
+                      src={absoluteUrl} 
+                      poster={getMediaUrl(item.thumbnailUrl)}
+                      autoPlay={idx === 0} 
+                      className="w-full h-full"
+                    />
+                  </div>
+                ) : (
                   <img 
                     key={idx} 
-                    src={getMediaUrl(url)} 
-                    className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl" 
+                    src={absoluteUrl} 
+                    referrerPolicy="no-referrer"
+                    className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl transition-transform hover:scale-[1.02]" 
                     alt={`${item.title} ${idx + 1}`} 
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
@@ -760,8 +782,8 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                       }
                     }}
                   />
-                ))
-              )}
+                );
+              })}
             </div>
             
             <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">

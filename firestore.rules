@@ -1,337 +1,167 @@
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: users
-// Document ID: userId (Firebase Auth UID)
-// Fields:
-//   - id: string (required)
-//   - username: string (required)
-//   - displayName: string (required)
-//   - email: string (required, PII)
-//   - avatar: string
-//   - coverImage: string
-//   - bio: string
-//   - isCreator: bool
-//   - isAdmin: bool
-//   - subscribersCount: int
-//   - followingCount: int
-//   - friendIds: list (strings)
-//   - pendingFriendRequestsSent: list (strings)
-//   - pendingFriendRequestsReceived: list (strings)
-//   - likedPostIds: list (strings)
-//   - fwbIds: list (strings)
-//   - pendingFwbRequestsSent: list (strings)
-//   - pendingFwbRequestsReceived: list (strings)
-//   - fwbRequestsResetDate: string (ISO 8601)
-//   - fwbRequestsSentCount: int
-//   - fanIds: list (strings)
-//   - hasPaidStoreFee: bool
-//   - hasPaidStableFee: bool
-//   - hasPaidStableBundle: bool
-//   - profileCustomization: map
-//   - stripeConnectId: string
-//   - purchasedItemIds: list (strings)
-//
-// Collection: profiles
-// Document ID: userId (Firebase Auth UID)
-// Fields: (Public subset of User)
-//   - id: string (required)
-//   - username: string (required)
-//   - displayName: string (required)
-//   - avatar: string
-//   - coverImage: string
-//   - bio: string
-//   - isCreator: bool
-//   - subscribersCount: int
-//   - followingCount: int
-//
-// Collection: posts
-// Document ID: postId
-// Fields:
-//   - id: string (required)
-//   - userId: string (required)
-//   - content: string (required)
-//   - mediaUrl: string
-//   - mediaType: string (enum: image, video)
-//   - createdAt: string (required, ISO 8601)
-//   - likes: int
-//   - likedBy: list (strings)
-//   - commentsCount: int
-//   - visibility: string (enum: PUBLIC, PRIVATE)
-//   - category: string
-//
-// Collection: messages
-// Document ID: messageId
-// Fields:
-//   - id: string (required)
-//   - senderId: string (required)
-//   - receiverId: string (required)
-//   - text: string (required)
-//   - timestamp: string (required, ISO 8601)
-//   - isRead: bool
-//
-// Collection: storeItems
-// Document ID: itemId
-// Fields:
-//   - id: string (required)
-//   - userId: string (required)
-//   - title: string (required)
-//   - description: string
-//   - price: number (required)
-//   - thumbnailUrl: string
-//   - mediaUrls: list (strings)
-//   - type: string (enum: video, picture_pack, other)
-//   - createdAt: string (required, ISO 8601)
-//
-// Collection: stableListings
-// Document ID: listingId
-// Fields:
-//   - id: string (required)
-//   - userId: string (required)
-//   - providerName: string (required)
-//   - providerGender: string (enum: male, female, non-binary, transgender)
-//   - services: string
-//   - city: string
-//   - pricing: string (required)
-//   - contactInfo: string
-//   - avatarUrl: string
-//   - createdAt: string (required, ISO 8601)
-//
-// Collection: notifications
-// Document ID: notificationId
-// Fields:
-//   - id: string (required)
-//   - userId: string (required)
-//   - type: string (required)
-//   - title: string (required)
-//   - message: string (required)
-//   - timestamp: string (required, ISO 8601)
-//   - isRead: bool
-//
-// Collection: comments
-// Document ID: commentId
-// Fields:
-//   - id: string (required)
-//   - postId: string (required)
-//   - userId: string (required)
-//   - text: string (required)
-//   - createdAt: string (required, ISO 8601)
-//
-// ===============================================================
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
+    // -----------------------------------------------------------------
+    // 0. GLOBAL SAFETY NET
+    // -----------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
-    function isAuthenticated() {
+    // -----------------------------------------------------------------
+    // 1. GLOBAL HELPERS
+    // -----------------------------------------------------------------
+    function isSignedIn() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email == "jtothek319@gmail.com" ||
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true));
+      return isSignedIn() && (
+        request.auth.token.email in [
+          "jtothek319@gmail.com", 
+          "edubrizzy420@gmail.com", 
+          "vixenvile420@gmail.com",
+          "vixenvile@gmail.com"
+        ] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true)
+      );
     }
 
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isValidDate(d) { return d is string && d.size() >= 10 && d.size() <= 64; }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-
-    function isValidEmail(email) {
-      return email is string && email.size() > 3 && email.size() < 256;
-    }
-
-    function isUpdateAction(allowedFields) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
-    }
-
-    // ===============================================================
-    // Domain Validators
-    // ===============================================================
-
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
+    // -----------------------------------------------------------------
+    // 2. ENTITY VALIDATIONS
+    // -----------------------------------------------------------------
 
     function isValidUser(data) {
-      return hasRequiredFields(['id', 'username', 'email']) &&
-             data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
-             data.username is string && data.username.size() >= 1 && data.username.size() <= 100 &&
-             isValidEmail(data.email) &&
-             (data.keys().size() <= 40); // Prevent shadow fields
+      return data.keys().hasAll(['id', 'username', 'email']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.username is string && data.username.size() <= 100 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.keys().size() <= 70; // High limit for complex user docs
     }
 
     function isValidPost(data) {
-      return hasRequiredFields(['id', 'userId', 'content', 'createdAt']) &&
+      return data.keys().hasAll(['id', 'userId', 'content', 'createdAt']) &&
              data.id is string && data.id.size() <= 128 &&
              data.userId is string && data.userId.size() <= 128 &&
-             data.content is string && data.content.size() > 0 && data.content.size() <= 5000 &&
-             isValidDateString(data.createdAt) &&
-             (data.get('visibility', 'PUBLIC') in ['PUBLIC', 'PRIVATE']) &&
-             (data.keys().size() <= 20);
+             data.content is string && data.content.size() <= 20000 &&
+             isValidDate(data.createdAt) &&
+             data.keys().size() <= 50;
     }
 
-    function isValidMessage(data) {
-      return hasRequiredFields(['id', 'senderId', 'receiverId', 'text', 'timestamp']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.senderId is string && data.senderId.size() <= 128 &&
-             data.receiverId is string && data.receiverId.size() <= 128 &&
-             data.text is string && data.text.size() > 0 && data.text.size() <= 2000 &&
-             isValidDateString(data.timestamp) &&
-             (data.keys().size() <= 10);
-    }
-
-    function isValidStoreItem(data) {
-      return hasRequiredFields(['id', 'userId', 'title', 'price', 'createdAt']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
-             data.price is number && data.price >= 0 &&
-             isValidDateString(data.createdAt) &&
-             (data.keys().size() <= 15);
-    }
-
-    function isValidStableListing(data) {
-      return hasRequiredFields(['id', 'userId', 'providerName', 'pricing', 'createdAt']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.providerName is string && data.providerName.size() > 0 &&
-             data.pricing is string &&
-             isValidDateString(data.createdAt) &&
-             (data.keys().size() <= 15);
-    }
-
-    function isValidNotification(data) {
-      return hasRequiredFields(['id', 'userId', 'title', 'message', 'timestamp']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.userId is string && data.userId.size() <= 128 &&
-             data.title is string && data.message is string &&
-             isValidDateString(data.timestamp) &&
-             (data.keys().size() <= 10);
-    }
-
-    function isValidAppComment(data) {
-      return hasRequiredFields(['id', 'postId', 'userId', 'text', 'createdAt']) &&
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'postId', 'userId', 'text', 'createdAt']) &&
              data.id is string && data.id.size() <= 128 &&
              data.postId is string && data.postId.size() <= 128 &&
              data.userId is string && data.userId.size() <= 128 &&
-             data.text is string && data.text.size() > 0 && data.text.size() <= 1000 &&
-             isValidDateString(data.createdAt) &&
-             (data.keys().size() <= 10);
+             data.text is string && data.text.size() <= 2000 &&
+             isValidDate(data.createdAt) &&
+             data.keys().size() <= 15;
     }
 
-    // ===============================================================
-    // Collection Rules
-    // ===============================================================
+    // -----------------------------------------------------------------
+    // 3. COLLECTION RULES
+    // -----------------------------------------------------------------
 
+    // USERS
     match /users/{userId} {
-      allow read, list: if true;
-      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isAuthenticated() && (
-        (isOwner(userId) && isValidUser(request.resource.data)) || 
-        isAdmin() || 
-        isUpdateAction(['fanIds', 'friendIds', 'subscribersCount', 'followingCount', 'pendingFriendRequestsSent', 'pendingFriendRequestsReceived', 'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived', 'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds', 'purchasedItemIds', 'blockedUserIds'])
+      allow read: if true;
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (isOwner(userId) && isValidUser(incoming())) || isAdmin() || (
+        // Allow partial updates from system/others for relational fields
+        isSignedIn() && incoming().diff(existing()).affectedKeys().hasAny([
+          'fanIds', 'friendIds', 'subscribersCount', 'followingCount', 
+          'pendingFriendRequestsSent', 'pendingFriendRequestsReceived',
+          'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived',
+          'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds',
+          'purchasedItemIds'
+        ])
       );
       allow delete: if isAdmin();
     }
 
+    // PROFILES (Public mirror)
     match /profiles/{userId} {
       allow read: if true;
-      allow create, update: if isAuthenticated() && isOwner(userId) && isValidProfile(request.resource.data);
-      allow delete: if isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
     }
 
-    match /_connection_test_/{docId} {
-      allow read: if isValidId(docId);
-    }
-
+    // POSTS
     match /posts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                    isValidId(postId) &&
-                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
-                    isValidPost(request.resource.data);
+      allow read: if true;
+      allow create: if isSignedIn() && (
+        incoming().userId == request.auth.uid || 
+        isAdmin() || 
+        (incoming().userId == 'ai-jade' && isAdmin())
+      ) && isValidPost(incoming());
       
-      allow update: if isAuthenticated() && (
-        ((resource.data.userId == request.auth.uid || isAdmin()) && isValidPost(request.resource.data)) ||
-        isUpdateAction(['likes', 'likedBy', 'commentsCount'])
+      allow update: if isSignedIn() && (
+        (existing().userId == request.auth.uid && isValidPost(incoming())) ||
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy', 'commentsCount'])
       );
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
+    // MESSAGES
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (
-        resource.data.senderId == request.auth.uid || 
-        resource.data.receiverId == request.auth.uid || 
+      allow read: if isSignedIn() && (
+        existing().senderId == request.auth.uid || 
+        existing().receiverId == request.auth.uid || 
         isAdmin()
       );
-      allow create: if isAuthenticated() && 
-                    isValidId(messageId) &&
-                    request.resource.data.senderId == request.auth.uid && 
-                    isValidMessage(request.resource.data);
-      allow update: if isAuthenticated() && 
-        (resource.data.receiverId == request.auth.uid || isAdmin()) && 
-        isUpdateAction(['isRead']);
+      allow create: if isSignedIn() && incoming().senderId == request.auth.uid && (
+        incoming().keys().hasAll(['id', 'senderId', 'receiverId', 'text', 'timestamp'])
+      );
+      allow update: if isSignedIn() && (
+        (existing().receiverId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['isRead'])) ||
+        isAdmin()
+      );
       allow delete: if isAdmin();
     }
 
+    // STORE ITEMS
     match /storeItems/{itemId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                    isValidId(itemId) && 
-                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
-                    isValidStoreItem(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStoreItem(request.resource.data);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
+      allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
-    match /stableListings/{listingId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                    isValidId(listingId) &&
-                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
-                    isValidStableListing(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidStableListing(request.resource.data);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-    }
-
+    // NOTIFICATIONS
     match /notifications/{notificationId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && 
-                    isValidId(notificationId) &&
-                    (request.resource.data.userId == request.auth.uid || isAdmin()) &&
-                    isValidNotification(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()) && isUpdateAction(['isRead']);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isOwner(existing().userId) || isAdmin();
+      allow create: if isSignedIn(); // Allow system or other users to send notifications
+      allow update: if isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isOwner(existing().userId) || isAdmin();
     }
 
+    // COMMENTS
     match /comments/{commentId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && 
-                    isValidId(commentId) &&
-                    (request.resource.data.userId == request.auth.uid || isAdmin()) && 
-                    isValidAppComment(request.resource.data);
-      allow update: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin()) && isValidAppComment(request.resource.data);
-      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if true;
+      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin()) && isValidComment(incoming());
+      allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
+    // STABLE LISTINGS
+    match /stableListings/{listingId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
+      allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // CONNECTION TEST
+    match /_connection_test_/{docId} {
+      allow read: if true;
     }
   }
 }

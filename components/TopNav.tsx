@@ -405,6 +405,7 @@ const TopNav: React.FC<TopNavProps> = ({
                               >
                                 <img 
                                   src={user.avatar || APP_LOGO_URL} 
+                                  referrerPolicy="no-referrer"
                                   className="w-8 h-8 rounded-lg object-cover border border-white/10" 
                                   alt="" 
                                   onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}
@@ -876,6 +877,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                       >
                                         <img 
                                           src={user.avatar || APP_LOGO_URL} 
+                                          referrerPolicy="no-referrer"
                                           className="w-8 h-8 rounded-lg object-cover" 
                                           alt="" 
                                           onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}

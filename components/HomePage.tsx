@@ -44,6 +44,8 @@ const HomePage: React.FC<HomePageProps> = ({
   onAcceptFwbRequest,
   onDeclineFwbRequest
 }) => {
+  if (!me) return null;
+
   const otherUsers = users.filter(u => u.id !== me.id);
   
   // Filter posts: show all posts for the "Recent Activity" feed
@@ -84,7 +86,7 @@ const HomePage: React.FC<HomePageProps> = ({
               <span className="text-[10px] font-black uppercase tracking-[0.3em]">Welcome Back</span>
             </div>
             <h1 className="text-4xl font-black text-white tracking-tighter mb-4 chrome-text">
-              HELLO, {me.displayName.split(' ')[0].toUpperCase()}!
+              HELLO, {(me.displayName || 'Friend').split(' ')[0].toUpperCase()}!
             </h1>
             <p className="text-slate-400 max-w-md text-sm leading-relaxed mb-6">
               Check out what's happening in your network. New exclusive content from your favorite creators is waiting.
@@ -116,7 +118,7 @@ const HomePage: React.FC<HomePageProps> = ({
             }}
           />
           <div className="flex-grow bg-white/5 rounded-xl px-4 py-2.5 text-slate-500 text-xs font-bold uppercase tracking-widest">
-            What's on your mind, {me.displayName.split(' ')[0]}?
+            What's on your mind, {(me.displayName || 'Friend').split(' ')[0]}?
           </div>
           <div className="p-2 bg-[#967bb6]/10 text-[#967bb6] rounded-lg">
             <Sparkles size={18} />
@@ -172,9 +174,9 @@ const HomePage: React.FC<HomePageProps> = ({
         </section>
 
         {/* Requests Popups */}
-        {(me.pendingFriendRequestsReceived.length > 0 || me.pendingFwbRequestsReceived.length > 0) && (
+        {((me?.pendingFriendRequestsReceived?.length ?? 0) > 0 || (me?.pendingFwbRequestsReceived?.length ?? 0) > 0) && (
           <div className="space-y-4">
-            {me.pendingFriendRequestsReceived.map(userId => {
+            {(me?.pendingFriendRequestsReceived ?? []).map(userId => {
               const requester = users.find(u => u.id === userId);
               if (!requester) return null;
               return (
@@ -205,7 +207,7 @@ const HomePage: React.FC<HomePageProps> = ({
                 </div>
               );
             })}
-            {me.pendingFwbRequestsReceived.map(userId => {
+            {(me?.pendingFwbRequestsReceived ?? []).map(userId => {
               const requester = users.find(u => u.id === userId);
               if (!requester) return null;
               return (
@@ -364,7 +366,7 @@ const HomePage: React.FC<HomePageProps> = ({
               className="bg-black/40 rounded-2xl p-4 border border-white/5 cursor-pointer hover:bg-black/60 transition-all group"
               onClick={() => onProfileClick?.(me.id)}
             >
-              <p className="text-xl font-black text-white group-hover:text-[#967bb6] transition-colors">{me.friendIds.length}</p>
+              <p className="text-xl font-black text-white group-hover:text-[#967bb6] transition-colors">{(me?.friendIds ?? []).length}</p>
               <p className="text-[9px] text-slate-500 uppercase font-bold tracking-widest group-hover:text-white transition-colors">Friends</p>
             </div>
           </div>

@@ -40,6 +40,8 @@ const ChatPage: React.FC<ChatPageProps> = ({
   onProfileClick,
   onDeleteConversation
 }) => {
+  if (!me) return null;
+
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -202,6 +204,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${isActive ? 'border-[#967bb6]' : 'border-white/10 group-hover:border-white/30'}`}>
                     <img 
                       src={user.avatar || APP_LOGO_URL} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
@@ -260,6 +263,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 <div className="relative cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
                   <img 
                     src={selectedUser.avatar || APP_LOGO_URL} 
+                    referrerPolicy="no-referrer"
                     className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" 
                     alt="" 
                     onError={(e) => {
@@ -321,6 +325,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                             {showAvatar ? (
                               <img 
                                 src={selectedUser.avatar || APP_LOGO_URL} 
+                                referrerPolicy="no-referrer"
                                 className="w-full h-full rounded-lg object-cover border border-white/10" 
                                 alt="" 
                                 onError={(e) => {
@@ -367,6 +372,7 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   <div className="w-8 h-8 shrink-0 mb-1">
                     <img 
                       src={selectedUser.avatar || APP_LOGO_URL} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full rounded-lg object-cover border border-white/10" 
                       alt="" 
                       onError={(e) => {

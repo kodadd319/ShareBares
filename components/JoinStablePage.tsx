@@ -85,7 +85,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Must Monetize First</h2>
           <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8 max-w-md mx-auto leading-relaxed">
-            Access to "Join The Stable" is blocked. You must pay the "Basic Listing" or "Store Bundle" fee via the Stripe payment link on the monetization page to create your escort service listing.
+            Access to "Join The Stable" is blocked. You must activate your account via the monetization page to create your escort service listing.
           </p>
           <button 
             onClick={onGoToMonetization}
@@ -209,6 +209,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                   <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
                     <img 
                       src={url} 
+                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {

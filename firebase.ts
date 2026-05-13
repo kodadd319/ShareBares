@@ -7,6 +7,9 @@ import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, getDocFromServer, or,
   enableIndexedDbPersistence, enableMultiTabIndexedDbPersistence, arrayUnion, arrayRemove, initializeFirestore, enableNetwork, disableNetwork
 } from 'firebase/firestore';
+import { 
+  getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject 
+} from 'firebase/storage';
 
 // Import the Firebase configuration
 import firebaseConfig from './firebase-applet-config.json';
@@ -17,35 +20,31 @@ const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId;
 
 // Initialize Firestore with specific settings for better compatibility in iframe environments
 export const db = firestoreDbId 
-  ? initializeFirestore(app, { experimentalForceLongPolling: true }, firestoreDbId)
-  : initializeFirestore(app, { experimentalForceLongPolling: true });
-
-// Enable persistence for better offline resilience once connected
-if (typeof window !== 'undefined') {
-  // Use non-blocking persistence initialization
-  const tryPersistence = async () => {
-    try {
-      await enableMultiTabIndexedDbPersistence(db);
-      console.log('Firestore multi-tab persistence enabled');
-    } catch (err: any) {
-      if (err.code === 'failed-precondition') {
-        // Multiple tabs open, persistence can only be enabled in one tab at a a time.
-        console.warn('Firestore persistence not enabled: Multiple tabs open');
-      } else if (err.code === 'unimplemented') {
-        // The current browser does not support all of the features required to enable persistence
-        console.warn('Firestore persistence not supported by browser');
-      } else {
-        // Fallback to single tab persistence
-        try {
-          await enableIndexedDbPersistence(db);
-          console.log('Firestore single-tab persistence enabled');
-        } catch (innerErr) {
-          console.warn('Firestore persistence initialization failed completely:', innerErr);
-        }
+  ? initializeFirestore(app, { 
+      experimentalForceLongPolling: true,
+      localCache: {
+        kind: 'persistent',
+        initialTabManager: { kind: 'multi-tab' }
       }
-    }
-  };
-  tryPersistence();
+    } as any, firestoreDbId)
+  : initializeFirestore(app, { 
+      experimentalForceLongPolling: true,
+      localCache: {
+        kind: 'persistent',
+        initialTabManager: { kind: 'multi-tab' }
+      }
+    } as any);
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
+
+// Connection Heartbeat and Auto-Reconnect
+if (typeof window !== 'undefined') {
+  // Add a listener for online/offline events to nudge Firestore
+  window.addEventListener('online', () => {
+    console.log('Browser back online, nudging Firestore...');
+    enableNetwork(db).catch(console.error);
+  });
 }
 
 export const auth = getAuth(app);
@@ -74,6 +73,39 @@ export enum OperationType {
   WRITE = 'write',
 }
 
+/**
+ * Tests the connection to Firestore with a small retry window 
+ * to handle transient initialization delays.
+ */
+export async function testFirestoreConnection(retries = 3): Promise<boolean> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      // Try to get a non-existent document from a test collection
+      // We use getDocFromServer to bypass local cache for a real network check
+      await getDocFromServer(doc(db, '_connection_test_', 'startup-check'));
+      console.log('Firestore connectivity verified.');
+      return true;
+    } catch (error: any) {
+      console.warn(`Firestore connection attempt ${i + 1} failed:`, error?.message);
+      
+      // If it's a "unavailable" error, we might want to wait a bit and try enableNetwork
+      if (error?.message?.includes('unavailable') || error?.message?.includes('offline')) {
+        try {
+          await enableNetwork(db);
+        } catch (e) {
+          console.error('Failed to enable network during retry:', e);
+        }
+      }
+      
+      if (i < retries - 1) {
+        // Linear backoff
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+  }
+  return false;
+}
+
 interface FirestoreErrorInfo {
   error: string;
   operationType: OperationType;
@@ -92,6 +124,40 @@ interface FirestoreErrorInfo {
     }[];
   }
 }
+
+// Storage helpers
+export interface UploadProgress {
+  progress: number;
+  downloadURL?: string;
+  error?: any;
+}
+
+export const uploadFile = (
+  file: File, 
+  path: string, 
+  onProgress?: (progress: number) => void
+): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const storageRef = ref(storage, path);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        if (onProgress) onProgress(progress);
+      },
+      (error) => {
+        console.error('Upload failed:', error);
+        reject(error);
+      },
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        resolve(downloadURL);
+      }
+    );
+  });
+};
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMessage = error instanceof Error ? error.message : String(error);
@@ -118,23 +184,29 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
   if (isPermissionError) {
     console.warn('Firestore Permission Denied: ', JSON.stringify(errInfo));
-    // Don't throw for permission errors in listeners to avoid crashing the app
+    // Don't throw for permission errors specifically in non-critical reads to avoid crashing app
     if (operationType === OperationType.LIST || operationType === OperationType.GET) {
       return;
     }
   } else {
-    // Only log connectivity errors as warnings but DO throw them so callers can handle retries/UI
-    if (errMessage.includes('unavailable') || errMessage.includes('offline')) {
+    const isConnectivityError = errMessage.includes('unavailable') || errMessage.includes('offline');
+    if (isConnectivityError) {
       console.warn('Firestore connectivity issue (transient):', errMessage);
+      // For listeners and generic reads, don't throw, just let it retry in background
+      if (operationType === OperationType.LIST || operationType === OperationType.GET) {
+        return;
+      }
     }
     console.error('Firestore Error: ', JSON.stringify(errInfo));
   }
   
+  // Only throw if it's a critical write operation or non-transient error
   throw new Error(JSON.stringify(errInfo));
 }
 
 export { 
   collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, onAuthStateChanged, or, getDocFromServer,
   enableNetwork, disableNetwork, setPersistence, browserLocalPersistence, browserSessionPersistence, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCustomToken,
-  arrayUnion, arrayRemove, firebaseConfig
+  arrayUnion, arrayRemove, firebaseConfig, signOut, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  ref, uploadBytesResumable, getDownloadURL, deleteObject
 };

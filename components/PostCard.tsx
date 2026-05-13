@@ -78,7 +78,7 @@ const PostCard: React.FC<PostCardProps> = ({
   const postComments = comments.filter(c => c.postId === post.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-  const isVideo = post.mediaType === 'video' || (post.mediaUrl && post.mediaUrl.match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i));
+  const isVideo = post.mediaType === 'video' || (post.mediaUrl && (post.mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || post.mediaUrl.toLowerCase().includes('video')));
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden mb-6 shadow-xl transition-all hover:border-[#967bb6]/40 chrome-border">

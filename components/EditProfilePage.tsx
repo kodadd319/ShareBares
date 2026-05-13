@@ -26,7 +26,6 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
   const [isCreator, setIsCreator] = useState(user.isCreator);
   const [avatar, setAvatar] = useState(user.avatar);
   const [coverImage, setCoverImage] = useState(user.coverImage);
-  const [stripeConnectId, setStripeConnectId] = useState(user.stripeConnectId || '');
   const [isSaving, setIsSaving] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -98,8 +97,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
         },
         isCreator,
         avatar: finalAvatar,
-        coverImage: finalCover,
-        stripeConnectId
+        coverImage: finalCover
       });
     } catch (error) {
       console.error('Save failed:', error);
@@ -141,6 +139,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 >
                   <img 
                     src={avatar} 
+                    referrerPolicy="no-referrer"
                     className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
                     alt="Avatar Preview" 
                     onError={(e) => {
@@ -183,6 +182,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                 >
                   <img 
                     src={coverImage} 
+                    referrerPolicy="no-referrer"
                     className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
                     alt="Cover Preview" 
                     onError={(e) => {
@@ -369,21 +369,6 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
               >
                 <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${isCreator ? 'left-8' : 'left-1'}`} />
               </button>
-            </div>
-
-            <div className="space-y-2 pt-4 border-t border-white/5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center">
-                <CreditCard size={12} className="mr-2" />
-                Stripe Account ID (acct_...)
-              </label>
-              <input 
-                type="text" 
-                value={stripeConnectId}
-                onChange={(e) => setStripeConnectId(e.target.value)}
-                placeholder="acct_1234567890"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 text-sm"
-              />
-              <p className="text-[9px] text-slate-600 uppercase font-bold">Find this in your Stripe Dashboard under Settings &gt; Account Details</p>
             </div>
           </div>
 

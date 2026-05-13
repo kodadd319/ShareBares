@@ -30,7 +30,6 @@
         "hasPaidStableFee": { "type": "boolean" },
         "hasPaidStableBundle": { "type": "boolean" },
         "profileCustomization": { "type": "object" },
-        "stripeConnectId": { "type": "string" },
         "purchasedItemIds": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["id", "username", "email"]
