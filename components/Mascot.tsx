@@ -88,7 +88,6 @@ const ShareBares: React.FC<ShareBaresProps> = ({
                   src={imageUrl || undefined}
                   className="w-full h-full object-contain drop-shadow-[0_0_25px_rgba(150,123,182,0.4)]"
                   alt="ShareBares Mascot"
-                  referrerPolicy="no-referrer"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/logo.png';
                   }}

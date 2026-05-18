@@ -179,7 +179,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, onSocialLogi
               src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
               className="w-full h-auto object-cover" 
               alt="Featured Content"
-              referrerPolicy="no-referrer"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 if (target.src !== APP_LOGO_URL) {

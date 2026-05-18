@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, DollarSign, Edit3, Search, X, Palette } from 'lucide-react';
+import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, Edit3, Search, X, Palette } from 'lucide-react';
 import { User, StoreItem } from '../types';
 import { StoreItemSkeleton } from './Skeleton';
 import { toast } from 'sonner';
@@ -13,7 +13,6 @@ interface StoreManagementPageProps {
   onAddItem: (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onUpdateItem: (itemId: string, updates: Partial<StoreItem>) => void;
   onDeleteItem: (itemId: string) => void;
-  onGoToMonetization: () => void;
   onGoToCustomization: () => void;
 }
 
@@ -24,7 +23,6 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   onAddItem,
   onUpdateItem,
   onDeleteItem,
-  onGoToMonetization,
   onGoToCustomization
 }) => {
   const [activeMode, setActiveMode] = useState<'upload' | 'edit'>('upload');
@@ -33,7 +31,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   const [details, setDetails] = useState({
     title: '',
     description: '',
-    price: ''
+    price: 0
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -47,7 +45,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   const [editDetails, setEditDetails] = useState({
     title: '',
     description: '',
-    price: ''
+    price: 0
   });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,23 +55,28 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
       if (type === 'video') {
         const videoFile = selectedFiles[0];
-        if (videoFile && videoFile.type.startsWith('video')) {
+        const isVideoMime = videoFile && videoFile.type.startsWith('video');
+        const isVideoExtension = videoFile && videoFile.name.match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI)$/i);
+        
+        if (videoFile && (isVideoMime || isVideoExtension)) {
           setFiles([videoFile]);
           
-          // Background duration check
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-          video.onloadedmetadata = () => {
-            window.URL.revokeObjectURL(video.src);
-            if (video.duration > 480) {
-              setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
-            }
-          };
-          video.onerror = () => {
-             console.warn('Could not read video metadata for duration check');
-             window.URL.revokeObjectURL(video.src);
-          };
-          video.src = URL.createObjectURL(videoFile);
+          // Background duration check - only if it's a format the browser can actually play to get metadata
+          if (isVideoMime || videoFile.name.match(/\.(mp4|webm|ogg|MP4|WEBM)$/i)) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+              window.URL.revokeObjectURL(video.src);
+              if (video.duration > 480) {
+                setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
+              }
+            };
+            video.onerror = () => {
+              console.warn('Could not read video metadata for duration check');
+              window.URL.revokeObjectURL(video.src);
+            };
+            video.src = URL.createObjectURL(videoFile);
+          }
         } else {
           setUploadError('Please select a valid video file.');
         }
@@ -109,7 +112,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (files.length === 0 || !details.title || !details.price || uploadError) return;
+    if (files.length === 0 || !details.title || uploadError) return;
 
     setIsUploading(true);
     
@@ -118,7 +121,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     onAddItem({
       title: details.title,
       description: details.description,
-      price: parseFloat(details.price),
+      price: details.price,
       thumbnailUrl: '', // Handled by App.tsx
       mediaUrls: [], // Handled by App.tsx
       type: type
@@ -126,7 +129,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
     setFiles([]);
     setThumbnailFile(null);
-    setDetails({ title: '', description: '', price: '' });
+    setDetails({ title: '', description: '', price: 0 });
     setIsUploading(false);
   };
 
@@ -137,7 +140,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       setEditDetails({
         title: item.title,
         description: item.description || '',
-        price: isNaN(item.price) ? '0.00' : item.price.toString()
+        price: item.price || 0
       });
     } else {
       toast.error('Media item not found with that title.');
@@ -151,7 +154,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     onUpdateItem(editingItem.id, {
       title: editDetails.title,
       description: editDetails.description,
-      price: parseFloat(editDetails.price)
+      price: editDetails.price
     });
 
     setEditingItem(null);
@@ -171,7 +174,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black text-white tracking-tighter chrome-text uppercase">Store Management</h1>
-          <p className="text-slate-500 mt-2 uppercase text-[10px] tracking-[0.2em] font-bold">Upload and manage your paid content</p>
+          <p className="text-slate-500 mt-2 uppercase text-[10px] tracking-[0.2em] font-bold">Upload and manage your store content</p>
         </div>
         
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
@@ -198,26 +201,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {!user.hasPaidStoreFee && !user.isAdmin ? (
-          <div className="glass-panel rounded-[2.5rem] p-12 text-center border-slate-500/30 bg-slate-500/5 chrome-border relative overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#967bb6]/10 blur-[100px] pointer-events-none"></div>
-            <div className="w-20 h-20 bg-slate-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <Lock size={40} className="text-slate-500" />
-            </div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Under Maintenance</h2>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8 max-w-md mx-auto leading-relaxed">
-              Our payment and store systems are currently undergoing maintenance. We are transitioning to a new payment provider to ensure your privacy and security. Please check back soon!
-            </p>
-            <button 
-              onClick={() => window.history.back()}
-              className="bg-gradient-to-r from-slate-700 to-slate-900 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl transition-all hover:scale-105 active:scale-95 chrome-border"
-            >
-              Go Back
-            </button>
-          </div>
-        ) : (
-          <>
-            {activeMode === 'upload' ? (
+        {activeMode === 'upload' ? (
               <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.02] chrome-border">
                 <div className="flex items-center space-x-3 mb-8">
                   <div className="w-10 h-10 bg-[#967bb6]/20 rounded-xl flex items-center justify-center">
@@ -264,7 +248,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         type="file" 
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        accept={type === 'video' ? 'video/*' : type === 'picture_pack' ? 'image/*' : '*/*'}
+                        accept={type === 'video' ? 'video/*,.mkv,.avi,.wmv,.flv,.3gp,.mov,.mp4,.webm,.m4v,.MP4,.MOV,.WEBM' : type === 'picture_pack' ? 'image/*' : '*/*'}
                         multiple={type === 'picture_pack'}
                         className="hidden"
                       />
@@ -361,18 +345,16 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Price (USD)</label>
-                      <div className="relative">
-                        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          required
-                          value={details.price}
-                          onChange={(e) => setDetails(prev => ({ ...prev, price: e.target.value }))}
-                          placeholder="9.99"
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-10 pr-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                        />
-                      </div>
+                      <input 
+                        type="number" 
+                        required
+                        min="0"
+                        step="0.01"
+                        value={details.price}
+                        onChange={(e) => setDetails(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                        placeholder="0.00"
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
+                      />
                     </div>
                   </div>
 
@@ -381,14 +363,14 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                     <textarea 
                       value={details.description}
                       onChange={(e) => setDetails(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Tell your fans what's included in this purchase..."
+                      placeholder="Tell your followers what's included..."
                       className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all h-32 resize-none chrome-border"
                     />
                   </div>
 
                   <button 
                     type="submit"
-                    disabled={files.length === 0 || !details.title || !details.price || isUploading || !!uploadError}
+                    disabled={files.length === 0 || !details.title || isUploading || !!uploadError}
                     className="w-full bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white py-5 rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-[#967bb6]/20 transition-all hover:scale-[1.02] active:scale-95 chrome-border disabled:opacity-50 disabled:grayscale flex items-center justify-center space-x-3"
                   >
                     {isUploading ? (
@@ -444,7 +426,6 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-black/20">
                           <img 
                             src={editingItem.thumbnailUrl} 
-                            referrerPolicy="no-referrer"
                             alt="" 
                             className="w-full h-full object-cover" 
                             onError={(e) => {
@@ -457,7 +438,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         </div>
                         <div>
                           <p className="text-white font-bold text-sm">{editingItem.title}</p>
-                          <p className="text-slate-500 text-[10px] uppercase font-bold">${isNaN(editingItem.price) ? '0.00' : editingItem.price}</p>
+                          <p className="text-slate-500 text-[10px] uppercase font-bold">In Store</p>
                         </div>
                       </div>
                       <button 
@@ -482,17 +463,15 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                         </div>
                         <div className="space-y-2">
                           <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Price (USD)</label>
-                          <div className="relative">
-                            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
-                            <input 
-                              type="number" 
-                              step="0.01"
-                              required
-                              value={editDetails.price}
-                              onChange={(e) => setEditDetails(prev => ({ ...prev, price: e.target.value }))}
-                              className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-10 pr-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                            />
-                          </div>
+                          <input 
+                            type="number" 
+                            required
+                            min="0"
+                            step="0.01"
+                            value={editDetails.price}
+                            onChange={(e) => setEditDetails(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
+                          />
                         </div>
                       </div>
 
@@ -526,8 +505,6 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                 )}
               </div>
             )}
-          </>
-        )}
 
         {/* Info Box */}
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 flex items-start space-x-4">

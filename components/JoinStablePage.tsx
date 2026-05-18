@@ -1,33 +1,86 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, X, Check, ArrowLeft, Shield, Lock } from 'lucide-react';
+import { Camera, Upload, X, Check, ArrowLeft, Shield, Lock, Video } from 'lucide-react';
 import { useShareBares } from './MascotContext';
-import { StableListing } from '../types';
-import { APP_LOGO_URL } from '../constants';
+import { StableListing, User } from '../types';
+import { APP_LOGO_URL, STABLE_MEMBERSHIP_LINK } from '../constants';
+import PaymentGate from './PaymentGate';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { toast } from 'sonner';
 
 interface JoinStablePageProps {
+  user: User;
   onBack: () => void;
-  onGoToMonetization: () => void;
   onSubmit: (listing: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean, photoFiles: File[]) => void;
-  hasPaidStableFee: boolean;
 }
 
-const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetization, onSubmit, hasPaidStableFee }) => {
+const JoinStablePage: React.FC<JoinStablePageProps> = ({ user, onBack, onSubmit }) => {
   const [name, setName] = useState('');
   const { showMascot } = useShareBares();
+  const [isActivated, setIsActivated] = useState(user.isStableActive || false);
+
+  const handlePaymentSuccess = async () => {
+    // In a real app, this would be verified server-side
+    const userRef = doc(db, 'users', user.id);
+    await setDoc(userRef, {
+      isStableActive: true,
+      stableActivationDate: new Date().toISOString()
+    }, { merge: true });
+    
+    // Also update public profile
+    const profileRef = doc(db, 'profiles', user.id);
+    await setDoc(profileRef, {
+      isStableActive: true
+    }, { merge: true });
+    
+    setIsActivated(true);
+    toast.success('Stable Membership Activated! You can now post your listing.');
+  };
 
   useEffect(() => {
-    showMascot({
-      action: 'wink',
-      message: "Ready to join the elite? The Stable is where the real money is made! 🐎💰",
-      duration: 6000
-    });
-  }, [showMascot]);
+    if (isActivated) {
+      showMascot({
+        action: 'wink',
+        message: "Ready to join the elite? The Stable is where the real action is! 🐎🔥",
+        duration: 6000
+      });
+    }
+  }, [showMascot, isActivated]);
 
   const [gender, setGender] = useState<'male' | 'female' | 'non-binary' | 'transgender'>('female');
+
+  if (!isActivated && !user.isAdmin) {
+    return (
+      <div className="py-12">
+        <button 
+          onClick={onBack}
+          className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group ml-4"
+        >
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-xs font-black uppercase tracking-widest">Back</span>
+        </button>
+        <PaymentGate 
+          title="The Stable Membership"
+          description="Elite Escort Directory Access"
+          amount={15}
+          paymentLink={STABLE_MEMBERSHIP_LINK}
+          onSuccess={handlePaymentSuccess}
+          features={[
+            'Official Stable Listing',
+            'In-Person Service Exposure',
+            'Verified Provider Badge',
+            'Unlimited Listing Edits',
+            'Direct Contact Messaging',
+            'Featured in "The Stable" Tab'
+          ]}
+        />
+      </div>
+    );
+  }
+
   const [services, setServices] = useState('');
   const [city, setCity] = useState('');
-  const [pricing, setPricing] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [importantInfo, setImportantInfo] = useState('');
   const [postToStore, setPostToStore] = useState(false);
@@ -52,51 +105,19 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !services || !pricing || !contactInfo) return;
+    if (!name || !services || !contactInfo) return;
 
     onSubmit({
       providerName: name,
       providerGender: gender,
       services,
       city,
-      pricing,
       contactInfo,
       importantInfo,
       photos: [], // Will be populated by parent after upload
       avatarUrl: APP_LOGO_URL // Will be populated by parent after upload
     }, postToStore, photoFiles);
   };
-
-  if (!hasPaidStableFee) {
-    return (
-      <div className="max-w-2xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <button 
-          onClick={onBack}
-          className="flex items-center space-x-2 text-slate-500 hover:text-white transition-colors mb-8 group"
-        >
-          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="text-xs font-black uppercase tracking-widest">Back to Feed</span>
-        </button>
-
-        <div className="glass-panel rounded-[3rem] p-12 text-center border-[#967bb6]/30 bg-[#967bb6]/5 chrome-border relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#967bb6]/10 blur-[100px] pointer-events-none"></div>
-          <div className="w-20 h-20 bg-[#967bb6]/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <Lock size={40} className="text-[#967bb6]" />
-          </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-4">Must Monetize First</h2>
-          <p className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-8 max-w-md mx-auto leading-relaxed">
-            Access to "Join The Stable" is blocked. You must activate your account via the monetization page to create your escort service listing.
-          </p>
-          <button 
-            onClick={onGoToMonetization}
-            className="bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-[#967bb6]/20 transition-all hover:scale-105 active:scale-95 chrome-border"
-          >
-            Go to Monetization
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
@@ -167,18 +188,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Pricing</label>
-                <input 
-                  type="text" 
-                  value={pricing}
-                  onChange={(e) => setPricing(e.target.value)}
-                  placeholder="e.g. $200/hr"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 focus:ring-1 focus:ring-[#967bb6] transition-all outline-none text-slate-100 placeholder:text-slate-700"
-                  required
-                />
-              </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Contact Info</label>
                 <input 
                   type="text" 
@@ -205,29 +215,42 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
             <div>
               <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Photos (Max 2)</label>
               <div className="grid grid-cols-2 gap-4">
-                {previews.map((url, index) => (
-                  <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
-                    <img 
-                      src={url} 
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover" 
-                      alt="" 
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        if (target.src !== APP_LOGO_URL) {
-                          target.src = APP_LOGO_URL;
-                        }
-                      }}
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                {previews.map((url, index) => {
+                  const isVideo = photoFiles[index]?.type.startsWith('video') || 
+                    url.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI|3GP|OGG|WMV|FLV|M4V)$/i) ||
+                    url.toLowerCase().includes('video') ||
+                    (url.toLowerCase().includes('firebasestorage') && (url.toLowerCase().includes('%2Fvideo') || url.toLowerCase().includes('video%2F') || url.toLowerCase().includes('video')));
+                  
+                  return (
+                    <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group">
+                      {isVideo ? (
+                        <div className="w-full h-full bg-black flex items-center justify-center">
+                           <Video className="text-white opacity-50" size={32} />
+                           <span className="absolute bottom-2 left-2 text-[8px] font-black uppercase tracking-widest text-white bg-black/40 px-2 py-0.5 rounded">Video</span>
+                        </div>
+                      ) : (
+                        <img 
+                          src={url} 
+                          className="w-full h-full object-cover" 
+                          alt="" 
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== APP_LOGO_URL) {
+                              target.src = APP_LOGO_URL;
+                            }
+                          }}
+                        />
+                      )}
+                      <button 
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
                 {previews.length < 2 && (
                   <button 
                     type="button"
@@ -235,7 +258,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                     className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center text-slate-500 hover:text-[#967bb6] hover:border-[#967bb6]/30 transition-all bg-white/5"
                   >
                     <Upload size={24} className="mb-2" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Upload Photo</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-center px-2">Upload Photo or Video</span>
                   </button>
                 )}
               </div>
@@ -243,52 +266,14 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
                 type="file" 
                 ref={fileInputRef}
                 onChange={handlePhotoUpload}
-                accept="image/*"
+                accept="image/*,video/*,.mkv,.avi,.wmv,.flv,.3gp"
                 className="hidden"
               />
             </div>
 
-            <div className="pt-4 space-y-4">
-              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-3">Listing Options</label>
-              
-              <div 
-                onClick={() => {
-                  if (hasPaidStableFee) {
-                    setPostToStore(false);
-                  }
-                }}
-                className={`p-6 rounded-2xl border-2 transition-all ${!postToStore && hasPaidStableFee ? 'border-[#967bb6] bg-[#967bb6]/5' : 'border-white/5 bg-white/5 hover:border-white/20'} ${!hasPaidStableFee ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-black text-white uppercase tracking-tight">Basic Listing</span>
-                  <div className="flex items-center space-x-2">
-                    {hasPaidStableFee && !postToStore && <Check size={14} className="text-[#967bb6]" />}
-                    <span className="text-[#967bb6] font-black">$10.00</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "The Stable" feed only</p>
-              </div>
-
-              <div 
-                onClick={() => {
-                  if (hasPaidStableFee) {
-                    setPostToStore(true);
-                  }
-                }}
-                className={`p-6 rounded-2xl border-2 transition-all ${postToStore && hasPaidStableFee ? 'border-[#967bb6] bg-[#967bb6]/5' : 'border-white/5 bg-white/5 hover:border-white/20'} ${!hasPaidStableFee ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-black text-white uppercase tracking-tight">Store Bundle</span>
-                    <div className="bg-emerald-500/20 text-emerald-500 text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Best Value</div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {hasPaidStableFee && postToStore && <Check size={14} className="text-[#967bb6]" />}
-                    <span className="text-[#967bb6] font-black">$15.00</span>
-                  </div>
-                </div>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Posts to "The Stable" AND your personal store</p>
-              </div>
+            <div className="pt-4 space-y-4 text-center">
+               <p className="text-[10px] text-[#967bb6] uppercase tracking-[0.2em] font-black">Official Stable Membership - $15</p>
+               <p className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Secure your place in the elite directory</p>
             </div>
           </div>
 
@@ -308,22 +293,11 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ onBack, onGoToMonetizat
 
             <button 
               type="submit"
-              disabled={!hasPaidStableFee}
-              className={`w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border ${
-                hasPaidStableFee 
-                ? 'bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white shadow-[#967bb6]/20' 
-                : 'bg-white/5 text-slate-700 border-white/5 cursor-not-allowed shadow-none'
-              }`}
+              className="w-full py-5 rounded-2xl font-black text-lg shadow-xl transition-all flex items-center justify-center gap-2 group transform active:scale-[0.98] chrome-border bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white shadow-[#967bb6]/20"
             >
-              {!hasPaidStableFee && <Lock size={20} className="mr-2" />}
               Post Listing
-              {hasPaidStableFee && <Check className="group-hover:translate-x-1 transition-transform" size={24} />}
+              <Check className="group-hover:translate-x-1 transition-transform" size={24} />
             </button>
-            {!hasPaidStableFee && (
-              <p className="text-center text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-4">
-                Please select a fee package above to unlock posting
-              </p>
-            )}
           </div>
         </form>
 

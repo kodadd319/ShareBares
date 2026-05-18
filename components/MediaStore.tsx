@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, Plus, X, Upload, Check, Download, AlertCircle, Lock } from 'lucide-react';
+import { ShoppingBag, Play, Image as ImageIcon, DollarSign, ArrowLeft, Briefcase, Shield, Trash2, X, Download, Lock } from 'lucide-react';
 import { User, StoreItem, StableListing } from '../types';
 import { StoreItemSkeleton } from './Skeleton';
 import { APP_LOGO_URL } from '../constants';
@@ -7,22 +7,21 @@ import AdPlaceholder from './AdPlaceholder';
 import VideoPlayer from './VideoPlayer';
 
 interface MediaStoreProps {
-  user: User;
+  user: User; // The store owner
+  currentUser: User; // The visitor
   items: StoreItem[];
   stableListings?: StableListing[];
   isOwnStore: boolean;
   isAdmin?: boolean;
   isLoading?: boolean;
-  purchasedItemIds?: string[];
   storeOwnerId?: string;
   onBack: () => void;
-  onPurchase?: (item: StoreItem) => void;
   onDeleteItem?: (itemId: string) => void;
-  onAddItem?: (item: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => void;
   onProfileClick?: (userId: string) => void;
+  onBuyItem?: (item: StoreItem) => void;
 }
 
-const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [], isOwnStore, isAdmin, isLoading, purchasedItemIds = [], storeOwnerId, onBack, onPurchase, onDeleteItem, onAddItem, onProfileClick }) => {
+const MediaStore: React.FC<MediaStoreProps> = ({ user, currentUser, items, stableListings = [], isOwnStore, isAdmin, isLoading, storeOwnerId, onBack, onDeleteItem, onProfileClick, onBuyItem }) => {
   const customization = user.storeCustomization || {
     backgroundColor: '#000000',
     accentColor: '#967bb6',
@@ -30,88 +29,9 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
     fontColor: '#ffffff',
     layout: 'grid'
   };
-  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'packs' | 'other' | 'services' | 'purchased'>('all');
-  const [isAddingItem, setIsAddingItem] = useState(false);
-  const [newItemTitle, setNewItemTitle] = useState('');
-  const [newItemDescription, setNewItemDescription] = useState('');
-  const [newItemPrice, setNewItemPrice] = useState('10.00');
-  const [newItemFiles, setNewItemFiles] = useState<File[]>([]);
-  const [newItemType, setNewItemType] = useState<'video' | 'picture_pack' | 'other'>('video');
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files) as File[];
-      setUploadError(null);
-
-      if (newItemType === 'video') {
-        const videoFile = selectedFiles[0];
-        if (videoFile && videoFile.type.startsWith('video')) {
-          setNewItemFiles([videoFile]);
-          
-          // Background duration check
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-          video.onloadedmetadata = () => {
-            window.URL.revokeObjectURL(video.src);
-            if (video.duration > 480) {
-              setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
-            }
-          };
-          video.onerror = () => {
-            console.warn('Could not read video metadata for duration check');
-            window.URL.revokeObjectURL(video.src);
-          };
-          video.src = URL.createObjectURL(videoFile);
-        } else {
-          setUploadError('Please select a valid video file.');
-        }
-      } else if (newItemType === 'picture_pack') {
-        if (selectedFiles.length !== 5) {
-          setUploadError('A picture pack must contain exactly 5 photos.');
-          setNewItemFiles([]);
-        } else {
-          const allImages = selectedFiles.every(f => f.type.startsWith('image'));
-          if (!allImages) {
-            setUploadError('All files in a picture pack must be images.');
-            setNewItemFiles([]);
-          } else {
-            setNewItemFiles(selectedFiles);
-          }
-        }
-      } else {
-        setNewItemFiles(selectedFiles);
-      }
-    }
-  };
-
-  const handleAddItemSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newItemFiles.length === 0 || !newItemTitle || !newItemPrice || uploadError) return;
-    
-    onAddItem?.({
-      title: newItemTitle,
-      description: newItemDescription,
-      price: parseFloat(newItemPrice),
-      thumbnailUrl: '', // Will be handled by parent
-      mediaUrls: [], // Will be handled by parent
-      type: newItemType
-    }, newItemFiles);
-
-    setIsAddingItem(false);
-    setNewItemTitle('');
-    setNewItemDescription('');
-    setNewItemPrice('10.00');
-    setNewItemFiles([]);
-    setUploadError(null);
-  };
+  const [activeSection, setActiveSection] = useState<'all' | 'videos' | 'packs' | 'other' | 'services'>('all');
 
   const filteredItems = items.filter(item => {
-    if (activeSection === 'purchased') {
-      return purchasedItemIds.includes(item.id);
-    }
-    
     // If viewing a specific store, filter items not matching that owner
     if (storeOwnerId && item.userId !== storeOwnerId) return false;
 
@@ -201,29 +121,21 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                 Escort Services
               </button>
             )}
-            <button 
-              onClick={() => setActiveSection('purchased')}
-              className="px-6 py-2 rounded-full font-black text-xs uppercase tracking-widest transition-all shadow-lg"
-              style={{ backgroundColor: '#000000', color: '#967bb6', opacity: activeSection === 'purchased' ? 1 : 0.5 }}
-            >
-              My Purchases
-            </button>
           </div>
-
-          {isOwnStore && (
-            <button 
-              onClick={() => setIsAddingItem(true)}
-              className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all hover:scale-105 active:scale-95 flex items-center space-x-2 chrome-border"
-              style={{ backgroundColor: '#000000', color: '#967bb6' }}
-            >
-              <Plus size={18} />
-              <span>Add New Item</span>
-            </button>
-          )}
         </div>
 
         {/* Content Sections */}
-        {isLoading ? (
+        {!user.isStoreActive && !isOwnStore ? (
+          <div className="glass-panel rounded-[3rem] p-20 text-center border-dashed border-white/10 max-w-2xl mx-auto">
+            <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ShoppingBag size={40} className="text-slate-700" />
+            </div>
+            <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Store Opening Soon</h3>
+            <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">
+              {user.displayName || user.username} is currently setting up their storefront.
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
               <StoreItemSkeleton key={i} />
@@ -253,10 +165,11 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     <StoreCard 
                       item={item} 
                       isAdmin={isAdmin} 
-                      isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
+                      isOwnItem={isOwnStore}
+                      isPurchased={currentUser.purchasedItemIds?.includes(item.id)}
                       customization={customization} 
-                      onPurchase={() => onPurchase?.(item)} 
                       onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
+                      onBuy={() => onBuyItem?.(item)}
                     />
                     {index === 3 && customization.layout === 'grid' && <AdPlaceholder size="md" className="sm:col-span-2 lg:col-span-1" />}
                   </React.Fragment>
@@ -291,11 +204,12 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                   <StoreCard 
                     key={item.id} 
                     item={item} 
-                    isAdmin={isAdmin} 
-                    isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
+                    isAdmin={isAdmin}
+                    isOwnItem={isOwnStore}
+                    isPurchased={currentUser.purchasedItemIds?.includes(item.id)}
                     customization={customization} 
-                    onPurchase={() => onPurchase?.(item)} 
                     onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
+                    onBuy={() => onBuyItem?.(item)}
                   />
                 ))}
               </div>
@@ -328,11 +242,12 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                   <StoreCard 
                     key={item.id} 
                     item={item} 
-                    isAdmin={isAdmin} 
-                    isPurchased={purchasedItemIds.includes(item.id) || isOwnStore}
+                    isAdmin={isAdmin}
+                    isOwnItem={isOwnStore}
+                    isPurchased={currentUser.purchasedItemIds?.includes(item.id)}
                     customization={customization} 
-                    onPurchase={() => onPurchase?.(item)} 
                     onDelete={(isOwnStore || isAdmin) ? () => onDeleteItem?.(item.id) : undefined} 
+                    onBuy={() => onBuyItem?.(item)}
                   />
                 ))}
               </div>
@@ -361,7 +276,6 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                   <div className="w-24 h-24 rounded-2xl overflow-hidden border border-white/10 shrink-0">
                     <img 
                       src={listing.photos?.[0] || listing.avatarUrl} 
-                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
@@ -376,7 +290,6 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                     <div className="mb-2">
                       <div className="flex items-center justify-between mb-0.5">
                         <h4 className="text-sm font-black tracking-tight uppercase truncate" style={{ color: customization.fontColor }}>{listing.providerName}</h4>
-                        <span className="font-black text-[10px]" style={{ color: customization.accentColor }}>{listing.pricing}</span>
                       </div>
                       <div className="flex items-center space-x-1.5" style={{ color: customization.accentColor }}>
                         <Shield size={10} />
@@ -391,9 +304,6 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
                         <span className="text-[7px] font-black uppercase tracking-widest text-slate-500">{listing.providerGender}</span>
                         <span className="font-bold text-[9px] break-all ml-2" style={{ color: customization.accentColor }}>{listing.contactInfo}</span>
                       </div>
-                      <p className="text-[6px] font-black uppercase tracking-[0.2em] text-slate-600 text-center italic">
-                        Only serious inquiries
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -404,135 +314,6 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
       </>
     )}
   </div>
-
-      {/* Add New Item Modal */}
-      {isAddingItem && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-          <div className="bg-[#0a0a0a] border border-[#c0c0c0]/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 chrome-border">
-            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-gradient-to-br from-[#967bb6]/10 to-transparent">
-              <div>
-                <h2 className="text-2xl font-black tracking-tighter uppercase text-white">Add Store Item</h2>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Upload paid media to your store</p>
-              </div>
-              <button onClick={() => setIsAddingItem(false)} className="p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-xl">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleAddItemSubmit} className="p-8 space-y-6">
-              <div className="space-y-4">
-                {/* Type Selection */}
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Content Type</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['video', 'picture_pack', 'other'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => {
-                          setNewItemType(t);
-                          setNewItemFiles([]);
-                          setUploadError(null);
-                        }}
-                        className={`py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${
-                          newItemType === t 
-                            ? 'bg-[#967bb6] text-white border-[#967bb6]' 
-                            : 'bg-white/5 text-slate-500 border-white/10'
-                        }`}
-                      >
-                        {t.replace('_', ' ')}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Item Title</label>
-                  <input 
-                    type="text" 
-                    value={newItemTitle}
-                    onChange={(e) => setNewItemTitle(e.target.value)}
-                    placeholder="e.g. Exclusive Video Set #1"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:ring-1 focus:ring-[#967bb6] outline-none text-slate-100 placeholder:text-slate-700 text-sm"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Price ($)</label>
-                    <input 
-                      type="number" 
-                      step="0.01"
-                      value={newItemPrice}
-                      onChange={(e) => setNewItemPrice(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:ring-1 focus:ring-[#967bb6] outline-none text-slate-100 text-sm"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Media File</label>
-                    <button 
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`w-full h-[50px] rounded-2xl border-2 border-dashed flex items-center justify-center transition-all ${newItemFiles.length > 0 ? 'border-emerald-500/50 bg-emerald-500/5 text-emerald-400' : 'border-white/10 bg-white/5 text-slate-500 hover:border-[#967bb6]/30'} ${uploadError ? 'border-red-500/50 bg-red-500/5' : ''}`}
-                    >
-                      {newItemFiles.length > 0 ? (
-                        <div className="flex items-center space-x-2">
-                          <Check size={16} />
-                          <span className="text-[10px] font-black uppercase truncate max-w-[100px]">
-                            {newItemType === 'picture_pack' ? `${newItemFiles.length} Photos` : newItemFiles[0].name}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <Upload size={16} />
-                          <span className="text-[10px] font-black uppercase">Select File</span>
-                        </div>
-                      )}
-                    </button>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept={newItemType === 'video' ? 'video/*' : newItemType === 'picture_pack' ? 'image/*' : '*/*'}
-                      multiple={newItemType === 'picture_pack'}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-
-                {uploadError && (
-                  <div className="flex items-center space-x-2 text-red-500 animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Description (Optional)</label>
-                  <textarea 
-                    value={newItemDescription}
-                    onChange={(e) => setNewItemDescription(e.target.value)}
-                    placeholder="Describe what's in this item..."
-                    rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 focus:ring-1 focus:ring-[#967bb6] outline-none text-slate-100 placeholder:text-slate-700 text-sm resize-none"
-                  />
-                </div>
-              </div>
-
-              <button 
-                type="submit"
-                disabled={newItemFiles.length === 0 || !newItemTitle || !!uploadError}
-                className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] chrome-border disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
-                style={{ backgroundColor: '#000000', color: '#967bb6' }}
-              >
-                Publish to Store
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes neonFlow {
@@ -564,14 +345,16 @@ const MediaStore: React.FC<MediaStoreProps> = ({ user, items, stableListings = [
   );
 };
 
-const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: boolean; customization: any; onPurchase?: () => void; onDelete?: () => void }> = ({ item, isAdmin, isPurchased, customization, onPurchase, onDelete }) => {
+const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isOwnItem?: boolean; isPurchased?: boolean; customization: any; onDelete?: () => void; onBuy?: () => void }> = ({ item, isAdmin, isOwnItem, isPurchased, customization, onDelete, onBuy }) => {
   const [showFull, setShowFull] = useState(false);
-  const canView = isAdmin || isPurchased;
+  const canView = isPurchased || isOwnItem || isAdmin;
 
   const [videoPoster, setVideoPoster] = useState<string | undefined>(item.thumbnailUrl);
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!canView) return;
+    
     item.mediaUrls?.forEach((url, index) => {
       const absoluteUrl = getMediaUrl(url);
       fetch(absoluteUrl)
@@ -604,17 +387,25 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
     return url.startsWith('/') ? url : `/${url}`;
   };
 
-  const isVideo = item.type === 'video' || (item.mediaUrls?.[0] && (item.mediaUrls[0].split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || item.mediaUrls[0].toLowerCase().includes('video')));
+  const isVideo = item.type === 'video' || (item.mediaUrls?.[0] && (
+    item.mediaUrls[0].split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI|3GP|OGG|WMV|FLV|M4V|MPG|MPEG|M2V|ASF|AMV)$/i) || 
+    item.mediaUrls[0].toLowerCase().includes('video') ||
+    (item.mediaUrls[0].toLowerCase().includes('firebasestorage') && (item.mediaUrls[0].toLowerCase().includes('%2Fvideo') || item.mediaUrls[0].toLowerCase().includes('video%2F') || item.mediaUrls[0].toLowerCase().includes('video')))
+  ));
+
+  const isExplicitVideo = item.type === 'video';
+  
+  const finalIsVideo = isVideo || isExplicitVideo;
 
   return (
     <div className={`group ${customization.layout === 'list' ? 'flex items-center space-x-8 p-6 rounded-[2.5rem] border border-white/5 bg-white/[0.02]' : ''}`}>
       <div 
-        onClick={() => canView ? setShowFull(true) : onPurchase?.()}
+        onClick={() => canView ? setShowFull(true) : onBuy?.()}
         className={`relative overflow-hidden border border-white/5 chrome-border bg-[#0a0a0a] transition-all duration-500 ${
           customization.layout === 'list' ? 'w-48 h-48 rounded-3xl shrink-0' : 'aspect-[4/5] rounded-[2rem] mb-4'
         } cursor-pointer`}
       >
-        {isVideo && canView ? (
+        {finalIsVideo && canView ? (
           <div className="w-full h-full relative">
             <VideoPlayer 
               src={getMediaUrl(item.mediaUrls[0])} 
@@ -623,8 +414,6 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
               muted
               autoPlay={false}
               controls={false}
-              showPlayIcon={false}
-              clickToPlay={true}
             />
             <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
               <Play size={32} className="text-white opacity-50" />
@@ -635,7 +424,6 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
             <img 
               src={getMediaUrl(item.thumbnailUrl)} 
               alt={item.title}
-              referrerPolicy="no-referrer"
               className={`w-full h-full object-cover transition-transform duration-700 ${canView ? 'group-hover:scale-110' : ''} ${!canView ? 'blur-sm grayscale' : ''}`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -644,7 +432,7 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                 }
               }}
             />
-            {isVideo && (
+            {finalIsVideo && (
               <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
                 <Play size={32} className="text-white opacity-50" />
               </div>
@@ -656,31 +444,31 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
             )}
           </div>
         )}
+        {!canView && (
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-10">
+            <Lock size={40} className="text-[#967bb6] mb-4 opacity-50" />
+            <h5 className="text-white font-black uppercase tracking-widest text-xs mb-2">Locked Content</h5>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onBuy?.(); }}
+              className="px-6 py-3 bg-[#967bb6] text-white font-black rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 transition-all"
+            >
+              Unlock Now
+            </button>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60"></div>
         
         <div className="absolute top-4 right-4 flex flex-col space-y-2 items-end">
-          {!canView && (
-            <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center space-x-1">
-              <DollarSign size={12} style={{ color: customization.accentColor }} />
-              <span className="text-white font-black text-sm">{isNaN(item.price) ? '0.00' : item.price}</span>
-            </div>
-          )}
-          {canView && (
-            <div className="flex flex-col space-y-2 items-end">
-              <div className="bg-emerald-500/80 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center space-x-1">
-                <Check size={12} className="text-white" />
-                <span className="text-white font-black text-[10px] uppercase tracking-widest">Unlocked</span>
-              </div>
-              <button 
-                onClick={handleDownload}
-                className="p-2 bg-black/60 text-white rounded-xl border border-white/10 hover:bg-white/10 transition-colors flex items-center space-x-1"
-                title="Download"
-              >
-                <Download size={14} />
-                <span className="text-[10px] font-black uppercase">Save</span>
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col space-y-2 items-end">
+            <button 
+              onClick={handleDownload}
+              className="p-2 bg-black/60 text-white rounded-xl border border-white/10 hover:bg-white/10 transition-colors flex items-center space-x-1"
+              title="Download"
+            >
+              <Download size={14} />
+              <span className="text-[10px] font-black uppercase">Save</span>
+            </button>
+          </div>
           {onDelete && (
             <button 
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -692,42 +480,22 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
           )}
         </div>
 
-        {(isVideo || canView) && (
-          <div className={`absolute inset-0 flex items-center justify-center ${canView ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-            {isVideo ? (
-              <div 
-                onClick={() => canView && setShowFull(true)}
-                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl ${canView ? 'cursor-pointer hover:scale-110' : ''}`} 
-                style={{ backgroundColor: customization.accentColor, boxShadow: `0 0 30px ${customization.accentColor}60` }}
-              >
-                <Play size={24} className="text-white fill-current ml-1" />
-              </div>
-            ) : isAdmin ? (
-              <div className="bg-emerald-500/80 backdrop-blur-sm px-3 py-1 rounded-full text-[8px] font-black text-white uppercase tracking-widest">
-                Admin View Enabled
-              </div>
-            ) : null}
+        {finalIsVideo && (
+          <div 
+            onClick={() => setShowFull(true)}
+            className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110" 
+            style={{ backgroundColor: customization.accentColor, boxShadow: `0 0 30px ${customization.accentColor}60` }}
+          >
+            <Play size={24} className="text-white fill-current ml-1" />
           </div>
         )}
 
-        {!canView && (
-          <div className="absolute bottom-6 left-6 right-6 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-            <button 
-              onClick={onPurchase}
-              className="w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 shadow-xl flex items-center justify-center gap-2 group/btn"
-              style={{ backgroundColor: '#000000', color: '#967bb6' }}
-            >
-              <Lock size={12} className="group-hover/btn:rotate-12 transition-transform" />
-              Unlock for ${isNaN(item.price) ? '0.00' : item.price.toFixed(2)}
-            </button>
-          </div>
-        )}
       </div>
       <div className={`px-2 ${customization.layout === 'list' ? 'flex-grow' : ''}`}>
         <h4 
-          onClick={() => !canView && onPurchase?.()}
-          className={`font-black uppercase tracking-tight text-sm mb-1 line-clamp-1 ${!canView ? 'cursor-pointer hover:underline' : ''}`} 
+          className="font-black uppercase tracking-tight text-sm mb-1 line-clamp-1 cursor-pointer hover:opacity-80 transition-opacity" 
           style={{ color: customization.fontColor }}
+          onClick={() => canView ? setShowFull(true) : onBuy?.()}
         >
           {item.title}
         </h4>
@@ -739,16 +507,6 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
         <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: customization.accentColor }}>
           {item.type === 'video' ? 'Video Content' : item.type === 'picture_pack' ? '5 Picture Pack' : 'Media Content'}
         </p>
-        {customization.layout === 'list' && !canView && (
-          <button 
-            onClick={onPurchase}
-            className="mt-4 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:scale-105 flex items-center gap-2"
-            style={{ backgroundColor: '#000000', color: '#967bb6' }}
-          >
-            <Lock size={12} />
-            Unlock for ${isNaN(item.price) ? '0.00' : item.price.toFixed(2)}
-          </button>
-        )}
       </div>
 
       {showFull && canView && (
@@ -757,7 +515,9 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
             <div className="flex-grow overflow-auto p-8 flex flex-wrap items-center justify-center gap-8">
               {item.mediaUrls.map((url, idx) => {
                 const absoluteUrl = getMediaUrl(url);
-                const isItemVideo = absoluteUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || absoluteUrl.toLowerCase().includes('video');
+                const isItemVideo = absoluteUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || 
+                                   absoluteUrl.toLowerCase().includes('video') ||
+                                   (absoluteUrl.toLowerCase().includes('firebasestorage') && absoluteUrl.toLowerCase().includes('%2Fvideo'));
                 
                 return isItemVideo ? (
                   <div key={idx} className="w-full max-w-4xl aspect-video rounded-2xl overflow-hidden shadow-2xl">
@@ -772,7 +532,6 @@ const StoreCard: React.FC<{ item: StoreItem; isAdmin?: boolean; isPurchased?: bo
                   <img 
                     key={idx} 
                     src={absoluteUrl} 
-                    referrerPolicy="no-referrer"
                     className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl transition-transform hover:scale-[1.02]" 
                     alt={`${item.title} ${idx + 1}`} 
                     onError={(e) => {

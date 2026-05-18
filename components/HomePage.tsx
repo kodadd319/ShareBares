@@ -64,7 +64,6 @@ const HomePage: React.FC<HomePageProps> = ({
             src="https://www.imglnkx.com/7106/009227A_EXTZ_18_ALL_EN_71_L.jpg" 
             width="300" 
             height="250" 
-            referrerPolicy="no-referrer"
             className="rounded-2xl shadow-2xl border border-white/10" 
             alt="Promotional Banner" 
             onError={(e) => {
@@ -107,7 +106,6 @@ const HomePage: React.FC<HomePageProps> = ({
         >
           <img 
             src={me.avatar || APP_LOGO_URL} 
-            referrerPolicy="no-referrer" 
             className="w-10 h-10 rounded-xl border border-white/10" 
             alt="" 
             onError={(e) => {
@@ -147,7 +145,6 @@ const HomePage: React.FC<HomePageProps> = ({
                   <div className="w-16 h-16 mx-auto rounded-2xl overflow-hidden border-2 border-black shadow-xl group-hover:scale-105 transition-transform">
                     <img 
                       src={user.avatar || APP_LOGO_URL} 
-                      referrerPolicy="no-referrer" 
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
@@ -281,7 +278,6 @@ const HomePage: React.FC<HomePageProps> = ({
                         <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
                           <img 
                             src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
-                            referrerPolicy="no-referrer"
                             className="w-full h-auto object-cover" 
                             alt="Featured Content"
                             onError={(e) => {
@@ -318,7 +314,6 @@ const HomePage: React.FC<HomePageProps> = ({
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onProfileClick?.(user.id)}>
                   <img 
                     src={user.avatar || APP_LOGO_URL} 
-                    referrerPolicy="no-referrer" 
                     className="w-10 h-10 rounded-xl border border-white/10" 
                     alt="" 
                     onError={(e) => {
@@ -348,7 +343,6 @@ const HomePage: React.FC<HomePageProps> = ({
           <a href="https://t.ajrkmx1.com/408699/8780/32516?bo=2779,2778,2777,2776,2775&file_id=616518&po=6533&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0002" target="_blank" rel="noopener noreferrer" className="block w-full">
             <img 
               src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
-              referrerPolicy="no-referrer"
               className="w-full h-auto object-cover" 
               alt="Featured Content"
               onError={(e) => {

@@ -104,7 +104,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
             height="250" 
             className="rounded-2xl shadow-2xl border border-white/10" 
             alt="Promotional Banner" 
-            referrerPolicy="no-referrer"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               if (target.src !== APP_LOGO_URL) {
@@ -204,7 +203,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   <div className={`w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${isActive ? 'border-[#967bb6]' : 'border-white/10 group-hover:border-white/30'}`}>
                     <img 
                       src={user.avatar || APP_LOGO_URL} 
-                      referrerPolicy="no-referrer"
                       className="w-full h-full object-cover" 
                       alt="" 
                       onError={(e) => {
@@ -263,7 +261,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
                 <div className="relative cursor-pointer" onClick={() => onProfileClick?.(selectedUser.id)}>
                   <img 
                     src={selectedUser.avatar || APP_LOGO_URL} 
-                    referrerPolicy="no-referrer"
                     className="w-10 h-10 md:w-12 md:h-12 rounded-2xl border border-[#967bb6]/30 shadow-lg" 
                     alt="" 
                     onError={(e) => {
@@ -325,7 +322,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
                             {showAvatar ? (
                               <img 
                                 src={selectedUser.avatar || APP_LOGO_URL} 
-                                referrerPolicy="no-referrer"
                                 className="w-full h-full rounded-lg object-cover border border-white/10" 
                                 alt="" 
                                 onError={(e) => {
@@ -372,7 +368,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   <div className="w-8 h-8 shrink-0 mb-1">
                     <img 
                       src={selectedUser.avatar || APP_LOGO_URL} 
-                      referrerPolicy="no-referrer"
                       className="w-full h-full rounded-lg object-cover border border-white/10" 
                       alt="" 
                       onError={(e) => {
@@ -437,7 +432,6 @@ const ChatPage: React.FC<ChatPageProps> = ({
                   src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
                   className="w-full h-auto object-cover" 
                   alt="Featured Content"
-                  referrerPolicy="no-referrer"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     if (target.src !== APP_LOGO_URL) {

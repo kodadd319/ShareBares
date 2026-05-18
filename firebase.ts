@@ -138,22 +138,61 @@ export const uploadFile = (
   onProgress?: (progress: number) => void
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('No file provided for upload'));
+      return;
+    }
+    
+    // Log upload details for debugging if needed
+    console.log(`Starting upload to ${path}`, { 
+      name: file.name, 
+      size: file.size, 
+      type: file.type,
+      bucket: firebaseConfig.storageBucket
+    });
+
     const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const metadata = {
+      contentType: file.type || 'application/octet-stream'
+    };
+    
+    const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
     uploadTask.on(
       'state_changed',
       (snapshot) => {
         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
         if (onProgress) onProgress(progress);
+        console.log(`Upload progress for ${file.name}: ${Math.round(progress)}%`);
       },
-      (error) => {
-        console.error('Upload failed:', error);
-        reject(error);
+      (error: any) => {
+        console.error('Firebase Storage upload failed:', {
+          code: error.code,
+          message: error.message,
+          serverResponse: error.serverResponse,
+          path: path
+        });
+        
+        let customMessage = error.message;
+        if (error.code === 'storage/unauthorized') {
+          customMessage = 'Permission denied to Firebase Storage. Please check storage rules.';
+        } else if (error.code === 'storage/retry-limit-exceeded') {
+          customMessage = 'Upload timed out. Please check your connection.';
+        } else if (error.code === 'storage/invalid-checksum') {
+          customMessage = 'File corrupted during upload. Please try again.';
+        }
+        
+        reject(new Error(customMessage));
       },
       async () => {
-        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(downloadURL);
+        try {
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          console.log(`Upload successful for ${file.name}: ${downloadURL}`);
+          resolve(downloadURL);
+        } catch (urlError: any) {
+          console.error('Failed to get download URL after upload:', urlError);
+          reject(urlError);
+        }
       }
     );
   });

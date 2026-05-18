@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { StableListing } from '../types';
-import { User as UserIcon, MapPin, DollarSign, MessageSquare, Shield, ChevronDown, Filter, Navigation, X } from 'lucide-react';
+import { User as UserIcon, MapPin, DollarSign, MessageSquare, Shield, ChevronDown, Filter, Navigation, X, Video } from 'lucide-react';
 import { APP_LOGO_URL } from '../constants';
 import { StableSkeleton } from './Skeleton';
+import VideoPlayer from './VideoPlayer';
 
 interface StablePageProps {
   listings: StableListing[];
@@ -189,25 +190,37 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick, isLoa
               <div className="mb-6">
                 <div className="grid grid-cols-2 gap-2 aspect-square rounded-3xl overflow-hidden border border-white/5 bg-black/20">
                   {listing.photos && listing.photos.length > 0 ? (
-                    listing.photos.slice(0, 2).map((photo, idx) => (
-                      <img 
-                        key={idx} 
-                        src={photo} 
-                        referrerPolicy="no-referrer"
-                        className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
-                        alt="" 
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          if (target.src !== APP_LOGO_URL) {
-                            target.src = APP_LOGO_URL;
-                          }
-                        }}
-                      />
-                    ))
+                    listing.photos.slice(0, 2).map((mediaUrl, idx) => {
+                      const isVideo = mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI)$/i) || 
+                                      mediaUrl.toLowerCase().includes('video') ||
+                                      (mediaUrl.toLowerCase().includes('firebasestorage') && mediaUrl.toLowerCase().includes('%2Fvideo'));
+                      
+                      if (isVideo) {
+                        return (
+                          <div key={idx} className={`w-full h-full ${listing.photos?.length === 1 ? 'col-span-2' : ''}`}>
+                            <VideoPlayer src={mediaUrl} className="w-full h-full object-cover" />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <img 
+                          key={idx} 
+                          src={mediaUrl} 
+                          className={`w-full h-full object-cover ${listing.photos?.length === 1 ? 'col-span-2' : ''}`} 
+                          alt="" 
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            if (target.src !== APP_LOGO_URL) {
+                                target.src = APP_LOGO_URL;
+                            }
+                          }}
+                        />
+                      );
+                    })
                   ) : (
                     <img 
-                      src={listing.avatarUrl} 
-                      referrerPolicy="no-referrer"
+                      src={listing.avatarUrl || APP_LOGO_URL} 
                       className="w-full h-full object-cover col-span-2" 
                       alt="" 
                       onError={(e) => {
@@ -248,13 +261,9 @@ const StablePage: React.FC<StablePageProps> = ({ listings, onProfileClick, isLoa
                   </div>
 
                   <div className="pt-4 border-t border-white/5 mt-auto space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Pricing</p>
-                        <p className="text-white font-bold text-sm">{listing.pricing}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Contact</p>
+                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Contact Method</p>
                         <p className="text-[#967bb6] font-bold text-sm break-all">{listing.contactInfo}</p>
                       </div>
                     </div>

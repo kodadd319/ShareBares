@@ -43,11 +43,10 @@ service cloud.firestore {
     // -----------------------------------------------------------------
 
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'username', 'email']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.username is string && data.username.size() <= 100 &&
-             data.email is string && data.email.size() <= 256 &&
-             data.keys().size() <= 70; // High limit for complex user docs
+      return data.id is string && data.id.size() <= 128 &&
+             (data.get('username', '') == '' || (data.username is string && data.username.size() <= 128)) &&
+             (data.get('email', '') == '' || (data.email is string && data.email.size() <= 256)) &&
+             data.keys().size() <= 150;
     }
 
     function isValidPost(data) {
@@ -56,7 +55,7 @@ service cloud.firestore {
              data.userId is string && data.userId.size() <= 128 &&
              data.content is string && data.content.size() <= 20000 &&
              isValidDate(data.createdAt) &&
-             data.keys().size() <= 50;
+             data.keys().size() <= 60;
     }
 
     function isValidComment(data) {
@@ -84,7 +83,7 @@ service cloud.firestore {
           'pendingFriendRequestsSent', 'pendingFriendRequestsReceived',
           'fwbIds', 'pendingFwbRequestsSent', 'pendingFwbRequestsReceived',
           'fwbRequestsSentCount', 'fwbRequestsResetDate', 'likedPostIds',
-          'purchasedItemIds'
+          'isStoreActive', 'storeActivationDate', 'isStableActive', 'stableActivationDate'
         ])
       );
       allow delete: if isAdmin();
@@ -133,7 +132,13 @@ service cloud.firestore {
     // STORE ITEMS
     match /storeItems/{itemId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (
+        (incoming().userId == request.auth.uid && (
+          isAdmin() || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isStoreActive', false) == true
+        )) || 
+        isAdmin()
+      );
       allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
@@ -155,7 +160,13 @@ service cloud.firestore {
     // STABLE LISTINGS
     match /stableListings/{listingId} {
       allow read: if true;
-      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (
+        (incoming().userId == request.auth.uid && (
+          isAdmin() || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isStableActive', false) == true
+        )) || 
+        isAdmin()
+      );
       allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 

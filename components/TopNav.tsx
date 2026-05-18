@@ -53,9 +53,8 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isGamesSubMenuOpen, setIsGamesSubMenuOpen] = React.useState(false);
-  const [isEditProfileSubMenuOpen, setIsEditProfileSubMenuOpen] = React.useState(false);
-  const [isMoreVideosSubMenuOpen, setIsMoreVideosSubMenuOpen] = React.useState(false);
-  const [isMoreVideosMobileOpen, setIsMoreVideosMobileOpen] = React.useState(false);
+  const [isMyPageSubMenuOpen, setIsMyPageSubMenuOpen] = React.useState(false);
+
   const [isStableSubMenuOpen, setIsStableSubMenuOpen] = React.useState(false);
   const [isStableMobileOpen, setIsStableMobileOpen] = React.useState(false);
   const [isStoresSubMenuOpen, setIsStoresSubMenuOpen] = React.useState(false);
@@ -64,7 +63,7 @@ const TopNav: React.FC<TopNavProps> = ({
   const [isOtherStoresMobileOpen, setIsOtherStoresMobileOpen] = React.useState(false);
   const [showResults, setShowResults] = React.useState(false);
 
-  const activeStoreUsers = users.filter(u => u.hasPaidStoreFee);
+  const activeStoreUsers = users;
 
   const filteredUsers = searchQuery.length > 1 
     ? users.filter(u => 
@@ -90,8 +89,8 @@ const TopNav: React.FC<TopNavProps> = ({
 
   const navItems = [
     { id: 'feed', icon: Home, label: 'Home' },
+    { id: 'my-videos', icon: Video, label: 'My Videos' },
     { id: 'store-management', icon: Briefcase, label: 'Store Mgmt' },
-    { id: 'monetization', icon: DollarSign, label: 'Monetize' },
     { id: 'notifications', icon: Bell, label: 'Alerts' },
     { id: 'messages', icon: MessageSquare, label: 'Chat' },
     { id: 'games', icon: Dices, label: 'Gameroom' },
@@ -156,7 +155,6 @@ const TopNav: React.FC<TopNavProps> = ({
                       >
                         <img 
                           src={u.avatar || APP_LOGO_URL} 
-                          referrerPolicy="no-referrer" 
                           className="w-8 h-8 rounded-lg object-cover" 
                           alt="" 
                           onError={(e) => {
@@ -194,7 +192,6 @@ const TopNav: React.FC<TopNavProps> = ({
                           {item.thumbnailUrl ? (
                             <img 
                               src={item.thumbnailUrl} 
-                              referrerPolicy="no-referrer" 
                               className="w-full h-full object-cover" 
                               alt="" 
                               onError={(e) => {
@@ -207,7 +204,7 @@ const TopNav: React.FC<TopNavProps> = ({
                         </div>
                         <div>
                           <p className="text-xs font-bold text-white truncate max-w-[200px]">{item.title}</p>
-                          <p className="text-[10px] text-slate-500">${item.price}</p>
+                          <p className="text-[10px] text-slate-500">{item.type.replace('_', ' ')}</p>
                         </div>
                       </button>
                     ))}
@@ -345,7 +342,6 @@ const TopNav: React.FC<TopNavProps> = ({
                         setIsStoresSubMenuOpen(!isStoresSubMenuOpen);
                         setIsStableSubMenuOpen(false);
                         setIsGamesSubMenuOpen(false);
-                        setIsMoreVideosSubMenuOpen(false);
                         setIsOtherStoresBoxOpen(false);
                       }}
                       className={`px-3 py-2 rounded-xl transition-all relative flex items-center space-x-2 group ${
@@ -405,7 +401,6 @@ const TopNav: React.FC<TopNavProps> = ({
                               >
                                 <img 
                                   src={user.avatar || APP_LOGO_URL} 
-                                  referrerPolicy="no-referrer"
                                   className="w-8 h-8 rounded-lg object-cover border border-white/10" 
                                   alt="" 
                                   onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}
@@ -432,46 +427,6 @@ const TopNav: React.FC<TopNavProps> = ({
             );
           })}
 
-          {/* More Videos Desktop Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsMoreVideosSubMenuOpen(!isMoreVideosSubMenuOpen)}
-              className="px-2 xl:px-3 py-2 rounded-xl transition-all relative flex items-center space-x-1 xl:space-x-2 group text-slate-400 hover:text-slate-100 hover:bg-white/5"
-            >
-              <Video size={18} />
-              <span className="text-[9px] xl:text-[10px] uppercase font-black tracking-widest whitespace-nowrap hidden xl:inline">More Videos</span>
-              <ChevronDown size={14} className={`transition-transform duration-300 ${isMoreVideosSubMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isMoreVideosSubMenuOpen && (
-              <div className="absolute right-0 mt-3 w-56 bg-[#050505] rounded-2xl border border-[#c0c0c0]/20 shadow-2xl py-2 animate-in fade-in slide-in-from-top-2 duration-200 chrome-border z-[100]">
-                <a 
-                  href="https://spankbang.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all border-b border-white/5"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold uppercase tracking-widest">SpankBang</span>
-                    <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
-                  </div>
-                  <ExternalLink size={14} />
-                </a>
-                <a 
-                  href="https://xvideos.com" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold uppercase tracking-widest">XVideos</span>
-                    <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
-                  </div>
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-            )}
-          </div>
 
           {/* Game$ Desktop Dropdown */}
           <div className="relative">
@@ -532,7 +487,6 @@ const TopNav: React.FC<TopNavProps> = ({
           >
             <img 
               src={userAvatar || APP_LOGO_URL} 
-              referrerPolicy="no-referrer" 
               className="w-8 h-8 rounded-[14px] object-cover" 
               alt="Profile" 
               onError={(e) => {
@@ -559,50 +513,56 @@ const TopNav: React.FC<TopNavProps> = ({
               )}
               <div className="relative">
                 <button 
-                  onClick={() => setIsEditProfileSubMenuOpen(!isEditProfileSubMenuOpen)}
+                  onClick={() => setIsMyPageSubMenuOpen(!isMyPageSubMenuOpen)}
                   className="w-full flex items-center justify-between px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
                 >
                   <div className="flex items-center space-x-3">
                     <UserIcon size={18} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Edit Profile</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">My Page</span>
                   </div>
-                  <ChevronDown size={14} className={`transition-transform duration-300 ${isEditProfileSubMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={14} className={`transition-transform duration-300 ${isMyPageSubMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 
-                {isEditProfileSubMenuOpen && (
+                {isMyPageSubMenuOpen && (
                   <div className="bg-white/5 py-1 animate-in slide-in-from-top-1 duration-200">
                     <button 
-                      onClick={() => { onViewPublicProfile(); setIsProfileMenuOpen(false); setIsEditProfileSubMenuOpen(false); }}
+                      onClick={() => { onViewPublicProfile(); setIsProfileMenuOpen(false); setIsMyPageSubMenuOpen(false); }}
                       className="w-full flex items-center space-x-3 px-8 py-2 text-slate-400 hover:text-[#967bb6] transition-all"
                     >
                       <ExternalLink size={14} />
                       <span className="text-[10px] font-bold uppercase tracking-widest">View Public Profile</span>
                     </button>
                     <button 
-                      onClick={() => { setActiveTab('more'); setIsProfileMenuOpen(false); setIsEditProfileSubMenuOpen(false); }}
+                      onClick={() => { setActiveTab('profile-edit'); setIsProfileMenuOpen(false); setIsMyPageSubMenuOpen(false); }}
                       className="w-full flex items-center space-x-3 px-8 py-2 text-slate-400 hover:text-[#967bb6] transition-all"
                     >
-                      <Plus size={14} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">More</span>
+                      <UserIcon size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Edit Profile</span>
                     </button>
                     <button 
-                      onClick={() => { setActiveTab('profile-edit'); setIsProfileMenuOpen(false); setIsEditProfileSubMenuOpen(false); }}
+                      onClick={() => { setActiveTab('profile-edit'); setIsProfileMenuOpen(false); setIsMyPageSubMenuOpen(false); }}
                       className="w-full flex items-center space-x-3 px-8 py-2 text-slate-400 hover:text-[#967bb6] transition-all"
                     >
                       <Settings size={14} />
                       <span className="text-[10px] font-bold uppercase tracking-widest">Edit Details</span>
                     </button>
+                    <button 
+                      onClick={() => { setActiveTab('custom-profile'); setIsProfileMenuOpen(false); setIsMyPageSubMenuOpen(false); }}
+                      className="w-full flex items-center space-x-3 px-8 py-2 text-slate-400 hover:text-[#967bb6] transition-all"
+                    >
+                      <Palette size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Custom Profile</span>
+                    </button>
+                    <button 
+                      onClick={() => { setActiveTab('more'); setIsProfileMenuOpen(false); setIsMyPageSubMenuOpen(false); }}
+                      className="w-full flex items-center space-x-3 px-8 py-2 text-slate-400 hover:text-[#967bb6] transition-all"
+                    >
+                      <Plus size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">More</span>
+                    </button>
                   </div>
                 )}
               </div>
-
-              <button 
-                onClick={() => { setActiveTab('custom-profile'); setIsProfileMenuOpen(false); }}
-                className="w-full flex items-center space-x-3 px-4 py-3 text-slate-300 hover:bg-[#967bb6]/10 hover:text-[#967bb6] transition-all"
-              >
-                <Palette size={18} />
-                <span className="text-xs font-bold uppercase tracking-widest">Custom Profile</span>
-              </button>
 
               <button 
                 onClick={() => { setActiveTab('settings'); setIsProfileMenuOpen(false); }}
@@ -670,7 +630,6 @@ const TopNav: React.FC<TopNavProps> = ({
                               >
                                 <img 
                                   src={u.avatar || APP_LOGO_URL} 
-                                  referrerPolicy="no-referrer" 
                                   className="w-8 h-8 rounded-lg object-cover" 
                                   alt="" 
                                   onError={(e) => {
@@ -708,7 +667,6 @@ const TopNav: React.FC<TopNavProps> = ({
                                   {item.thumbnailUrl ? (
                                     <img 
                                       src={item.thumbnailUrl} 
-                                      referrerPolicy="no-referrer" 
                                       className="w-full h-full object-cover" 
                                       alt="" 
                                       onError={(e) => {
@@ -721,7 +679,7 @@ const TopNav: React.FC<TopNavProps> = ({
                                 </div>
                                 <div>
                                   <p className="text-xs font-bold text-white truncate max-w-[200px]">{item.title}</p>
-                                  <p className="text-[10px] text-slate-500">${item.price}</p>
+                                  <p className="text-[10px] text-slate-500">{item.type.replace('_', ' ')}</p>
                                 </div>
                               </button>
                             ))}
@@ -877,7 +835,6 @@ const TopNav: React.FC<TopNavProps> = ({
                                       >
                                         <img 
                                           src={user.avatar || APP_LOGO_URL} 
-                                          referrerPolicy="no-referrer"
                                           className="w-8 h-8 rounded-lg object-cover" 
                                           alt="" 
                                           onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }}
@@ -905,51 +862,6 @@ const TopNav: React.FC<TopNavProps> = ({
                   );
                 })}
 
-                <div className="pt-2">
-                  <button
-                    onClick={() => setIsMoreVideosMobileOpen(!isMoreVideosMobileOpen)}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all relative ${
-                      isMoreVideosMobileOpen 
-                      ? 'bg-[#967bb6]/10 text-[#967bb6] border border-[#967bb6]/20' 
-                      : 'text-slate-400 hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <Video size={24} />
-                      <span className="text-sm font-black uppercase tracking-widest">More Videos</span>
-                    </div>
-                    <ChevronDown size={18} className={`transition-transform duration-300 ${isMoreVideosMobileOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {isMoreVideosMobileOpen && (
-                    <div className="mt-2 ml-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
-                      <a 
-                        href="https://spankbang.com" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black uppercase tracking-widest">SpankBang</span>
-                          <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
-                        </div>
-                        <ExternalLink size={14} />
-                      </a>
-                      <a 
-                        href="https://xvideos.com" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-all"
-                      >
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black uppercase tracking-widest">XVideos</span>
-                          <span className="text-[8px] text-[#967bb6] font-black uppercase tracking-widest">Affiliate Link</span>
-                        </div>
-                        <ExternalLink size={14} />
-                      </a>
-                    </div>
-                  )}
-                </div>
 
                 <div className="pt-2">
                   <button

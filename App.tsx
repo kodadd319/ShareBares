@@ -13,11 +13,13 @@ import LoginPage from './components/LoginPage';
 import PostCard from './components/PostCard';
 import Logo from './components/Logo';
 import MediaStore from './components/MediaStore';
+import MyVideosPage from './components/MyVideosPage';
 import StoreManagementPage from './components/StoreManagementPage';
 import StablePage from './components/StablePage';
 import JoinStablePage from './components/JoinStablePage';
 import MyProfilePage from './components/MyProfilePage';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
+import StoreActivationGate from './components/StoreActivationGate';
 import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
 import VideoPlayer from './components/VideoPlayer';
@@ -419,7 +421,6 @@ const ProfileEditPage: React.FC<{
           >
             <img 
               src={cover || APP_LOGO_URL} 
-              referrerPolicy="no-referrer" 
               className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
               alt="" 
               onError={(e) => {
@@ -450,7 +451,6 @@ const ProfileEditPage: React.FC<{
             >
               <img 
                 src={avatar || APP_LOGO_URL} 
-                referrerPolicy="no-referrer" 
                 className="w-full h-full object-cover" 
                 alt="" 
                 onError={(e) => {
@@ -671,7 +671,6 @@ const SettingsPage: React.FC<{
           src="https://www.imglnkx.com/3785/010766A_GDAT_18_ALL_EN_71_L.jpg" 
           width="300" 
           height="250" 
-          referrerPolicy="no-referrer"
           alt=""
           className="rounded-2xl shadow-2xl border border-white/10"
           onError={(e) => {
@@ -935,7 +934,6 @@ const SettingsPage: React.FC<{
             width="300" 
             height="250" 
             style={{ border: 0 }} 
-            referrerPolicy="no-referrer"
             alt="Banner"
             className="rounded-2xl shadow-2xl border border-white/10"
           />
@@ -1134,8 +1132,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
               onClick={() => coverInputRef.current?.click()}
             >
               <img 
-                src={cover || undefined} 
-                referrerPolicy="no-referrer" 
+                src={cover || APP_LOGO_URL} 
                 className="w-full h-full object-cover opacity-60 transition-transform duration-700 group-hover:scale-105" 
                 alt="Cover" 
                 onError={(e) => {
@@ -1165,8 +1162,7 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
                 onClick={() => avatarInputRef.current?.click()}
               >
                 <img 
-                  src={avatar || undefined} 
-                  referrerPolicy="no-referrer" 
+                  src={avatar || APP_LOGO_URL} 
                   className="w-full h-full object-cover" 
                   alt="Avatar" 
                   onError={(e) => {
@@ -1336,394 +1332,6 @@ const ProfileCreationPage: React.FC<{ currentUserId: string; initialEmail: strin
             {isSaving && <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />}
           </button>
         </form>
-      </div>
-    </div>
-  );
-};
-
-const MonetizationPage: React.FC<{
-  me: User;
-  onRequestPayment: (type: 'store' | 'stable', isBundle?: boolean) => void;
-  onGoToStoreManager: () => void;
-  onTestPayment: () => void;
-}> = ({ me, onRequestPayment, onGoToStoreManager, onTestPayment }) => {
-  return (
-    <div className="max-w-5xl mx-auto py-12 px-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-black text-white tracking-tighter uppercase chrome-text mb-2">Creator Hub</h1>
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Manage your monetization, earnings, and store instructions</p>
-      </div>
-
-      {/* Earnings & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-2 glass-panel rounded-[2.5rem] p-8 border-[#967bb6]/20 bg-gradient-to-br from-[#967bb6]/10 to-transparent chrome-border flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="text-center md:text-left">
-            <div className="flex items-center justify-center md:justify-start space-x-2 text-[#967bb6] mb-2">
-              <DollarSign size={16} />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Total Revenue</span>
-            </div>
-            <h2 className="text-5xl font-black text-white tracking-tighter">$0.00</h2>
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mt-2">Available for payout: $0.00</p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-            {me.isAdmin && (
-              <button 
-                onClick={onTestPayment}
-                className="px-8 py-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/20 text-emerald-500 font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500/30 transition-all"
-              >
-                Test Payment Flow
-              </button>
-            )}
-            <button 
-              disabled={true}
-              className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-slate-500 font-black text-[10px] uppercase tracking-widest cursor-not-allowed opacity-50"
-            >
-              Request Payout
-            </button>
-            <button 
-              onClick={onGoToStoreManager}
-              className="px-8 py-4 rounded-2xl bg-[#967bb6] text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-[#967bb6]/20 hover:scale-105 transition-all"
-            >
-              Manage Store
-            </button>
-          </div>
-        </div>
-
-        <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.02] chrome-border flex flex-col justify-center text-center">
-          <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Check size={24} className="text-emerald-500" />
-          </div>
-          <h3 className="text-sm font-black text-white uppercase tracking-widest mb-2">Account Status</h3>
-          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-            {me.isAdmin ? 'Administrator Access' : me.hasPaidStoreFee ? 'Verified Creator' : 'Standard Account'}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-        {/* Store Activation */}
-        <div className="glass-panel rounded-[2.5rem] p-8 border-[#967bb6]/20 flex flex-col h-full bg-[#967bb6]/5 chrome-border relative group hover:border-[#967bb6]/40 transition-all">
-          <div className="mb-6">
-            <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <ShoppingBag className="text-[#967bb6]" size={24} />
-            </div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tight">Store Usage</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">One-time activation fee</p>
-          </div>
-          <div className="mb-8">
-            <span className="text-4xl font-black text-white">$10.00</span>
-          </div>
-          <ul className="text-[10px] text-slate-400 space-y-3 mb-8 flex-grow uppercase tracking-widest font-bold">
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Unlimited Store Uploads</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Paid Content Sales</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Private Media Hosting</span>
-            </li>
-          </ul>
-          <button 
-            onClick={() => onRequestPayment('store')}
-            disabled={me.hasPaidStoreFee}
-            className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all chrome-border ${me.hasPaidStoreFee ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white shadow-lg shadow-[#967bb6]/20 hover:scale-105 active:scale-95'}`}
-          >
-            {me.hasPaidStoreFee ? 'Activated' : 'Activate Store'}
-          </button>
-        </div>
-
-        {/* The Stable Listing */}
-        <div className="glass-panel rounded-[2.5rem] p-8 border-[#967bb6]/20 flex flex-col h-full bg-[#967bb6]/5 chrome-border relative group hover:border-[#967bb6]/40 transition-all">
-          <div className="mb-6">
-            <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Briefcase className="text-[#967bb6]" size={24} />
-            </div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tight">The Stable</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">One-time membership fee</p>
-          </div>
-          <div className="mb-8">
-            <span className="text-4xl font-black text-white">$10.00</span>
-          </div>
-          <ul className="text-[10px] text-slate-400 space-y-3 mb-8 flex-grow uppercase tracking-widest font-bold">
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Professional Listing</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Verified Status</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Escort Services</span>
-            </li>
-          </ul>
-          <button 
-            onClick={() => onRequestPayment('stable', false)}
-            disabled={me.hasPaidStableFee}
-            className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all chrome-border ${me.hasPaidStableFee ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white shadow-lg shadow-[#967bb6]/20 hover:scale-105 active:scale-95'}`}
-          >
-            {me.hasPaidStableFee ? 'Activated' : 'Join The Stable'}
-          </button>
-        </div>
-
-        {/* Store Bundle */}
-        <div className="glass-panel rounded-[2.5rem] p-8 border-[#967bb6]/20 flex flex-col h-full bg-[#967bb6]/5 chrome-border relative group hover:border-emerald-500/40 transition-all">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[8px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-emerald-500/20 z-10">Best Value</div>
-          <div className="mb-6">
-            <div className="w-12 h-12 bg-emerald-500/20 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <Dices className="text-emerald-500" size={24} />
-            </div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tight">Store Bundle</h3>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mt-1">Escort service listing in The Stable and in your store</p>
-          </div>
-          <div className="mb-8">
-            <span className="text-4xl font-black text-white">$15.00</span>
-          </div>
-          <ul className="text-[10px] text-slate-400 space-y-3 mb-8 flex-grow uppercase tracking-widest font-bold">
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>All Stable Features</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>double listing exposure</span>
-            </li>
-            <li className="flex items-center space-x-2">
-              <Check size={12} className="text-emerald-500" />
-              <span>Save $5.00 Today</span>
-            </li>
-          </ul>
-          <button 
-            onClick={() => onRequestPayment('stable', true)}
-            disabled={me.hasPaidStableBundle}
-            className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all chrome-border ${me.hasPaidStableBundle ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/20' : 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95'}`}
-          >
-            {me.hasPaidStableBundle ? 'Activated' : 'Get Bundle'}
-          </button>
-        </div>
-      </div>
-
-      {/* Maintenance Notice Section */}
-      <div className="mt-16 pt-16 border-t border-white/5">
-        <div className="flex items-center space-x-4 mb-8">
-          <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
-            <CreditCard className="text-[#967bb6]" size={24} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">System Update</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Payouts and payment systems are being upgraded</p>
-          </div>
-        </div>
-
-        <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-          <div className="max-w-2xl mx-auto text-center py-8">
-            <h3 className="text-xl font-black text-white uppercase tracking-tight mb-4">Under Maintenance</h3>
-            <p className="text-slate-400 text-xs leading-relaxed uppercase font-bold tracking-wide mb-8">
-              We are currently transitioning to a new payment provider to ensure the best possible experience for our creators and users. During this time, new Stripe connections and certain payment features are temporarily disabled.
-            </p>
-            <div className="flex items-center justify-center space-x-2 text-[#967bb6] text-[10px] font-black uppercase tracking-widest">
-              <ShieldCheck size={14} />
-              <span>Checking back soon for new payment options!</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Guide Section */}
-      <div className="mt-16 pt-16 border-t border-white/5">
-        <div className="flex items-center space-x-4 mb-8">
-          <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
-            <HelpCircle className="text-[#967bb6]" size={24} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Selling Guide</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">How it works when the system is live</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
-              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">1</span>
-              Scheduled Payouts
-            </h3>
-            <div className="space-y-4">
-              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                Earnings are processed and ready for withdrawal once they clear our security period.
-              </p>
-              <ul className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-disc ml-4">
-                <li>Link your verified payment method in the creator dashboard.</li>
-                <li>Everything is synchronized automatically once you return.</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.01] chrome-border">
-            <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center">
-              <span className="w-6 h-6 rounded-full bg-[#967bb6] text-white flex items-center justify-center text-[10px] mr-3">2</span>
-              Revenue Split (80/20)
-            </h3>
-            <div className="space-y-4">
-              <p className="text-[10px] text-slate-400 leading-relaxed uppercase font-bold">
-                You keep the vast majority of your earnings.
-              </p>
-              <ul className="space-y-3 text-[10px] text-slate-300 uppercase font-bold tracking-wide list-disc ml-4">
-                <li><strong>Creator Share (80%):</strong> Sent directly to your account.</li>
-                <li><strong>Platform Fee (20%):</strong> Covers hosting, marketing, and processing.</li>
-                <li>Transfers occur automatically or on request depending on balance.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sales History Section */}
-      <div className="mt-16 pt-16 border-t border-white/5">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
-              <TrendingUp className="text-[#967bb6]" size={24} />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Sales History</h2>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Track your recent content sales</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="glass-panel rounded-[2.5rem] border-white/10 bg-white/[0.01] overflow-hidden chrome-border">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/5 bg-white/[0.02]">
-                  <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[#967bb6]">Date</th>
-                  <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[#967bb6]">Item</th>
-                  <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[#967bb6]">Buyer</th>
-                  <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[#967bb6]">Amount</th>
-                  <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-[#967bb6]">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-4 opacity-30">
-                      <ShoppingBag size={48} className="text-slate-500" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">No sales recorded yet</p>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Creator Instructions Section */}
-      <div className="mt-16 pt-16 border-t border-white/5">
-        <div className="flex items-center space-x-4 mb-12">
-          <div className="w-12 h-12 bg-[#967bb6]/20 rounded-2xl flex items-center justify-center">
-            <Sparkles className="text-[#967bb6]" size={24} />
-          </div>
-          <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter">Creator Guide</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Everything you need to know about selling on ShareBares</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          <div className="space-y-8">
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">01</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Activate Your Store</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Pay the one-time activation fee of $10.00 to unlock your personal media store. This fee covers hosting and platform maintenance for your exclusive content.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">02</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Upload High-Res Media</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Use the Store Manager to upload pictures and videos. Videos are limited to 8 minutes. We recommend high-resolution content to ensure fan satisfaction.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">03</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Set Your Prices</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  You have full control over your pricing. Whether it's a $5.00 quick clip or a $50.00 exclusive set, you decide what your content is worth.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-8">
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">04</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Revenue Split (80/20)</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Creators keep 80% of all sales. ShareBares retains 20% to cover processing fees, security, and platform development.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#967bb6] font-black text-sm">05</div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Payouts & Security</h4>
-                <p className="text-slate-400 text-[11px] leading-relaxed uppercase font-bold tracking-wide">
-                  Earnings are tracked in real-time. Payouts can be requested once your balance reaches $50.00. All transactions are secured via our processing partners.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-6">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#967bb6]/20 border border-[#967bb6]/30 flex items-center justify-center text-[#967bb6] font-black text-sm">
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <h4 className="text-white font-black uppercase tracking-tight mb-2">Creator Pro Tips</h4>
-                <ul className="space-y-2">
-                  <li className="text-slate-400 text-[10px] leading-relaxed uppercase font-bold tracking-wide flex items-center gap-2">
-                    <div className="w-1 h-1 bg-[#967bb6] rounded-full" />
-                    Bundle content into "Stable" collections for higher conversion.
-                  </li>
-                  <li className="text-slate-400 text-[10px] leading-relaxed uppercase font-bold tracking-wide flex items-center gap-2">
-                    <div className="w-1 h-1 bg-[#967bb6] rounded-full" />
-                    Use high-quality thumbnails to increase click-through rates.
-                  </li>
-                  <li className="text-slate-400 text-[10px] leading-relaxed uppercase font-bold tracking-wide flex items-center gap-2">
-                    <div className="w-1 h-1 bg-[#967bb6] rounded-full" />
-                    Promote your store in your bio and posts to drive traffic.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-16 flex flex-col items-center justify-center space-y-4 text-slate-600">
-        <div className="flex items-center space-x-3 bg-white/5 px-6 py-3 rounded-2xl border border-white/10">
-          <ShieldCheck className="text-[#967bb6]" size={18} />
-          <p className="text-[10px] font-black uppercase tracking-[0.2em]">All payments processed securely</p>
-        </div>
-        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 max-w-md text-center leading-relaxed">
-          Fees are one-time only and non-refundable. Your features will be unlocked immediately after successful payment confirmation.
-        </p>
       </div>
     </div>
   );
@@ -1954,11 +1562,6 @@ const AppContent: React.FC = () => {
   const [isPosting, setIsPosting] = useState(false);
   const postFileInputRef = useRef<HTMLInputElement>(null);
   const [aiGenerating, setAiGenerating] = useState(false);
-  const [isPaying, setIsPaying] = useState(false);
-  const [paymentType, setPaymentType] = useState<'store' | 'stable' | 'item'>('store');
-  const [stableBundleSelected, setStableBundleSelected] = useState(false);
-  const [pendingStableListing, setPendingStableListing] = useState<Omit<StableListing, 'id' | 'createdAt' | 'userId'> | null>(null);
-  const [pendingStoreItem, setPendingStoreItem] = useState<StoreItem | null>(null);
   const [isJadeTyping, setIsJadeTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
@@ -2047,10 +1650,7 @@ const AppContent: React.FC = () => {
   const me = meRaw ? { 
     ...meRaw, 
     isAdmin: isAdminUser,
-    isCreator: isAdminUser ? true : (meRaw.isCreator || false),
-    hasPaidStoreFee: isAdminUser ? true : (meRaw.hasPaidStoreFee || false),
-    hasPaidStableFee: isAdminUser ? true : (meRaw.hasPaidStableFee || false),
-    hasPaidStableBundle: isAdminUser ? true : (meRaw.hasPaidStableBundle || false),
+    isCreator: true, // Everyone is a creator now
     friendIds: meRaw.friendIds || [],
     pendingFriendRequestsSent: meRaw.pendingFriendRequestsSent || [],
     pendingFriendRequestsReceived: meRaw.pendingFriendRequestsReceived || [],
@@ -2062,7 +1662,6 @@ const AppContent: React.FC = () => {
     photos: meRaw.photos || [],
     storeUploads: meRaw.storeUploads || [],
     blockedUserIds: meRaw.blockedUserIds || [],
-    purchasedItemIds: meRaw.purchasedItemIds || [],
     settings: meRaw.settings || (MOCK_USERS && MOCK_USERS.length > 0 ? MOCK_USERS[0].settings : {
       pushNotifications: true,
       emailNotifications: true,
@@ -2416,6 +2015,8 @@ const AppContent: React.FC = () => {
         if (user) {
           setCurrentUserId(user.uid);
           setIsLoggedIn(true);
+          sessionStorage.setItem('sharebares_session_auth', 'true');
+          setIsSessionAuthenticated(true);
           
           // Check for admin user
           const isAdminEmail = user.email === 'jtothek319@gmail.com';
@@ -2449,26 +2050,7 @@ const AppContent: React.FC = () => {
                   coverImage: 'https://images.unsplash.com/photo-1557683316-973673baf926',
                   bio: 'Official Admin Account',
                   isCreator: true,
-                  isAdmin: true,
-                  subscribersCount: 0,
-                  followingCount: 0,
-                  friendIds: [],
-                  pendingFriendRequestsSent: [],
-                  pendingFriendRequestsReceived: [],
-                  fwbIds: [],
-                  pendingFwbRequestsSent: [],
-                  pendingFwbRequestsReceived: [],
-                  fwbRequestsResetDate: new Date().toISOString(),
-                  fwbRequestsSentCount: 0,
-                  fanIds: [],
-                  photos: [],
-                  storeUploads: [],
-                  blockedUserIds: [],
                   likedPostIds: [],
-                  hasPaidStoreFee: true,
-                  hasPaidStableFee: true,
-                  hasPaidStableBundle: true,
-                  purchasedItemIds: []
                 };
                 try {
                   await setDoc(doc(db, 'users', user.uid), adminData);
@@ -2488,15 +2070,12 @@ const AppContent: React.FC = () => {
               } else if (userSnap.exists()) {
                 const userData = { ...userSnap.data(), id: userSnap.id } as User;
                 // Ensure admin flags are always present for admin user
-                if (isAdminEmail && (!userData.isAdmin || !userData.isCreator)) {
+                if (isAdminEmail && !userData.isAdmin) {
                   console.log('Ensuring admin flags on existing profile...');
                   try {
                     await updateDoc(userRef, {
                       isAdmin: true,
-                      isCreator: true,
-                      hasPaidStoreFee: true,
-                      hasPaidStableFee: true,
-                      hasPaidStableBundle: true
+                      isCreator: true
                     });
                   } catch (e) {
                     console.error('Failed to update admin flags:', e);
@@ -2637,7 +2216,7 @@ const AppContent: React.FC = () => {
     };
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const updatedUsers = snapshot.docs.map(doc => doc.data() as User);
+      const updatedUsers = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
       setUsers(updatedUsers);
       usersReady = true;
       checkReady();
@@ -2648,7 +2227,7 @@ const AppContent: React.FC = () => {
     });
 
     const unsubPosts = onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), (snapshot) => {
-      const updatedPosts = snapshot.docs.map(doc => doc.data() as Post);
+      const updatedPosts = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Post));
       setPosts(updatedPosts);
       postsReady = true;
       checkReady();
@@ -2659,7 +2238,7 @@ const AppContent: React.FC = () => {
     });
 
     const unsubStoreItems = onSnapshot(collection(db, 'storeItems'), (snapshot) => {
-      const updatedItems = snapshot.docs.map(doc => doc.data() as StoreItem);
+      const updatedItems = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StoreItem));
       setStoreItems(updatedItems);
       storeItemsReady = true;
       checkReady();
@@ -2670,7 +2249,7 @@ const AppContent: React.FC = () => {
     });
 
     const unsubStableListings = onSnapshot(collection(db, 'stableListings'), (snapshot) => {
-      const updatedListings = snapshot.docs.map(doc => doc.data() as StableListing);
+      const updatedListings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StableListing));
       setStableListings(updatedListings);
       stableListingsReady = true;
       checkReady();
@@ -2681,7 +2260,7 @@ const AppContent: React.FC = () => {
     });
 
     const unsubComments = onSnapshot(collection(db, 'comments'), (snapshot) => {
-      const updatedComments = snapshot.docs.map(doc => doc.data() as AppComment);
+      const updatedComments = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as AppComment));
       setComments(updatedComments);
       commentsReady = true;
       checkReady();
@@ -3264,19 +2843,26 @@ const AppContent: React.FC = () => {
     
     const newPhotosToAdd = uniqueUrls
       .filter(url => !existingUrls.has(url))
-      .map(url => ({
-        id: `sync-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-        url,
-        type: (url.toLowerCase().includes('video') || url.match(/\.(mp4|mov|webm|m4v)$/i)) ? 'video' : 'image' as const,
-        isNSFW: true,
-        createdAt: new Date().toISOString()
-      }));
+      .map(url => {
+      const isVideoUrl = url.split('?')[0].match(/\.(mp4|mov|webm|m4v|ogg|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI|3GP|OGG|WMV|FLV|M4V|MPG|MPEG|M2V|ASF|AMV)$/i) || 
+                          url.toLowerCase().includes('video') ||
+                          (url.toLowerCase().includes('firebasestorage') && (url.toLowerCase().includes('%2Fvideo') || url.toLowerCase().includes('video%2F') || url.toLowerCase().includes('video')));
+        
+        return {
+          id: `sync-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+          url,
+          type: isVideoUrl ? 'video' : 'image' as const,
+          isNSFW: true,
+          createdAt: new Date().toISOString()
+        };
+      });
       
     if (newPhotosToAdd.length > 0) {
       try {
-        await updateDoc(doc(db, 'users', currentUserId), {
-          photos: [...newPhotosToAdd, ...existingPhotos]
-        });
+        const updatedPhotos = [...newPhotosToAdd, ...existingPhotos];
+        await setDoc(doc(db, 'users', currentUserId), {
+          photos: updatedPhotos
+        }, { merge: true });
         console.log(`Synced ${newPhotosToAdd.length} media items to gallery`);
       } catch (error) {
         console.error('Failed to sync media to gallery:', error);
@@ -3285,86 +2871,169 @@ const AppContent: React.FC = () => {
   }, [me, currentUserId]);
 
     const handleProfileUpdate = async (profileData: Partial<User>) => {
-      if (!me) return;
       const isInitialCreation = !hasCreatedProfile;
-    const toastId = toast.loading(isInitialCreation ? 'Creating your profile...' : 'Updating profile...');
+      if (!currentUserId) {
+        toast.error('You must be logged in to update your profile');
+        return;
+      }
+      
+      const toastId = toast.loading(isInitialCreation ? 'Creating your profile...' : 'Updating profile...');
     
-    try {
-      await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
-      
-      // Also sync to public profiles collection
-      const publicProfile = {
-        id: currentUserId,
-        username: profileData.username,
-        displayName: profileData.displayName,
-        avatar: profileData.avatar,
-        isCreator: profileData.isCreator || false,
-        subscribersCount: profileData.subscribersCount || 0,
-        followingCount: profileData.followingCount || 0
-      };
-      await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
-      
-      // Auto-sync profile images to gallery to ensure they are "visible all the time"
-      const imagesToSync = [];
-      if (profileData.avatar) imagesToSync.push(profileData.avatar);
-      if (profileData.coverImage) imagesToSync.push(profileData.coverImage);
-      if (imagesToSync.length > 0) {
-        await syncMediaToGallery(imagesToSync);
-      }
+      try {
+        console.log('Starting profile update for user:', currentUserId, 'Initial creation:', isInitialCreation);
+        
+        // Clean undefined values for Firestore
+        const cleanedData: any = {};
+        Object.entries(profileData).forEach(([key, value]) => {
+          if (value !== undefined) cleanedData[key] = value;
+        });
 
-      if (isInitialCreation) {
-        setHasCreatedProfile(true);
-        toast.success('Welcome to ShareBares! Profile created successfully.', { id: toastId });
-        setActiveTab('feed');
-        window.scrollTo(0, 0);
-      } else {
-        toast.success('Profile updated successfully!', { id: toastId });
-        setActiveTab('feed'); // Take back to home page after edit too, as requested
-        window.scrollTo(0, 0);
+        // Ensure fundamental identifiers are always included
+        const currentUser = users.find(u => u.id === currentUserId);
+        cleanedData.id = currentUserId;
+        cleanedData.username = profileData.username || currentUser?.username || '';
+        cleanedData.email = profileData.email || currentUser?.email || auth.currentUser?.email || '';
+        
+        if (isInitialCreation) {
+          cleanedData.createdAt = new Date().toISOString();
+        }
+        cleanedData.updatedAt = new Date().toISOString();
+        cleanedData.lastActive = new Date().toISOString();
+
+        // Special handling for nested objects to prevent data loss during top-level merge
+        if (profileData.socials) {
+          cleanedData.socials = {
+            ...(currentUser?.socials || {}),
+            ...profileData.socials
+          };
+        }
+        
+        if (profileData.settings) {
+          cleanedData.settings = {
+            ...(currentUser?.settings || {}),
+            ...profileData.settings
+          };
+        }
+
+        console.log('Saving cleaned profile data to users collection:', cleanedData);
+        await setDoc(doc(db, 'users', currentUserId), cleanedData, { merge: true });
+        
+        // Also sync to public profiles collection
+        const publicFields = [
+          'id', 'username', 'displayName', 'bio', 'avatar', 'coverImage', 
+          'location', 'occupation', 'tagline', 'socials', 'isCreator',
+          'subscribersCount', 'followingCount', 'isStoreActive', 'isStableActive'
+        ];
+        
+        const publicProfile: any = {};
+        publicFields.forEach(field => {
+          if (cleanedData[field] !== undefined) {
+            publicProfile[field] = cleanedData[field];
+          } else if (currentUser && (currentUser as any)[field] !== undefined) {
+            publicProfile[field] = (currentUser as any)[field];
+          }
+        });
+        
+        console.log('Syncing to public profiles collection:', publicProfile);
+        await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
+        
+        // Auto-sync profile images to gallery
+        const imagesToSync: string[] = [];
+        if (cleanedData.avatar && (cleanedData.avatar.startsWith('https://') || cleanedData.avatar.startsWith('/uploads/'))) {
+          imagesToSync.push(cleanedData.avatar);
+        }
+        if (cleanedData.coverImage && (cleanedData.coverImage.startsWith('https://') || cleanedData.coverImage.startsWith('/uploads/'))) {
+          imagesToSync.push(cleanedData.coverImage);
+        }
+        
+        if (imagesToSync.length > 0) {
+          try {
+            await syncMediaToGallery(imagesToSync);
+          } catch (syncErr) {
+            console.warn('Media sync warning:', syncErr);
+          }
+        }
+
+        if (isInitialCreation) {
+          setHasCreatedProfile(true);
+          toast.success('Welcome to ShareBares! Profile created successfully.', { id: toastId });
+          setActiveTab('feed');
+          window.scrollTo(0, 0);
+        } else {
+          toast.success('Profile updated successfully!', { id: toastId });
+          setTimeout(() => {
+            setActiveTab('profile');
+            window.scrollTo(0, 0);
+          }, 500);
+        }
+      } catch (error: any) {
+        console.error('Profile update failed:', error);
+        toast.error(`Update failed: ${error.message || 'Permission denied'}`, { id: toastId });
+        throw error;
       }
-    } catch (error) {
-      toast.error('Failed to save profile. Please try again.', { id: toastId });
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
-      throw error; // Re-throw to allow component to handle error state
-    }
-  };
+    };
 
     const handleUpdateUser = async (profileData: Partial<User>) => {
-      if (!me) return;
+      if (!currentUserId) return;
       try {
-        await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
-      } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
-    }
-  };
+        const currentUser = users.find(u => u.id === currentUserId);
+        const updates: any = {};
+        
+        // 1. Basic identifiers
+        updates.id = currentUserId;
+        updates.updatedAt = new Date().toISOString();
 
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const success = urlParams.get('payment_success');
-    if (success && currentUserId) {
-      if (success === 'store') {
-        handleUpdateUser({ hasPaidStoreFee: true });
-        setActiveTab('store-management');
-        setIsPaying(false);
-        addNotification(
-          NotificationType.PURCHASE,
-          'Store Activated!',
-          'Your one-time store fee has been processed. You can now upload paid content.',
-        );
-      } else if (success === 'stable') {
-        handleUpdateUser({ hasPaidStableFee: true });
-        setActiveTab('join-stable');
-        setIsPaying(false);
-        addNotification(
-          NotificationType.PURCHASE,
-          'Stable Activated!',
-          'You now have unlimited access to The Stable.',
-        );
+        // 2. Map profileData to updates, using dot-notation for known nested objects to prevent clobbering
+        Object.entries(profileData).forEach(([key, value]) => {
+          if (value === undefined) return;
+          
+          if (key === 'settings' && typeof value === 'object' && value !== null) {
+            // Flatten one level for settings
+            Object.entries(value).forEach(([sKey, sValue]) => {
+              updates[`settings.${sKey}`] = sValue;
+            });
+          } else if (key === 'socials' && typeof value === 'object' && value !== null) {
+            // Flatten one level for socials
+            Object.entries(value).forEach(([socKey, socValue]) => {
+              updates[`socials.${socKey}`] = socValue;
+            });
+          } else if (key === 'username') {
+            if (value || currentUser?.username) updates.username = value || currentUser?.username;
+          } else if (key === 'email') {
+            if (value || currentUser?.email) updates.email = value || currentUser?.email;
+          } else {
+            updates[key] = value;
+          }
+        });
+
+        console.log('Sending atomic updates to users collection:', updates);
+        await updateDoc(doc(db, 'users', currentUserId), updates);
+        
+        // 3. If we updated fields that should be public, sync to profiles
+        const publicFields = ['username', 'displayName', 'avatar', 'isCreator', 'isStoreActive', 'isStableActive'];
+        const needsProfileSync = Object.keys(profileData).some(key => publicFields.includes(key));
+        
+        if (needsProfileSync) {
+          const publicProfile: any = { id: currentUserId };
+          publicFields.forEach(field => {
+            if (profileData[field as keyof User] !== undefined) {
+              publicProfile[field] = profileData[field as keyof User];
+            } else if (currentUser && (currentUser as any)[field] !== undefined) {
+              publicProfile[field] = (currentUser as any)[field];
+            }
+          });
+          await setDoc(doc(db, 'profiles', currentUserId), publicProfile, { merge: true });
+        }
+      } catch (error) {
+        console.error('Update user atomic error:', error);
+        // Fallback to merge mode if updateDoc fails (e.g. if document doesn't exist yet, though it should)
+        try {
+          await setDoc(doc(db, 'users', currentUserId), profileData, { merge: true });
+        } catch (innerError) {
+          handleFirestoreError(innerError, OperationType.UPDATE, `users/${currentUserId}`);
+        }
       }
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [currentUserId, handleUpdateUser]);
+    };
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -3382,65 +3051,96 @@ const AppContent: React.FC = () => {
       }
       return;
     }
-    
-    setIsPosting(true);
-    console.log('Post creation sequence started...');
-    let mediaUrl: string | undefined = undefined;
-    
-    if (newPostMedia) {
-      try {
-        console.log('Uploading media for post:', { name: newPostMedia.name, size: newPostMedia.size, type: newPostMedia.type });
-        mediaUrl = await uploadFile(newPostMedia, `posts/${currentUserId}/${Date.now()}_${newPostMedia.name}`);
-        console.log('Post media uploaded successfully:', mediaUrl);
-      } catch (err) {
-        console.error('Failed to upload media:', err);
-        toast.error('Error uploading media.');
-        setIsPosting(false);
-        return;
-      }
+
+    if (!currentUserId) {
+      toast.error('You must be logged in to create a post.');
+      return;
     }
     
+    setIsPosting(true);
+    const toastId = toast.loading('Creating your post...');
+    console.log('Post creation sequence started...', { content: newPostContent.substring(0, 50), hasMedia: !!newPostMedia });
+    let mediaUrl: string | undefined = undefined;
     const postId = `post-${Date.now()}`;
-    const authorDoc = users.find(u => u.id === currentUserId);
-    
-    const newPost: Post = {
-      id: postId,
-      userId: currentUserId,
-      content: newPostContent,
-      createdAt: new Date().toISOString(),
-      likes: 0,
-      likedBy: [],
-      commentsCount: 0,
-      visibility: newPostVisibility,
-      mediaUrl: mediaUrl,
-      mediaType: mediaUrl ? (
-        (newPostMedia?.type.startsWith('video') || 
-         mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || 
-         mediaUrl.toLowerCase().includes('video')) ? 'video' : 'image'
-      ) : undefined,
-    };
     
     try {
-      console.log('Creating post in Firestore:', postId, 'for user:', currentUserId);
-      await setDoc(doc(db, 'posts', postId), newPost);
+      if (newPostMedia) {
+        try {
+          console.log('Uploading media for post:', { name: newPostMedia.name, size: newPostMedia.size, type: newPostMedia.type });
+          mediaUrl = await uploadFile(newPostMedia, `posts/${currentUserId}/${Date.now()}_${newPostMedia.name}`, (progress) => {
+            toast.loading(`Uploading media: ${Math.round(progress)}%`, { id: toastId });
+          });
+          console.log('Post media uploaded successfully:', mediaUrl);
+        } catch (err: any) {
+          console.error('Failed to upload media:', err);
+          toast.error(`Error uploading media: ${err.message || 'Unknown storage error'}`, { id: toastId });
+          setIsPosting(false);
+          return;
+        }
+      }
+      
+      const isVideo = (newPostMedia && newPostMedia.type.startsWith('video')) || 
+        (mediaUrl && (
+          mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|m3u8|ts|rm|rmvb|asf|amv|divx|mpg|mpeg|m2v)$/i) || 
+          mediaUrl.toLowerCase().includes('video') ||
+          (mediaUrl.toLowerCase().includes('firebasestorage') && (mediaUrl.toLowerCase().includes('%2Fvideo') || mediaUrl.toLowerCase().includes('video%2F') || mediaUrl.toLowerCase().includes('video')))
+        )) || false;
+
+      const newPost: Post = {
+        id: postId,
+        userId: currentUserId,
+        content: newPostContent || '',
+        mediaUrl: mediaUrl || undefined,
+        mediaType: mediaUrl ? (isVideo ? 'video' : 'image') : undefined,
+        createdAt: new Date().toISOString(),
+        likes: 0,
+        likedBy: [],
+        commentsCount: 0,
+        visibility: newPostVisibility,
+      };
+      
+      // Clean undefined and NaN values
+      const cleanedPost: any = {};
+      Object.keys(newPost).forEach(key => {
+        const val = (newPost as any)[key];
+        if (val !== undefined && val !== null && (typeof val !== 'number' || !isNaN(val))) {
+          cleanedPost[key] = val;
+        }
+      });
+      
+      console.log('Final post object for Firestore:', cleanedPost);
+      await setDoc(doc(db, 'posts', postId), cleanedPost);
       console.log('Post document created successfully');
       
       // Auto-sync post media to gallery
       if (mediaUrl) {
-        await syncMediaToGallery([mediaUrl]);
+        try {
+          await syncMediaToGallery([mediaUrl]);
+        } catch (syncErr) {
+          console.warn('Failed to sync media to gallery, continuing...', syncErr);
+        }
       }
+
+      // Success cleanup
       setNewPostContent('');
       setNewPostVisibility(PostVisibility.PUBLIC);
       setNewPostMedia(null);
       setNewPostMediaPreview(null);
       setIsPosting(false);
       setIsCreating(false);
-      toast.success('Post created successfully!');
+      toast.success('Post created successfully!', { id: toastId });
     } catch (error: any) {
-      console.error('Post creation error:', error);
-      handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
       setIsPosting(false);
-      toast.error(`Failed to create post: ${error.message || 'Unknown error'}`);
+      console.error('Post creation error:', error);
+      
+      try {
+        const errorMsg = error?.message || String(error);
+        handleFirestoreError(error, OperationType.CREATE, `posts/${postId}`);
+      } catch (errInfo: any) {
+        const message = errInfo.message || 'Unknown error';
+        console.error('Handled Firestore Error:', message);
+        toast.error(`Post creation failed: ${error.message || 'Permission denied or network error'}`);
+      }
     }
   };
 
@@ -3460,8 +3160,8 @@ const AppContent: React.FC = () => {
       if (!isFan) {
         addNotification(
           NotificationType.FOLLOW,
-          'New Fan!',
-          `${me.displayName} joined your Fan Club!`,
+          'New Follower!',
+          `${me.displayName} started following you!`,
           { userId: targetUserId, senderId: currentUserId }
         );
       }
@@ -3576,9 +3276,7 @@ const AppContent: React.FC = () => {
   };
 
   const handlePurchaseItem = (item: StoreItem) => {
-    setPendingStoreItem(item);
-    setPaymentType('item');
-    setIsPaying(true);
+    toast.success(`Unlocked ${item.title} for free!`);
   };
 
   const handleSendFriendRequest = async (targetUserId: string) => {
@@ -3964,14 +3662,19 @@ const AppContent: React.FC = () => {
     try {
       const mediaUrls: string[] = [];
       const isVideo = itemData.type === 'video';
-      const hasExplicitThumbnail = isVideo && files.length > 1 && files[0].type.startsWith('image');
+      // Detect if an explicit thumbnail was provided (first file is image, and there are more files)
+      const hasExplicitThumbnail = files.length > 1 && files[0].type.startsWith('image') && 
+                                  (isVideo || itemData.type === 'picture_pack' || itemData.type === 'other');
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         console.log(`Uploading file ${i + 1}/${files.length}: ${file.name} (${file.size} bytes)`);
         
         try {
-          const url = await uploadFile(file, `store/${currentUserId}/${Date.now()}_${file.name}`);
+          const url = await uploadFile(file, `store/${currentUserId}/${Date.now()}_${file.name}`, (progress) => {
+            const overallProgress = Math.round(((i / files.length) * 100) + (progress / files.length));
+            toast.loading(`Uploading file ${i + 1}/${files.length}: ${overallProgress}%`, { id: uploadToastId });
+          });
           console.log(`Successfully uploaded file ${i + 1}:`, url);
           mediaUrls.push(url);
         } catch (err: any) {
@@ -4010,8 +3713,16 @@ const AppContent: React.FC = () => {
         mediaUrls: finalMediaUrls,
         createdAt: new Date().toISOString()
       };
+
+      const cleanedNewItem: any = {};
+      Object.keys(newItem).forEach(key => {
+        const val = (newItem as any)[key];
+        if (val !== undefined && (typeof val !== 'number' || !isNaN(val))) {
+          cleanedNewItem[key] = val;
+        }
+      });
       
-      await setDoc(doc(db, 'storeItems', itemId), newItem);
+      await setDoc(doc(db, 'storeItems', itemId), cleanedNewItem);
       
       const newMediaItems: MediaItem[] = mediaUrls.map((url, index) => {
         const file = files[index];
@@ -4027,7 +3738,7 @@ const AppContent: React.FC = () => {
       const updatedStoreUploads = [...(me.storeUploads || []), ...newMediaItems];
       await updateDoc(doc(db, 'users', currentUserId), { 
         storeUploads: updatedStoreUploads,
-        hasPaidStoreFee: true // Just to be sure
+        isStoreActive: true // Ensure store state is correct
       });
       
       addNotification(
@@ -4043,15 +3754,32 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean, photoFiles: File[]) => {
-    if (!me.hasPaidStableFee && !me.isAdmin) {
-      setPendingStableListing(listingData);
-      setStableBundleSelected(postToStore);
-      setPaymentType('stable');
-      setIsPaying(true);
+  const handleBuyStoreItem = async (item: StoreItem) => {
+    if (!me) {
+      toast.error('You must be logged in to purchase items.');
       return;
     }
+    
+    const confirmPurchase = window.confirm(`Unlock "${item.title}" for $${item.price || '0.00'}?\n\nThis will add the content to your permanent collection in "My Videos".`);
+    if (!confirmPurchase) return;
 
+    // In a real app, logic would involve CCBill redirect and webhook validation.
+    // To satisfy the user requirement for instant access in this environment, 
+    // we'll update the user's purchasedItemIds list.
+    
+    try {
+      const updatedPurchasedIds = Array.from(new Set([...(me.purchasedItemIds || []), item.id]));
+      await handleUpdateUser({ purchasedItemIds: updatedPurchasedIds });
+      
+      toast.success(`Success! ${item.title} has been added to your Vault.`);
+      setActiveTab('my-videos');
+    } catch (error) {
+      console.error('Purchase failed', error);
+      toast.error('Could not complete purchase. Please try again.');
+    }
+  };
+
+  const handleCreateStableListing = async (listingData: Omit<StableListing, 'id' | 'createdAt' | 'userId'>, postToStore: boolean, photoFiles: File[]) => {
     try {
       const uploadedPhotos: string[] = [];
       
@@ -4073,8 +3801,16 @@ const AppContent: React.FC = () => {
         avatarUrl: uploadedPhotos[0] || APP_LOGO_URL,
         createdAt: new Date().toISOString()
       };
+
+      // Clean undefined values
+      const cleanedListing: any = {};
+      Object.keys(newListing).forEach(key => {
+        if ((newListing as any)[key] !== undefined) {
+          cleanedListing[key] = (newListing as any)[key];
+        }
+      });
       
-      await setDoc(doc(db, 'stableListings', listingId), newListing);
+      await setDoc(doc(db, 'stableListings', listingId), cleanedListing);
       
       // Auto-sync stable photos to gallery
       if (uploadedPhotos.length > 0) {
@@ -4090,7 +3826,6 @@ const AppContent: React.FC = () => {
           userId: currentUserId,
           title: `${listingData.providerName} - Stable Listing`,
           description: listingData.services,
-          price: parseFloat(listingData.pricing.replace(/[^0-9.]/g, '')) || 0,
           thumbnailUrl: newListing.avatarUrl,
           mediaUrls: newListing.photos,
           type: isVideo ? 'video' : 'other',
@@ -4104,101 +3839,6 @@ const AppContent: React.FC = () => {
     } catch (error) {
       console.error('Stable listing upload error:', error);
       toast.error('Failed to create stable listing');
-    }
-  };
-
-  const handlePaymentSuccess = async () => {
-    setIsPaying(false);
-    
-    try {
-      let updates: Partial<User> = {};
-      let successMessage = '';
-      
-      if (paymentType === 'store') {
-        updates = { hasPaidStoreFee: true };
-        successMessage = 'Your store has been activated! You can now upload items.';
-        setActiveTab('store-management');
-      } else if (paymentType === 'stable') {
-        const isBundle = stableBundleSelected;
-        updates = { 
-          hasPaidStableFee: true, 
-          hasPaidStableBundle: isBundle || (me.hasPaidStableBundle || false)
-        };
-        
-        if (pendingStableListing) {
-          const listingId = `sl-${Date.now()}`;
-          const newListing: StableListing = {
-            id: listingId,
-            userId: currentUserId,
-            ...pendingStableListing,
-            createdAt: new Date().toISOString()
-          };
-          await setDoc(doc(db, 'stableListings', listingId), newListing);
-
-          if (isBundle) {
-            const itemId = `si-stable-${Date.now()}`;
-            const newStoreItem: StoreItem = {
-              id: itemId,
-              userId: currentUserId,
-              title: `${pendingStableListing.providerName} - Stable Listing`,
-              description: pendingStableListing.services,
-              price: parseFloat(pendingStableListing.pricing.replace(/[^0-9.]/g, '')) || 0,
-              thumbnailUrl: pendingStableListing.avatarUrl || pendingStableListing.photos?.[0] || '',
-              mediaUrls: pendingStableListing.photos || [pendingStableListing.avatarUrl || ''],
-              type: 'other',
-              createdAt: new Date().toISOString()
-            };
-            await setDoc(doc(db, 'storeItems', itemId), newStoreItem);
-          }
-          setActiveTab('stable');
-        } else {
-          setActiveTab('join-stable');
-        }
-        
-        successMessage = isBundle 
-          ? 'Your Store Bundle has been processed. Your listing is live in the feed and your store.'
-          : 'Your one-time stable fee has been processed. Your listing is now live.';
-      } else if (paymentType === 'item' && pendingStoreItem) {
-        const currentPurchased = me.purchasedItemIds || [];
-        updates = { 
-          purchasedItemIds: [...currentPurchased, pendingStoreItem.id] 
-        };
-      
-        // Notify seller
-        const sellerId = pendingStoreItem.userId;
-        const msgId = `msg-notif-${Date.now()}`;
-        const notification: AppNotification = {
-          id: msgId,
-          userId: sellerId,
-          type: NotificationType.PURCHASE,
-          title: 'New Sale!',
-          message: `${me.displayName || 'Someone'} purchased "${pendingStoreItem.title}" from your store for $${pendingStoreItem.price}`,
-          timestamp: new Date().toISOString(),
-          isRead: false,
-          storeItemId: pendingStoreItem.id
-        };
-        await setDoc(doc(db, 'notifications', msgId), notification);
-        
-        successMessage = `You have successfully purchased ${pendingStoreItem.title}`;
-      }
-      setPendingStoreItem(null);
-      setIsPaying(false);
-
-      if (Object.keys(updates).length > 0) {
-        await updateDoc(doc(db, 'users', currentUserId), updates);
-      }
-
-      addNotification(
-        NotificationType.SYSTEM,
-        'Payment Successful!',
-        successMessage
-      );
-      
-      setPendingStableListing(null);
-      setPendingStoreItem(null);
-      setStableBundleSelected(false);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${currentUserId}`);
     }
   };
 
@@ -4405,7 +4045,6 @@ const AppContent: React.FC = () => {
         <div className="h-[350px] md:h-[450px] rounded-[3rem] overflow-hidden border border-white/10 relative group shadow-2xl">
           <img 
             src={user.coverImage || undefined} 
-            referrerPolicy="no-referrer" 
             className="w-full h-full object-cover opacity-70 transition-transform duration-1000 group-hover:scale-105" 
             alt="" 
             onError={(e) => {
@@ -4423,7 +4062,6 @@ const AppContent: React.FC = () => {
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-[2.5rem] border-4 border-black overflow-hidden shadow-2xl bg-black chrome-border shrink-0 relative z-10">
                 <img 
                   src={user.avatar || undefined} 
-                  referrerPolicy="no-referrer" 
                   className="w-full h-full object-cover" 
                   alt="" 
                   onError={(e) => {
@@ -4496,7 +4134,7 @@ const AppContent: React.FC = () => {
               <div className="w-px h-8 bg-white/10"></div>
               <div className="text-center p-2">
                 <p className="text-2xl font-black text-white tracking-tighter" style={{ color: fontColor }}>{(user.fanIds || []).length}</p>
-                <p className="text-[9px] text-slate-400 uppercase font-black tracking-[0.2em] mt-1">Fans</p>
+                <p className="text-[9px] text-slate-400 uppercase font-black tracking-[0.2em] mt-1">Followers</p>
               </div>
             </div>
           </div>
@@ -4573,7 +4211,7 @@ const AppContent: React.FC = () => {
                 style={profileButtonStyle}
               >
                 <Star size={16} fill={(user.fanIds || []).includes(currentUserId) ? "currentColor" : "none"} />
-                <span>{(user.fanIds || []).includes(currentUserId) ? 'In Fan Club' : 'Join Fan Club'}</span>
+                <span>{(user.fanIds || []).includes(currentUserId) ? 'Following' : 'Follow'}</span>
               </button>
               <button 
                 onClick={() => { setSelectedUserId(user.id); setActiveTab('messages'); }}
@@ -4890,7 +4528,6 @@ const AppContent: React.FC = () => {
                             muted
                             autoPlay={false}
                             controls={false}
-                            showPlayIcon={false}
                           />
                           <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
                             <Play size={32} className="text-white opacity-50" />
@@ -4899,7 +4536,6 @@ const AppContent: React.FC = () => {
                       ) : (
                         <img 
                           src={photo.url} 
-                          referrerPolicy="no-referrer" 
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                           alt="" 
                           onError={(e) => {
@@ -5127,52 +4763,55 @@ const AppContent: React.FC = () => {
         {activeTab === 'media-store' && viewingUserId && me && (
           <MediaStore 
             user={filteredUsers.find(u => u.id === viewingUserId) || me}
+            currentUser={me}
             items={storeItems}
             stableListings={stableListings.filter(l => l.userId === viewingUserId)}
             isOwnStore={viewingUserId === currentUserId}
             isAdmin={me.isAdmin}
             isLoading={isDataLoading}
-            purchasedItemIds={me.purchasedItemIds || []}
             storeOwnerId={viewingUserId}
             onBack={() => setActiveTab('user-profile')}
-            onPurchase={handlePurchaseItem}
             onDeleteItem={handleDeleteStoreItem}
-            onAddItem={handleAddItemToStore}
             onProfileClick={navigateToProfile}
+            onBuyItem={handleBuyStoreItem}
+          />
+        )}
+        {activeTab === 'my-videos' && me && (
+          <MyVideosPage 
+            user={me}
+            purchasedItems={storeItems.filter(item => (me.purchasedItemIds || []).includes(item.id))}
+            onBack={() => setActiveTab('feed')}
+            onExploreStore={() => {
+              // If there are no stores, just go to feed, otherwise go to a random creator's store 
+              // or just back to feed and they can find a store
+              setActiveTab('feed');
+            }}
           />
         )}
         {activeTab === 'store-management' && me && (
-          <StoreManagementPage 
-            user={me}
-            items={storeItems.filter(i => i.userId === currentUserId)}
-            onAddItem={handleAddItemToStore}
-            onUpdateItem={handleUpdateStoreItem}
-            onDeleteItem={handleDeleteStoreItem}
-            onGoToMonetization={() => setActiveTab('monetization')}
-            onGoToCustomization={() => setActiveTab('store-customization')}
-          />
+          !me.isStoreActive && !me.isAdmin ? (
+            <StoreActivationGate user={me} onActivated={() => setActiveTab('store-management')} />
+          ) : (
+            <StoreManagementPage 
+              user={me}
+              items={storeItems.filter(i => i.userId === currentUserId)}
+              onAddItem={handleAddItemToStore}
+              onUpdateItem={handleUpdateStoreItem}
+              onDeleteItem={handleDeleteStoreItem}
+              onGoToCustomization={() => setActiveTab('store-customization')}
+            />
+          )
         )}
         {activeTab === 'store-customization' && me && (
-          <StoreCustomizationPage 
-            user={me}
-            onSave={handleStoreCustomizationUpdate}
-            onCancel={() => setActiveTab('store-management')}
-          />
-        )}
-        {activeTab === 'monetization' && me && (
-          <MonetizationPage 
-            me={me} 
-            onRequestPayment={(type, isBundle) => {
-              setPaymentType(type);
-              if (type === 'stable') setStableBundleSelected(!!isBundle);
-              setIsPaying(true);
-            }}
-            onGoToStoreManager={() => setActiveTab('store-management')}
-            onTestPayment={() => {
-              setPaymentType('store');
-              handlePaymentSuccess();
-            }}
-          />
+          !me.isStoreActive && !me.isAdmin ? (
+            <StoreActivationGate user={me} onActivated={() => setActiveTab('store-management')} />
+          ) : (
+            <StoreCustomizationPage 
+              user={me}
+              onSave={handleStoreCustomizationUpdate}
+              onCancel={() => setActiveTab('store-management')}
+            />
+          )
         )}
         {activeTab === 'notifications' && (
           <div className="max-w-2xl mx-auto py-12 px-4">
@@ -5193,7 +4832,6 @@ const AppContent: React.FC = () => {
                 appNotifications.map(notif => {
                   let Icon = Bell;
                   if (notif.type === NotificationType.MESSAGE) Icon = MessageSquare;
-                  if (notif.type === NotificationType.PURCHASE) Icon = ShoppingBag;
                   if (notif.type === NotificationType.LIKE) Icon = Heart;
                   if (notif.type === NotificationType.COMMENT) Icon = MessageCircle;
 
@@ -5264,10 +4902,9 @@ const AppContent: React.FC = () => {
         )}
         {activeTab === 'join-stable' && me && (
           <JoinStablePage 
+            user={me}
             onBack={() => setActiveTab('feed')} 
-            onGoToMonetization={() => setActiveTab('monetization')}
             onSubmit={handleCreateStableListing} 
-            hasPaidStableFee={me.hasPaidStableFee || me.isAdmin}
           />
         )}
         {activeTab === 'games' && me && (
@@ -5338,7 +4975,6 @@ const AppContent: React.FC = () => {
                   ) : (
                     <img 
                       src={newPostMediaPreview} 
-                      referrerPolicy="no-referrer" 
                       className="w-full h-full object-cover" 
                       alt="Preview" 
                       onError={(e) => {
@@ -5367,17 +5003,6 @@ const AppContent: React.FC = () => {
                   <Wand2 size={14} className={aiGenerating ? 'animate-spin' : ''} />
                   <span>{aiGenerating ? 'Working...' : 'Get Ideas'}</span>
                 </button>
-
-                <div className="flex space-x-2 bg-white/5 p-1 rounded-full border border-white/5">
-                  <button 
-                    onClick={() => setNewPostVisibility(PostVisibility.PUBLIC)}
-                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all ${newPostVisibility === PostVisibility.PUBLIC ? 'bg-[#967bb6] text-white shadow-lg' : 'text-slate-600'}`}
-                  >Public</button>
-                  <button 
-                    onClick={() => setNewPostVisibility(PostVisibility.PRIVATE)}
-                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase transition-all ${newPostVisibility === PostVisibility.PRIVATE ? 'bg-[#967bb6] text-white shadow-lg' : 'text-slate-400'}`}
-                  >Private</button>
-                </div>
               </div>
             </div>
 
@@ -5394,7 +5019,7 @@ const AppContent: React.FC = () => {
                   ref={postFileInputRef} 
                   onChange={handleMediaChange} 
                   className="hidden" 
-                  accept="image/*,video/*" 
+                  accept="image/*,video/*,.mkv,.avi,.wmv,.flv,.3gp,.mov,.mp4,.webm,.m4v,.MP4,.MOV,.WEBM" 
                 />
               </div>
               <button 
@@ -5448,155 +5073,6 @@ const AppContent: React.FC = () => {
           onCancel={() => setConfirmAction(null)} 
         />
       )}
-
-      {isPaying && (
-        <PaymentModal 
-          isOpen={isPaying} 
-          onClose={() => setIsPaying(false)} 
-          onSuccess={handlePaymentSuccess} 
-          type={paymentType}
-          item={pendingStoreItem || undefined}
-        />
-      )}
-    </div>
-  );
-};
-
-const PaymentModal: React.FC<{ 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onSuccess: () => void; 
-  type: 'store' | 'stable' | 'item';
-  item?: StoreItem;
-}> = ({ isOpen, onClose, onSuccess, type, item }) => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvc, setCvc] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    // Simulate payment processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      onSuccess();
-    }, 2000);
-  };
-
-  if (!isOpen) return null;
-
-  const getTitle = () => {
-    if (type === 'store') return 'Activate Creator Store';
-    if (type === 'stable') return 'Uncommon Stable Listing';
-    if (type === 'item' && item) return `Unlock ${item.title}`;
-    return 'Secure Payment';
-  };
-
-  const getPrice = () => {
-    if (type === 'store') return 49.99;
-    if (type === 'stable') return 24.99;
-    if (type === 'item' && item) return item.price;
-    return 0;
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[200] p-4">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-[#0a0a0a] border border-white/5 w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl chrome-border"
-      >
-        <div className="p-8 border-b border-white/5 bg-gradient-to-br from-[#967bb6]/10 to-transparent flex justify-between items-start">
-          <div>
-            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-white/10">
-              <CreditCard className="text-[#967bb6]" />
-            </div>
-            <h2 className="text-2xl font-black tracking-tighter uppercase text-white">{getTitle()}</h2>
-            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Safe & Secure 256-bit Encryption</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-xl">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-6 mb-6">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Order Summary</span>
-              <div className="flex items-center space-x-1">
-                <DollarSign size={16} className="text-[#967bb6]" />
-                <span className="text-2xl font-black text-white">{getPrice().toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Card Number</label>
-              <div className="relative">
-                <input 
-                  required
-                  type="text" 
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  placeholder="0000 0000 0000 0000"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
-                />
-                <CreditCard className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-700" size={20} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">Expiry Date</label>
-                <input 
-                  required
-                  type="text" 
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  placeholder="MM/YY"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#967bb6] mb-2">CVC</label>
-                <input 
-                  required
-                  type="text" 
-                  value={cvc}
-                  onChange={(e) => setCvc(e.target.value)}
-                  placeholder="123"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white placeholder:text-slate-700 font-mono tracking-widest focus:ring-2 focus:ring-[#967bb6]/50 focus:border-[#967bb6] outline-none transition-all"
-                />
-              </div>
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            disabled={isProcessing}
-            className="w-full py-5 rounded-[1.5rem] bg-gradient-to-r from-[#967bb6] to-[#6b46c1] text-white font-black uppercase tracking-[0.2em] text-sm shadow-2xl shadow-[#967bb6]/50 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-wait flex items-center justify-center space-x-3"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                <span>Processing...</span>
-              </>
-            ) : (
-              <>
-                <Lock size={20} />
-                <span>Pay ${getPrice().toFixed(2)}</span>
-              </>
-            )}
-          </button>
-
-          <div className="flex items-center justify-center space-x-2 text-slate-600">
-            <Shield size={14} />
-            <span className="text-[8px] font-black uppercase tracking-widest">PCI-DSS Compliant Infrastructure</span>
-          </div>
-        </form>
-      </motion.div>
     </div>
   );
 };

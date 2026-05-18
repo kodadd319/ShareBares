@@ -56,7 +56,6 @@ const FriendsListModal: React.FC<FriendsListModalProps> = ({
                 >
                   <img 
                     src={friend.avatar || APP_LOGO_URL} 
-                    referrerPolicy="no-referrer"
                     className="w-12 h-12 rounded-xl object-cover border border-white/10" 
                     alt="" 
                     onError={(e) => {

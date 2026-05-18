@@ -1,7 +1,6 @@
 
 export enum PostVisibility {
-  PUBLIC = 'PUBLIC',
-  PRIVATE = 'PRIVATE'
+  PUBLIC = 'PUBLIC'
 }
 
 export interface MediaItem {
@@ -53,36 +52,35 @@ export interface User {
     website?: string;
   };
   isCreator: boolean;
-  subscribersCount: number;
-  followingCount: number;
-  friendIds: string[];
-  pendingFriendRequestsSent: string[];
-  pendingFriendRequestsReceived: string[];
-  likedPostIds: string[];
-  fwbIds: string[];
-  pendingFwbRequestsSent: string[];
-  pendingFwbRequestsReceived: string[];
-  fwbRequestsResetDate: string;
-  fwbRequestsSentCount: number;
-  fanIds: string[];
-  photos: MediaItem[];
-  storeUploads: MediaItem[];
-  blockedUserIds: string[];
-  hasPaidStoreFee?: boolean;
-  hasPaidStableFee?: boolean;
-  hasPaidStableBundle?: boolean;
+  subscribersCount?: number;
+  followingCount?: number;
+  friendIds?: string[];
+  pendingFriendRequestsSent?: string[];
+  pendingFriendRequestsReceived?: string[];
+  likedPostIds?: string[];
+  fwbIds?: string[];
+  pendingFwbRequestsSent?: string[];
+  pendingFwbRequestsReceived?: string[];
+  fwbRequestsResetDate?: string;
+  fwbRequestsSentCount?: number;
+  fanIds?: string[];
+  photos?: MediaItem[];
+  storeUploads?: MediaItem[];
+  blockedUserIds?: string[];
   isAdmin?: boolean;
-  stripeConnectId?: string; // Kept for DB compatibility, but unused in UI
-  payoutsEnabled?: boolean; // Generic flag for the future
-  purchasedItemIds?: string[];
   storeCustomization?: StoreCustomization;
   profileCustomization?: ProfileCustomization;
+  isStoreActive?: boolean;
+  isStableActive?: boolean;
+  stableActivationDate?: string;
+  storeActivationDate?: string;
   settings?: {
     pushNotifications: boolean;
     emailNotifications: boolean;
     profileVisibility: 'public' | 'private';
     messagingPrivacy: 'everyone' | 'following' | 'none';
   };
+  purchasedItemIds?: string[];
   createdAt?: string;
   lastActive?: string;
 }
@@ -125,10 +123,10 @@ export interface StoreItem {
   userId: string;
   title: string;
   description?: string;
-  price: number;
   thumbnailUrl: string;
   mediaUrls: string[]; // Support for multiple files (e.g., picture packs)
   type: StoreItemType;
+  price?: number;
   createdAt: string;
   videoDuration?: number; // in seconds
 }
@@ -140,7 +138,6 @@ export interface ChatThread {
 
 export enum NotificationType {
   MESSAGE = 'MESSAGE',
-  PURCHASE = 'PURCHASE',
   LIKE = 'LIKE',
   COMMENT = 'COMMENT',
   FOLLOW = 'FOLLOW',
@@ -171,7 +168,6 @@ export interface StableListing {
   services: string;
   city: string;
   importantInfo?: string;
-  pricing: string;
   contactInfo: string;
   avatarUrl?: string;
   photos?: string[];

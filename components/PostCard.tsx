@@ -45,32 +45,54 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const postUrl = `${APP_URL}/post/${post.id}`;
-    navigator.clipboard.writeText(postUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    
-    showMascot({
-      action: 'wink',
-      message: `Spread the love! Link copied to clipboard. 😉🔥`,
-      duration: 3000
-    });
+    const shareData = {
+      title: `ShareBares Post by ${author.displayName}`,
+      text: post.content ? (post.content.length > 100 ? post.content.substring(0, 97) + '...' : post.content) : 'Check out this post on ShareBares!',
+      url: postUrl,
+    };
+
+    // Try native share first
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        } else {
+          return; // User cancelled, don't fallback to clipboard in this case usually, or maybe we should?
+        }
+      }
+    }
+
+    // Fallback to clipboard
+    try {
+      await navigator.clipboard.writeText(postUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      
+      showMascot({
+        action: 'wink',
+        message: `Spread the love! Link copied to clipboard. 😉🔥`,
+        duration: 3000
+      });
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
   };
   
   const getVisibilityLabel = (visibility: PostVisibility) => {
-    switch (visibility) {
-      case PostVisibility.PRIVATE: return 'Private';
-      default: return 'Public';
-    }
+    return 'Public';
   };
 
-  const isLocked = post.visibility === PostVisibility.PRIVATE && !isMe && !isAdmin && !isFan;
+  const isLocked = false;
 
   const handleLockedClick = () => {
     showMascot({
       action: 'wink',
-      message: `Want to see what's behind the curtain? Join ${author.displayName}'s Fan Club to unlock this! 😉💎`,
+      message: `Want to see what's behind the curtain? Follow ${author.displayName} to unlock this! 😉💎`,
       duration: 5000
     });
   };
@@ -78,7 +100,20 @@ const PostCard: React.FC<PostCardProps> = ({
   const postComments = comments.filter(c => c.postId === post.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-  const isVideo = post.mediaType === 'video' || (post.mediaUrl && (post.mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|MP4|MOV|WEBM)$/i) || post.mediaUrl.toLowerCase().includes('video')));
+  const getMediaUrl = (url: string | undefined) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    return url.startsWith('/') ? url : `/${url}`;
+  };
+
+  const isVideo = post.mediaType === 'video' || 
+    (post.mediaUrl && (
+      post.mediaUrl.split('?')[0].match(/\.(mp4|mov|webm|ogg|m4v|avi|mkv|flv|wmv|3gp|MP4|MOV|WEBM|MKV|AVI|3GP|OGG|WMV|FLV|M4V|MPG|MPEG|M2V|ASF|AMV)$/i) || 
+      post.mediaUrl.toLowerCase().includes('video') ||
+      (post.mediaUrl.toLowerCase().includes('firebasestorage') && (post.mediaUrl.toLowerCase().includes('%2Fvideo') || post.mediaUrl.toLowerCase().includes('video%2F') || post.mediaUrl.toLowerCase().includes('video')))
+    ));
+
+  const mediaUrl = getMediaUrl(post.mediaUrl);
 
   return (
     <div className="glass-panel rounded-2xl overflow-hidden mb-6 shadow-xl transition-all hover:border-[#967bb6]/40 chrome-border">
@@ -89,7 +124,6 @@ const PostCard: React.FC<PostCardProps> = ({
             <img 
               src={author.avatar || APP_LOGO_URL} 
               alt="" 
-              referrerPolicy="no-referrer" 
               className="w-10 h-10 rounded-full border border-[#967bb6]/30" 
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -133,30 +167,28 @@ const PostCard: React.FC<PostCardProps> = ({
       )}
 
       {/* Media */}
-      {post.mediaUrl && (
+      {mediaUrl && (
         <div 
           className="relative aspect-video bg-black flex items-center justify-center overflow-hidden cursor-pointer"
           onClick={isLocked ? handleLockedClick : undefined}
         >
           {isVideo ? (
             <VideoPlayer 
-              src={post.mediaUrl}
+              src={mediaUrl}
               className={`w-full h-full transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`}
               controls={!isLocked}
               loop
               muted
               autoPlay={false}
-              clickToPlay={!isLocked}
             />
           ) : (
             <img 
-              src={post.mediaUrl} 
+              src={mediaUrl} 
               alt="Post content" 
-              referrerPolicy="no-referrer"
               className={`w-full h-full object-cover transition-all duration-700 ${isLocked ? 'blur-2xl' : ''}`} 
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                if (target.src !== APP_LOGO_URL) {
+                if (target.src !== APP_LOGO_URL && mediaUrl) {
                   target.src = APP_LOGO_URL;
                 }
               }}
@@ -217,7 +249,6 @@ const PostCard: React.FC<PostCardProps> = ({
           <form onSubmit={handleCommentSubmit} className="mb-6 flex items-center space-x-3">
             <img 
               src={users.find(u => u.id === currentUserId)?.avatar || APP_LOGO_URL} 
-              referrerPolicy="no-referrer"
               className="w-8 h-8 rounded-full border border-white/10"
               alt=""
               onError={(e) => {
@@ -254,7 +285,6 @@ const PostCard: React.FC<PostCardProps> = ({
                     <img 
                       src={commenter?.avatar || APP_LOGO_URL} 
                       alt="" 
-                      referrerPolicy="no-referrer"
                       className="w-8 h-8 rounded-full border border-white/10"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;

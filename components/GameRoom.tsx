@@ -231,7 +231,6 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             width="300" 
             height="250" 
             style={{ border: 0 }} 
-            referrerPolicy="no-referrer"
             alt="Banner"
             className="rounded-2xl shadow-2xl border border-white/10"
             onError={(e) => {
@@ -304,7 +303,6 @@ const GameRoom: React.FC<GameRoomProps> = ({ user, socket, users, setActiveTab }
             src="https://www.imglnkx.com/8780/JM-645_DESIGN-22450_WETTSHIRT2_640360.jpg" 
             className="w-full h-auto object-cover" 
             alt="Featured Content"
-            referrerPolicy="no-referrer"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               if (target.src !== APP_LOGO_URL) {

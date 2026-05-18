@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Save, Music, Layout, Palette, Type, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, Music, Layout, Palette, Type, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { User, ProfileCustomization } from '../types';
+import { uploadFile } from '../firebase';
 
 interface CustomProfilePageProps {
   user: User;
@@ -61,6 +62,7 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
   });
 
   const [musicFileName, setMusicFileName] = useState<string>('');
+  const [isUploadingMusic, setIsUploadingMusic] = useState(false);
 
   const activeWallpaper = WALLPAPERS.find(w => w.url === config.backgroundWallpaper);
   
@@ -92,15 +94,19 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
     setMusicFileName('');
   };
 
-  const handleMusicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMusicUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setMusicFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setConfig(prev => ({ ...prev, themeSongUrl: event.target?.result as string }));
-      };
-      reader.readAsDataURL(file);
+      setIsUploadingMusic(true);
+      try {
+        const url = await uploadFile(file, `profiles/${user.id}/theme_${Date.now()}`);
+        setConfig(prev => ({ ...prev, themeSongUrl: url }));
+      } catch (err) {
+        console.error('Music upload failed:', err);
+      } finally {
+        setIsUploadingMusic(false);
+      }
     }
   };
 
@@ -280,10 +286,17 @@ const CustomProfilePage: React.FC<CustomProfilePageProps> = ({ user, onSave, onB
                 <p className="text-[10px] text-slate-500 max-w-[200px]">MP3 or WAV files. Plays automatically when users view your profile.</p>
                 
                 <label className="mt-6 cursor-pointer">
-                  <span className="bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10">
-                    {musicFileName ? 'Change File' : 'Select File'}
+                  <span className={`bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 flex items-center space-x-2 ${isUploadingMusic ? 'opacity-50 cursor-wait' : ''}`}>
+                    {isUploadingMusic ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <span>{musicFileName ? 'Change File' : 'Select File'}</span>
+                    )}
                   </span>
-                  <input type="file" accept="audio/*" className="hidden" onChange={handleMusicUpload} />
+                  <input type="file" accept="audio/*" className="hidden" onChange={handleMusicUpload} disabled={isUploadingMusic} />
                 </label>
                 
                 {musicFileName && (

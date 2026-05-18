@@ -22,7 +22,6 @@ const Logo: React.FC<{ className?: string; size?: 'sm' | 'md' | 'lg' }> = ({ cla
         src={imgSrc} 
         className="w-full h-full object-contain transition-all duration-700 group-hover:scale-105 animate-float" 
         alt="ShareBares Logo" 
-        referrerPolicy="no-referrer"
         onError={handleImageError}
       />
     </div>

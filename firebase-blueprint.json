@@ -26,11 +26,9 @@
         "fwbRequestsResetDate": { "type": "string" },
         "fwbRequestsSentCount": { "type": "integer" },
         "fanIds": { "type": "array", "items": { "type": "string" } },
-        "hasPaidStoreFee": { "type": "boolean" },
-        "hasPaidStableFee": { "type": "boolean" },
-        "hasPaidStableBundle": { "type": "boolean" },
-        "profileCustomization": { "type": "object" },
-        "purchasedItemIds": { "type": "array", "items": { "type": "string" } }
+        "isStoreActive": { "type": "boolean" },
+        "storeActivationDate": { "type": "string" },
+        "profileCustomization": { "type": "object" }
       },
       "required": ["id", "username", "email"]
     },
@@ -76,13 +74,12 @@
         "userId": { "type": "string" },
         "title": { "type": "string" },
         "description": { "type": "string" },
-        "price": { "type": "number" },
         "thumbnailUrl": { "type": "string" },
         "mediaUrls": { "type": "array", "items": { "type": "string" } },
         "type": { "type": "string", "enum": ["video", "picture_pack", "other"] },
         "createdAt": { "type": "string" }
       },
-      "required": ["id", "userId", "title", "price", "createdAt"]
+      "required": ["id", "userId", "title", "createdAt"]
     },
     "StableListing": {
       "title": "StableListing",
@@ -96,13 +93,12 @@
         "services": { "type": "string" },
         "city": { "type": "string" },
         "importantInfo": { "type": "string" },
-        "pricing": { "type": "string" },
         "contactInfo": { "type": "string" },
         "avatarUrl": { "type": "string" },
         "photos": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string" }
       },
-      "required": ["id", "userId", "providerName", "pricing", "createdAt"]
+      "required": ["id", "userId", "providerName", "createdAt"]
     },
     "Notification": {
       "title": "Notification",

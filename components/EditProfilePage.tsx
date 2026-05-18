@@ -4,6 +4,7 @@ import { Check, ArrowLeft, Camera, Globe, Mail, Phone, MapPin, Briefcase, Tag, C
 import { User } from '../types';
 import { APP_LOGO_URL } from '../constants';
 import { toast } from 'sonner';
+import { uploadFile } from '../firebase';
 
 interface EditProfilePageProps {
   user: User;
@@ -57,12 +58,11 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
       if (avatar.startsWith('blob:')) {
         const file = avatarInputRef.current?.files?.[0];
         if (file) {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalAvatar = data.url;
+          try {
+            finalAvatar = await uploadFile(file, `profiles/${user.id}/avatar_${Date.now()}`);
+          } catch (err) {
+            console.error('Avatar upload failed:', err);
+            toast.error('Failed to upload avatar');
           }
         }
       }
@@ -71,12 +71,11 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
       if (coverImage.startsWith('blob:')) {
         const file = coverInputRef.current?.files?.[0];
         if (file) {
-          const formData = new FormData();
-          formData.append('file', file);
-          const res = await fetch('/api/upload', { method: 'POST', body: formData });
-          if (res.ok) {
-            const data = await res.json();
-            finalCover = data.url;
+          try {
+            finalCover = await uploadFile(file, `profiles/${user.id}/cover_${Date.now()}`);
+          } catch (err) {
+            console.error('Cover upload failed:', err);
+            toast.error('Failed to upload cover image');
           }
         }
       }
@@ -138,8 +137,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   onClick={() => avatarInputRef.current?.click()}
                 >
                   <img 
-                    src={avatar} 
-                    referrerPolicy="no-referrer"
+                    src={avatar || APP_LOGO_URL} 
                     className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
                     alt="Avatar Preview" 
                     onError={(e) => {
@@ -181,8 +179,7 @@ const EditProfilePage: React.FC<EditProfilePageProps> = ({ user, onSave, onBack 
                   onClick={() => coverInputRef.current?.click()}
                 >
                   <img 
-                    src={coverImage} 
-                    referrerPolicy="no-referrer"
+                    src={coverImage || APP_LOGO_URL} 
                     className="w-20 h-20 rounded-3xl object-cover border-2 border-[#967bb6]/30 group-hover:border-[#967bb6] transition-all" 
                     alt="Cover Preview" 
                     onError={(e) => {

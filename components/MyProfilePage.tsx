@@ -120,8 +120,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
               {me.photos.map(photo => (
                 <div key={photo.id} className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 group chrome-border">
                   <img 
-                    src={photo.url} 
-                    referrerPolicy="no-referrer" 
+                    src={photo.url || APP_LOGO_URL} 
                     className="w-full h-full object-cover" 
                     alt="" 
                     onError={(e) => {
@@ -167,8 +166,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                       <div className="flex items-center space-x-3">
                         <img 
-                          src={user.avatar} 
-                          referrerPolicy="no-referrer" 
+                          src={user.avatar || APP_LOGO_URL} 
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {
@@ -214,8 +212,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                   <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5 group">
                     <div className="flex items-center space-x-3">
                       <img 
-                        src={user.avatar} 
-                        referrerPolicy="no-referrer" 
+                        src={user.avatar || APP_LOGO_URL} 
                         className="w-12 h-12 rounded-xl object-cover" 
                         alt="" 
                         onError={(e) => {
@@ -292,8 +289,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                       <div key={user.id} className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                         <div className="flex items-center space-x-3">
                           <img 
-                            src={user.avatar} 
-                            referrerPolicy="no-referrer" 
+                            src={user.avatar || APP_LOGO_URL} 
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
@@ -341,8 +337,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                       <div key={user.id} className="bg-white/5 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                         <div className="flex items-center space-x-3">
                           <img 
-                            src={user.avatar} 
-                            referrerPolicy="no-referrer" 
+                            src={user.avatar || APP_LOGO_URL} 
                             className="w-10 h-10 rounded-lg object-cover" 
                             alt="" 
                             onError={(e) => {
@@ -384,8 +379,7 @@ const MyProfilePage: React.FC<MyProfilePageProps> = ({
                     <div className="flex items-center space-x-3">
                       <div className="relative">
                         <img 
-                          src={user.avatar} 
-                          referrerPolicy="no-referrer" 
+                          src={user.avatar || APP_LOGO_URL} 
                           className="w-12 h-12 rounded-xl object-cover" 
                           alt="" 
                           onError={(e) => {

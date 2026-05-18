@@ -15,6 +15,7 @@
     "@tailwindcss/vite": "^4.2.2",
     "buffer": "^6.0.3",
     "cors": "^2.8.6",
+    "crypto-js": "^4.2.0",
     "express": "^5.2.1",
     "firebase": "^12.11.0",
     "firebase-admin": "^13.7.0",
@@ -23,7 +24,6 @@
     "motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-player": "^3.4.0",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
@@ -32,6 +32,7 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
