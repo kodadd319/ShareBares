@@ -517,6 +517,34 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Ensure uploads directory exists
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  // Local Base64 File Upload API
+  app.post("/api/upload", async (req, res) => {
+    try {
+      const { name, type, data } = req.body;
+      if (!name || !data) {
+        return res.status(400).json({ error: "Missing name or data" });
+      }
+      const base64Data = data.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, 'base64');
+      const sanitizedName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+      const filename = `${Date.now()}_${sanitizedName}`;
+      const filePath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filePath, buffer);
+      const fileUrl = `/uploads/${filename}`;
+      console.log(`Local upload complete: ${filename} (${buffer.length} bytes)`);
+      res.json({ url: fileUrl });
+    } catch (err: any) {
+      console.error("Local upload error info:", err);
+      res.status(500).json({ error: err.message || "Failed to upload file locally" });
+    }
+  });
+
   // Custom Auth Login for Admin (Bypasses need for Email/Password provider in console)
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -589,6 +617,9 @@ async function startServer() {
       path: req.path
     });
   });
+
+  // Serve the uploads directory statically
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

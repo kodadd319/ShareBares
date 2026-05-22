@@ -110,7 +110,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || !details.title || uploadError) return;
 
@@ -118,19 +118,24 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     
     const allFiles = thumbnailFile ? [thumbnailFile, ...files] : files;
 
-    onAddItem({
-      title: details.title,
-      description: details.description,
-      price: details.price,
-      thumbnailUrl: '', // Handled by App.tsx
-      mediaUrls: [], // Handled by App.tsx
-      type: type
-    }, allFiles);
+    try {
+      await onAddItem({
+        title: details.title,
+        description: details.description,
+        price: details.price,
+        thumbnailUrl: '', // Handled by App.tsx
+        mediaUrls: [], // Handled by App.tsx
+        type: type
+      }, allFiles);
 
-    setFiles([]);
-    setThumbnailFile(null);
-    setDetails({ title: '', description: '', price: 0 });
-    setIsUploading(false);
+      setFiles([]);
+      setThumbnailFile(null);
+      setDetails({ title: '', description: '', price: 0 });
+    } catch (err) {
+      console.error('Error during store publish:', err);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSearch = () => {

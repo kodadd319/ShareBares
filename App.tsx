@@ -2015,8 +2015,6 @@ const AppContent: React.FC = () => {
         if (user) {
           setCurrentUserId(user.uid);
           setIsLoggedIn(true);
-          sessionStorage.setItem('sharebares_session_auth', 'true');
-          setIsSessionAuthenticated(true);
           
           // Check for admin user
           const isAdminEmail = user.email === 'jtothek319@gmail.com';
