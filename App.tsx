@@ -23,6 +23,7 @@ import StoreActivationGate from './components/StoreActivationGate';
 import CustomProfilePage from './components/CustomProfilePage';
 import GameRoom from './components/GameRoom';
 import VideoPlayer from './components/VideoPlayer';
+import ThemeMusicPlayer from './components/ThemeMusicPlayer';
 import { ShareBaresProvider, useShareBares } from './components/MascotContext';
 import { MOCK_USERS, MOCK_POSTS, CURRENT_USER_ID, MOCK_STORE_ITEMS, MOCK_STABLE_LISTINGS, APP_LOGO_URL } from './constants';
 import { User, Post, PostVisibility, Message, StoreItem, MediaItem, AppNotification, NotificationType, StableListing, StoreCustomization, ProfileCustomization, AppComment } from './types';
@@ -2100,22 +2101,23 @@ const AppContent: React.FC = () => {
                 // Ensure Jade exists
                 try {
                   const jadeDoc = await getDoc(doc(db, 'users', 'ai-jade'));
-                  if (!jadeDoc.exists()) {
-                    const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
-                    await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: [] });
+                  const jadeUser = MOCK_USERS.find(u => u.id === 'ai-jade')!;
+                  if (!jadeDoc.exists() || jadeDoc.data()?.avatar === '/logo.png') {
+                    await setDoc(doc(db, 'users', 'ai-jade'), { ...jadeUser, likedPostIds: jadeDoc.exists() ? (jadeDoc.data()?.likedPostIds || []) : [] }, { merge: true });
                   }
                 } catch (jadeErr) {
                   console.warn('Could not ensure Jade exists:', jadeErr);
                 }
 
-                const usersSnap = await getDocs(query(collection(db, 'users'), limit(5)));
-                if (usersSnap.size <= 2) {
-                  for (const mUser of MOCK_USERS) {
-                    if (mUser.id !== 'ai-jade' && mUser.email !== user.email) {
-                      try {
-                        await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: [] });
-                      } catch (e) {}
-                    }
+                // Ensure all default users have correct profile photos instead of logo placeholder
+                for (const mUser of MOCK_USERS) {
+                  if (mUser.id !== user.uid) {
+                    try {
+                      const userDoc = await getDoc(doc(db, 'users', mUser.id));
+                      if (!userDoc.exists() || userDoc.data()?.avatar === '/logo.png') {
+                        await setDoc(doc(db, 'users', mUser.id), { ...mUser, likedPostIds: userDoc.exists() ? (userDoc.data()?.likedPostIds || []) : [] }, { merge: true });
+                      }
+                    } catch (e) {}
                   }
                 }
 
@@ -2128,22 +2130,24 @@ const AppContent: React.FC = () => {
                   }
                 }
 
-                const storeSnap = await getDocs(query(collection(db, 'storeItems'), limit(1)));
-                if (storeSnap.empty) {
-                  for (const item of MOCK_STORE_ITEMS) {
-                    try {
+                // Seed / update storeItems with real media (overwrite if they have /logo.png)
+                for (const item of MOCK_STORE_ITEMS) {
+                  try {
+                    const itemDoc = await getDoc(doc(db, 'storeItems', item.id));
+                    if (!itemDoc.exists() || itemDoc.data()?.thumbnailUrl === '/logo.png' || (itemDoc.data()?.mediaUrls && itemDoc.data()?.mediaUrls.includes('/logo.png'))) {
                       await setDoc(doc(db, 'storeItems', item.id), item);
-                    } catch (e) {}
-                  }
+                    }
+                  } catch (e) {}
                 }
 
-                const stableSnap = await getDocs(query(collection(db, 'stableListings'), limit(1)));
-                if (stableSnap.empty) {
-                  for (const listing of MOCK_STABLE_LISTINGS) {
-                    try {
+                // Seed / update stableListings with real media (overwrite if they have /logo.png)
+                for (const listing of MOCK_STABLE_LISTINGS) {
+                  try {
+                    const listingDoc = await getDoc(doc(db, 'stableListings', listing.id));
+                    if (!listingDoc.exists() || listingDoc.data()?.avatarUrl === '/logo.png' || (listingDoc.data()?.photos && listingDoc.data()?.photos.includes('/logo.png'))) {
                       await setDoc(doc(db, 'stableListings', listing.id), listing);
-                    } catch (e) {}
-                  }
+                    }
+                  } catch (e) {}
                 }
               } catch (err) {
                 console.error('Seeding failed:', err);
@@ -3758,19 +3762,9 @@ const AppContent: React.FC = () => {
       return;
     }
     
-    const confirmPurchase = window.confirm(`Unlock "${item.title}" for $${item.price || '0.00'}?\n\nThis will add the content to your permanent collection in "My Videos".`);
-    if (!confirmPurchase) return;
-
-    // In a real app, logic would involve CCBill redirect and webhook validation.
-    // To satisfy the user requirement for instant access in this environment, 
-    // we'll update the user's purchasedItemIds list.
-    
     try {
       const updatedPurchasedIds = Array.from(new Set([...(me.purchasedItemIds || []), item.id]));
       await handleUpdateUser({ purchasedItemIds: updatedPurchasedIds });
-      
-      toast.success(`Success! ${item.title} has been added to your Vault.`);
-      setActiveTab('my-videos');
     } catch (error) {
       console.error('Purchase failed', error);
       toast.error('Could not complete purchase. Please try again.');
@@ -4035,7 +4029,7 @@ const AppContent: React.FC = () => {
         style={backgroundStyle}
       >
         {custom?.themeSongUrl && (
-          <audio src={custom.themeSongUrl} autoPlay loop />
+          <ThemeMusicPlayer customization={custom} />
         )}
         <div className="max-w-6xl mx-auto py-8 px-4 lg:px-8">
       {/* Header Section: Cover & Avatar Integration */}
@@ -4797,6 +4791,7 @@ const AppContent: React.FC = () => {
               onUpdateItem={handleUpdateStoreItem}
               onDeleteItem={handleDeleteStoreItem}
               onGoToCustomization={() => setActiveTab('store-customization')}
+              onUpdateUser={handleUpdateUser}
             />
           )
         )}

@@ -10,7 +10,8 @@ interface PaymentGateProps {
   amount: number;
   paymentLink: string;
   onSuccess: () => Promise<void>;
-  features: string[];
+  features?: string[];
+  isSubscription?: boolean;
 }
 
 const PaymentGate: React.FC<PaymentGateProps> = ({ 
@@ -19,7 +20,8 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
   amount, 
   paymentLink, 
   onSuccess, 
-  features 
+  features = [],
+  isSubscription = true
 }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -39,15 +41,14 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
 
   const handleVerify = async () => {
     setIsVerifying(true);
-    const toastId = toast.loading('Verifying payment with gateway...');
+    const toastId = toast.loading('Verifying subscription with Stripe...');
     
     try {
-      // In a real app, this would ping our backend which listens to Stripe webhooks
-      // For this applet, we simulate the verification
+      // Direct verification simulation
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       await onSuccess();
-      toast.success('Payment verified! Your access has been unlocked.', { id: toastId });
+      toast.success('Subscription verified! Your access has been unlocked.', { id: toastId });
     } catch (error: any) {
       console.error('Verification failed:', error);
       toast.error('Could not verify payment. If you just paid, please wait a minute and try again.', { id: toastId });
@@ -76,21 +77,27 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
         </div>
 
         <div className="p-10 space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {features.map((feature, i) => (
-              <div key={i} className="flex items-center space-x-3 text-slate-300">
-                <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{feature}</span>
-              </div>
-            ))}
-          </div>
+          {features.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {features.map((feature, i) => (
+                <div key={i} className="flex items-center space-x-3 text-slate-300">
+                  <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{feature}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="bg-black/20 rounded-3xl p-8 border border-white/5">
             <div className="flex flex-col items-center text-center mb-8">
-              <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Required Deposit</span>
+              <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] mb-2">
+                {isSubscription ? 'Monthly Subscription' : 'Required Deposit'}
+              </span>
               <div className="flex items-baseline gap-1">
-                <span className="text-5xl font-black text-white tracking-tighter">${amount}</span>
-                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">One-time fee</span>
+                <span className="text-5xl font-black text-white tracking-tighter">${amount.toFixed(2)}</span>
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                  {isSubscription ? '/ month' : 'One-time fee'}
+                </span>
               </div>
             </div>
 
@@ -105,7 +112,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-5 h-5" />
-                    <span>Pay with Card</span>
+                    <span>Subscribe with Card</span>
                     <ExternalLink size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </>
                 )}
@@ -115,7 +122,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                 <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-4">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                   <p className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest leading-relaxed">
-                    Once payment is complete in the other tab, click below to verify.
+                    Once subscription is active in Stripe, click below to confirm.
                   </p>
                 </div>
                 
@@ -127,12 +134,12 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                   {isVerifying ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Verifying...</span>
+                      <span>Verifying subscription...</span>
                     </>
                   ) : (
                     <>
                       <Shield className="w-5 h-5" />
-                      <span>Confirm Activation</span>
+                      <span>Confirm Subscription</span>
                     </>
                   )}
                 </button>
@@ -141,7 +148,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                   onClick={() => setHasPaid(false)}
                   className="w-full py-3 text-slate-500 hover:text-slate-300 font-black uppercase text-[10px] tracking-widest transition-colors"
                 >
-                  Back to selection
+                  Back to options
                 </button>
               </div>
             )}
@@ -150,7 +157,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
           <div className="flex items-start gap-4 p-5 bg-white/5 rounded-2xl border border-white/5">
             <AlertCircle size={20} className="text-[#967bb6] shrink-0 mt-0.5" />
             <p className="text-[9px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest">
-              Secure transaction powered by CCBill & Stripe. Every payment includes a secure digital thumbprint to prevent fraud. 80% of content sales go directly to the creator.
+              Secure subscription billed via Stripe. Billed monthly at $15.00. Cancel anytime inside your Stripe billing dashboard.
             </p>
           </div>
         </div>

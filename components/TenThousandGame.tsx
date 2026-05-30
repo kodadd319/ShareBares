@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Dices, Trophy, CheckCircle2, AlertCircle, 
-  RotateCcw, Play, History, Info, Sparkles 
+  Dices, Trophy, CheckCircle2, 
+  RotateCcw, Sparkles 
 } from 'lucide-react';
 import { APP_LOGO_URL } from '../constants';
 
@@ -40,33 +40,33 @@ const Die: React.FC<{
 
   return (
     <motion.div
-      whileHover={!disabled && !isSaved ? { scale: 1.05, rotate: 2 } : {}}
-      whileTap={!disabled && !isSaved ? { scale: 0.95 } : {}}
+      whileHover={!disabled && !isSaved ? { scale: 1.08, rotate: 3 } : {}}
+      whileTap={!disabled && !isSaved ? { scale: 0.92 } : {}}
       animate={isRolling ? { 
         rotate: [0, 90, 180, 270, 360],
-        scale: [1, 1.1, 1],
+        scale: [1, 1.12, 1],
       } : {}}
       transition={isRolling ? { duration: 0.3, repeat: Infinity } : {}}
       onClick={!disabled && !isSaved ? onClick : undefined}
-      className={`relative w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shadow-lg transition-all border-2 ${
+      className={`relative w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center shadow-xl transition-all border-2 ${
         isSaved 
-          ? 'bg-slate-800/50 border-slate-700/50 opacity-40 grayscale cursor-default' 
+          ? 'bg-[#40040e]/30 border-black/40 opacity-40 grayscale scale-95 cursor-default' 
           : isSelected 
-          ? 'bg-[#967bb6] border-white shadow-[0_0_20px_rgba(150,123,182,0.5)] -translate-y-2 cursor-pointer' 
-          : 'bg-black border-[#967bb6]/30 cursor-pointer hover:border-[#967bb6]/60'
+          ? 'bg-gradient-to-br from-[#800c1e] to-[#40020a] border-amber-400 shadow-[0_0_20px_rgba(255,200,0,0.6)] ring-4 ring-amber-400/30 -translate-y-2 cursor-pointer' 
+          : 'bg-gradient-to-br from-[#700612] to-[#3a0108] border-black cursor-pointer hover:border-amber-500/50 hover:shadow-[0_0_12px_rgba(112,6,18,0.5)]'
       }`}
     >
       <div className="grid grid-cols-3 grid-rows-3 gap-1 w-3/4 h-3/4 pointer-events-none">
         {[...Array(9)].map((_, i) => (
           <div key={i} className="flex items-center justify-center">
             {dots.includes(i) && (
-              <div className={`w-2 h-2 rounded-full ${isSelected || isSaved ? 'bg-white' : 'bg-[#967bb6]'}`} />
+              <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.8)]" />
             )}
           </div>
         ))}
       </div>
       {isSaved && (
-        <div className="absolute -top-1 -right-1 bg-emerald-500 rounded-full p-0.5 border border-black shadow-lg">
+        <div className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-black shadow-lg">
           <CheckCircle2 size={10} className="text-white" />
         </div>
       )}
@@ -159,7 +159,6 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
     if (!isFirstRoll && !isValidSelection) return;
     
     setIsRolling(true);
-    // Move is sent after a short delay for animation
     setTimeout(() => {
       onMove({ type: 'roll', selectedIndices });
     }, 600);
@@ -175,39 +174,47 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-2 flex flex-col items-center">
+    <div className="w-full max-w-4xl mx-auto p-4 flex flex-col items-center rounded-3xl bg-gradient-to-br from-[#12653f] via-[#0d4f10] to-[#042617] border-[6px] border-[#080808] shadow-[0_20px_50px_rgba(0,0,0,0.8)] text-white relative overflow-hidden">
+      {/* Felt Grid / Poker Line Accent */}
+      <div className="absolute inset-0 border-[10px] border-double border-black/35 pointer-events-none rounded-2xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_45%,_rgba(0,0,0,0.55)_100%)] pointer-events-none" />
+
       {/* Scoreboard */}
-      <div className="w-full grid grid-cols-2 gap-2 mb-4">
-        <div className={`p-3 rounded-2xl border-2 transition-all ${isMyTurn ? 'bg-[#967bb6]/10 border-[#967bb6] shadow-[0_0_20px_rgba(150,123,182,0.2)]' : 'bg-white/5 border-white/10'}`}>
+      <div className="w-full grid grid-cols-2 gap-3 mb-6 relative z-10">
+        <div className={`p-4 rounded-2xl border-2 transition-all ${isMyTurn ? 'bg-[#000000]/95 border-[#800020] shadow-[0_0_15px_rgba(128,0,32,0.6)] scale-[1.01]' : 'bg-[#000000]/80 border-[#0a0a0a]'}`}>
           <div className="flex items-center space-x-2 mb-1">
-            <img src={me?.avatar || APP_LOGO_URL} className="w-8 h-8 rounded-full border border-white/20" alt="Me" onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }} />
-            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">You</span>
+            <img src={me?.avatar || APP_LOGO_URL} className="w-8 h-8 rounded-full border border-black/80 shadow-md" alt="Me" onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }} />
+            <span className="text-[11px] font-black text-neutral-400 uppercase tracking-widest">You</span>
           </div>
-          <p className="text-3xl font-black text-white tracking-tighter">{myTotalScore.toLocaleString()}</p>
+          <p className="text-3xl font-black text-[#be123c] tracking-tighter drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.8)]">
+            {myTotalScore.toLocaleString()}
+          </p>
           {isMyTurn && (
             <div className="mt-2 flex items-center space-x-1 animate-pulse">
-              <Sparkles size={10} className="text-[#967bb6]" />
-              <span className="text-[8px] font-black text-[#967bb6] uppercase tracking-[0.2em]">Playing</span>
+              <Sparkles size={11} className="text-[#be123c]" />
+              <span className="text-[9px] font-black text-[#be123c] uppercase tracking-[0.2em]">Playing</span>
             </div>
           )}
         </div>
         
-        <div className={`p-4 rounded-3xl border-2 transition-all ${!isMyTurn ? 'bg-[#967bb6]/10 border-[#967bb6] shadow-[0_0_20px_rgba(150,123,182,0.2)]' : 'bg-white/5 border-white/10'}`}>
+        <div className={`p-4 rounded-2xl border-2 transition-all ${!isMyTurn ? 'bg-[#000000]/95 border-[#800020] shadow-[0_0_15px_rgba(128,0,32,0.6)] scale-[1.01]' : 'bg-[#000000]/80 border-[#0a0a0a]'}`}>
           <div className="flex items-center space-x-2 mb-1">
-            <img src={opponent?.avatar || APP_LOGO_URL} className="w-7 h-7 rounded-full border border-white/20" alt="Opponent" onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }} />
-            <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{opponent?.displayName || 'ShareBares'}</span>
+            <img src={opponent?.avatar || APP_LOGO_URL} className="w-8 h-8 rounded-full border border-black/80 shadow-md" alt="Opponent" onError={(e) => { (e.target as HTMLImageElement).src = APP_LOGO_URL; }} />
+            <span className="text-[11px] font-black text-neutral-400 uppercase tracking-widest">{opponent?.displayName || 'ShareBares'}</span>
           </div>
-          <p className="text-2xl font-black text-white tracking-tighter">{opponentTotalScore.toLocaleString()}</p>
+          <p className="text-3xl font-black text-[#be123c] tracking-tighter drop-shadow-[0_1.5px_2px_rgba(0,0,0,0.8)]">
+            {opponentTotalScore.toLocaleString()}
+          </p>
           {!isMyTurn && (
             <div className="mt-2 flex items-center space-x-1 animate-pulse">
-              <Sparkles size={10} className="text-[#967bb6]" />
-              <span className="text-[8px] font-black text-[#967bb6] uppercase tracking-[0.2em]">Thinking</span>
+              <Sparkles size={11} className="text-[#be123c]" />
+              <span className="text-[9px] font-black text-[#be123c] uppercase tracking-[0.2em]">Thinking</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="w-full glass-panel rounded-[2rem] border-[#967bb6]/20 bg-black/40 p-6 shadow-2xl relative overflow-hidden backdrop-blur-xl chrome-border">
+      <div className="w-full rounded-[2rem] border-4 border-black bg-black/90 p-6 shadow-[0_15px_30px_rgba(0,0,0,0.6)] relative overflow-hidden backdrop-blur-xl z-10">
         {/* Turn Status Overlay */}
         <AnimatePresence>
           {farkled && (
@@ -215,11 +222,21 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md"
             >
-              <div className="text-center">
-                <h3 className="text-6xl font-black text-red-500 uppercase tracking-tighter animate-bounce drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]">FARKLE!</h3>
-                <p className="text-white/60 font-black uppercase tracking-[0.3em] mt-4">Next player's turn</p>
+              <div className="text-center flex flex-col items-center p-6">
+                <h3 className="text-6xl font-black text-[#be123c] uppercase tracking-tighter animate-bounce drop-shadow-[0_0_20px_rgba(190,18,60,0.7)]">FARKLE!</h3>
+                <p className="text-neutral-400 font-black uppercase tracking-[0.3em] mt-4">Next player's turn</p>
+                {isMyTurn && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onMove({ type: 'acknowledge_farkle' })}
+                    className="mt-6 px-8 py-3 bg-black text-[#be123c] border-2 border-[#800020] font-black uppercase tracking-[0.2em] rounded-xl shadow-lg hover:bg-neutral-950 transition-all cursor-pointer relative z-50 pointer-events-auto"
+                  >
+                    Start My Turn
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           )}
@@ -227,16 +244,18 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
 
         {/* Current Turn Score Area */}
         <div className="text-center mb-6">
-          <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.4em] mb-1">Current Turn Score</p>
+          <p className="text-[11px] font-black text-[#800020] uppercase tracking-[0.4em] mb-1 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+            Current Turn Score
+          </p>
           <div className="relative inline-block">
-            <h4 className="text-5xl md:text-6xl font-black text-white tracking-tighter chrome-text">
+            <h4 className="text-5xl md:text-6xl font-black text-[#be123c] tracking-tighter drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {(currentTurnScore + potentialScore).toLocaleString()}
             </h4>
             {potentialScore > 0 && (
               <motion.div 
                 initial={{ y: 10, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="absolute -right-12 top-0 bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded-lg"
+                className="absolute -right-14 top-0 bg-black text-[#be123c] border border-[#800020] text-[10px] font-black px-2 py-1 rounded-lg shadow-md"
               >
                 +{potentialScore}
               </motion.div>
@@ -247,8 +266,10 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
         {/* Saved Dice Display */}
         {savedDice.length > 0 && (
           <div className="flex flex-col items-center mb-6">
-            <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em] mb-2">Saved Combinations</span>
-            <div className="flex flex-wrap justify-center gap-1.5">
+            <span className="text-[10px] font-black text-[#800020] uppercase tracking-[0.3em] mb-2 drop-shadow-[0_1px_1.5px_rgba(0,0,0,0.5)]">
+              Saved Combinations
+            </span>
+            <div className="flex flex-wrap justify-center gap-2">
               {savedDice.map((val: number, i: number) => (
                 <Die key={`saved-${i}`} value={val} isSelected={false} isSaved={true} onClick={() => {}} disabled={true} />
               ))}
@@ -260,9 +281,9 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
         <div className="flex flex-col items-center space-y-6">
           <div className="flex flex-wrap justify-center gap-3 min-h-[4rem]">
             {isFirstRoll ? (
-              <div className="flex flex-col items-center justify-center space-y-4 opacity-40">
-                <Dices size={64} className="text-[#967bb6]" />
-                <p className="text-xs font-black uppercase tracking-widest">Ready to Roll</p>
+              <div className="flex flex-col items-center justify-center space-y-4 opacity-75">
+                <Dices size={64} className="text-[#800020]" />
+                <p className="text-xs font-black uppercase tracking-widest text-[#be123c]">Ready to Roll</p>
               </div>
             ) : (
               dice.map((val: number, i: number) => (
@@ -283,10 +304,10 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
             <button
               onClick={handleRoll}
               disabled={!isMyTurn || isRolling || (!isFirstRoll && !isValidSelection)}
-              className={`py-4 rounded-xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-3 ${
+              className={`py-4 rounded-xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-3 border-2 ${
                 isMyTurn && (isFirstRoll || isValidSelection) && !isRolling
-                  ? 'bg-white text-black hover:scale-[1.02] active:scale-[0.98] shadow-2xl'
-                  : 'bg-white/5 text-white/20 cursor-not-allowed'
+                  ? 'bg-black text-[#be123c] border-[#800020] hover:bg-neutral-950 hover:scale-[1.02] active:scale-[0.98] shadow-2xl cursor-pointer'
+                  : 'bg-black/40 text-neutral-700 border-neutral-900/60 cursor-not-allowed'
               }`}
             >
               <RotateCcw size={18} className={isRolling ? 'animate-spin' : ''} />
@@ -295,10 +316,10 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
             <button
               onClick={handleBank}
               disabled={!isMyTurn || isRolling || (currentTurnScore + potentialScore === 0) || (selectedIndices.length > 0 && !isValidSelection)}
-              className={`py-4 rounded-xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-3 ${
+              className={`py-4 rounded-xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-3 border-2 ${
                 isMyTurn && (currentTurnScore + potentialScore > 0) && (selectedIndices.length === 0 || isValidSelection) && !isRolling
-                  ? 'bg-[#967bb6] text-white hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-[#967bb6]/30 animate-pulse'
-                  : 'bg-white/5 text-white/20 cursor-not-allowed'
+                  ? 'bg-black text-[#be123c] border-[#800020] hover:bg-neutral-950 hover:scale-[1.02] active:scale-[0.98] shadow-2xl shadow-black/80 cursor-pointer animate-pulse'
+                  : 'bg-black/40 text-neutral-700 border-neutral-900/60 cursor-not-allowed'
               }`}
             >
               <Trophy size={18} />
@@ -308,7 +329,7 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
         </div>
 
         {/* Quick Rules Summary */}
-        <div className="mt-8 pt-6 border-t border-white/5">
+        <div className="mt-8 pt-6 border-t border-black/80">
           <div className="grid grid-cols-4 gap-2">
             {[
               { label: 'Single 1', val: '100' },
@@ -316,9 +337,9 @@ const TenThousandGame: React.FC<TenThousandGameProps> = ({ game, onMove, isMyTur
               { label: '3 of Kind', val: '100x' },
               { label: 'Straight', val: '1500' }
             ].map((rule, i) => (
-              <div key={i} className="text-center p-2 bg-white/5 rounded-xl border border-white/5">
-                <p className="text-[8px] font-black text-white/40 uppercase mb-1">{rule.label}</p>
-                <p className="text-sm font-black text-[#967bb6]">{rule.val}</p>
+              <div key={i} className="text-center p-2 bg-black rounded-xl border border-black shadow-md">
+                <p className="text-[9px] font-black text-neutral-500 uppercase mb-1">{rule.label}</p>
+                <p className="text-xs font-black text-[#be123c]">{rule.val}</p>
               </div>
             ))}
           </div>

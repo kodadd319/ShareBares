@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, Edit3, Search, X, Palette } from 'lucide-react';
+import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, Edit3, Search, X, Palette, DollarSign, CreditCard, RefreshCw } from 'lucide-react';
 import { User, StoreItem } from '../types';
 import { StoreItemSkeleton } from './Skeleton';
 import { toast } from 'sonner';
@@ -14,6 +14,7 @@ interface StoreManagementPageProps {
   onUpdateItem: (itemId: string, updates: Partial<StoreItem>) => void;
   onDeleteItem: (itemId: string) => void;
   onGoToCustomization: () => void;
+  onUpdateUser?: (updates: Partial<User>) => Promise<void>;
 }
 
 const StoreManagementPage: React.FC<StoreManagementPageProps> = ({ 
@@ -23,7 +24,8 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   onAddItem,
   onUpdateItem,
   onDeleteItem,
-  onGoToCustomization
+  onGoToCustomization,
+  onUpdateUser
 }) => {
   const [activeMode, setActiveMode] = useState<'upload' | 'edit'>('upload');
   const [files, setFiles] = useState<File[]>([]);
@@ -39,6 +41,11 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
+  // Direct user-to-user pay details
+  const [cashAppTag, setCashAppTag] = useState(user.cashAppTag || '');
+  const [payPalUsername, setPayPalUsername] = useState(user.payPalUsername || '');
+  const [isSavingPayment, setIsSavingPayment] = useState(false);
+
   // Edit mode state
   const [searchTitle, setSearchTitle] = useState('');
   const [editingItem, setEditingItem] = useState<StoreItem | null>(null);
@@ -47,6 +54,28 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     description: '',
     price: 0
   });
+
+  const handleSavePaymentInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!onUpdateUser) {
+      toast.error('Unable to update payment details in this view.');
+      return;
+    }
+    
+    setIsSavingPayment(true);
+    try {
+      await onUpdateUser({
+        cashAppTag: cashAppTag.trim(),
+        payPalUsername: payPalUsername.trim()
+      });
+      toast.success('Your payment tags have been saved successfully.');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Failed to save details: ${err.message || 'Error occurred'}`);
+    } finally {
+      setIsSavingPayment(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -203,6 +232,121 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
             <span>Customize</span>
           </button>
         </div>
+      </div>
+
+      {/* Monetization Subscription Status */}
+      <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.02] chrome-border mb-8 animate-in fade-in duration-300">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-[#967bb6]/20 rounded-xl flex items-center justify-center">
+              <CreditCard className="text-[#967bb6]" size={20} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-white uppercase tracking-tight">Store Usage Fee</h2>
+              <p className="text-[#967bb6] uppercase text-[9px] tracking-widest font-black">Monthly Store Usage Fee Plan</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-4 py-2 rounded-2xl">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">ACTIVE & BILLED</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 pt-6 border-t border-white/5 text-left">
+          <div>
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Billing Amount</span>
+            <span className="text-lg font-black text-white font-mono">$15.00 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">/ month</span></span>
+          </div>
+          <div>
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Billing Interval</span>
+            <span className="text-sm font-black text-white uppercase tracking-wider">Subscription Billed (Stripe)</span>
+          </div>
+          <div>
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Testing & Simulation</span>
+            <button 
+              onClick={async () => {
+                const confirmed = window.confirm(
+                  "Would you like to simulate a subscription lapse (force reblock)?\n\nThis will instantly lock your store and prompt you to pay the $15.00 monthly fee to resume access."
+                );
+                if (confirmed && onUpdateUser) {
+                  const toastId = toast.loading("Processing subscription lapse simulation...");
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  await onUpdateUser({ isStoreActive: false });
+                  toast.success("Subscription has lapsed! Access blocked.", { id: toastId });
+                }
+              }}
+              className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-500 font-bold uppercase text-[9px] tracking-wider py-2.5 px-4 rounded-xl transition-all active:scale-95 text-center flex items-center justify-center gap-2"
+            >
+              <RefreshCw size={12} />
+              <span>Force Reblock (Lapse Sub)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Direct Payment Setup */}
+      <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.02] chrome-border mb-8 animate-in fade-in duration-300">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+            <DollarSign className="text-emerald-500" size={20} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white uppercase tracking-tight">Direct Payments Setup (User-to-User)</h2>
+            <p className="text-slate-500 uppercase text-[9px] tracking-widest font-black">Configure how viewers pay you directly for locked store items</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSavePaymentInfo} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cash App Tag</label>
+                <input 
+                  type="text" 
+                  value={cashAppTag}
+                  onChange={(e) => setCashAppTag(e.target.value)}
+                  placeholder="e.g. $yourtag"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all chrome-border font-bold placeholder-white/20 mt-1"
+                />
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PayPal Username</label>
+                <input 
+                  type="text" 
+                  value={payPalUsername}
+                  onChange={(e) => setPayPalUsername(e.target.value)}
+                  placeholder="e.g. yourusername"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all chrome-border font-bold placeholder-white/20 mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t border-white/5">
+            <p className="text-[9px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest text-center sm:text-left">
+              Buyers will see these credentials when unlocking media. Direct payments are 100% yours (0% platform fee!).
+            </p>
+            <button 
+              type="submit"
+              disabled={isSavingPayment}
+              className="w-full sm:w-auto bg-white text-black hover:bg-slate-100 py-4 px-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-95 shrink-0 flex items-center justify-center space-x-2"
+            >
+              {isSavingPayment ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={16} />
+                  <span>Save Payment Info</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="grid grid-cols-1 gap-8">

@@ -30,24 +30,26 @@ const StoreActivationGate: React.FC<StoreActivationGateProps> = ({ user, onActiv
     onActivated();
   };
 
-  const features = [
-    'Monetize Content',
-    'Secure Payments',
-    'Custom Storefront',
-    'Marketplace Exposure',
-    '8-Minute Video Limits',
-    'Picture Pack Support'
-  ];
-
   return (
-    <PaymentGate 
-      title="Store Activation"
-      description="Unlock your creative business"
-      amount={15}
-      paymentLink={STORE_ACTIVATION_LINK}
-      onSuccess={handleSuccess}
-      features={features}
-    />
+    <div className="space-y-6">
+      <div className="max-w-md mx-auto text-center px-4 pt-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-black uppercase tracking-widest mb-4">
+          🔐 STORE ACCESS BLOCKED
+        </div>
+        <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed">
+          Access to Store Management is blocked until the monthly store usage fee subscription of $15.00 is active.
+        </p>
+      </div>
+
+      <PaymentGate 
+        title="Store Usage Fee"
+        description="Active Monthly Subscription Required"
+        amount={15}
+        paymentLink={STORE_ACTIVATION_LINK}
+        onSuccess={handleSuccess}
+        isSubscription={true}
+      />
+    </div>
   );
 };
 

@@ -14,7 +14,7 @@ import TenThousandGame from './TenThousandGame';
 import { User, GameType, GameState, GameInvite } from '../types';
 import { Socket } from 'socket.io-client';
 import { APP_LOGO_URL } from '../constants';
-import { calculateRummyScore, getRankValue } from '../games';
+import { calculateRummyScore, getRankValue, getDeadwoodScore } from '../games';
 
 interface GameRoomProps {
   user: User;
@@ -1276,11 +1276,6 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
     onMove({ type: 'discard', cardIndex });
   };
 
-  const handleKnock = (cardIndex: number) => {
-    if (!isMyTurn || turnPhase !== 'discard') return;
-    onMove({ type: 'discard', cardIndex, knock: true });
-  };
-
   const sortedHand = [...me.hand].map((c, i) => ({ ...c, originalIndex: i }))
     .sort((a, b) => {
       if (sortBy === 'suit') {
@@ -1294,9 +1289,37 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-between py-4 lg:py-8 bg-[#0a0510] relative overflow-hidden font-sans">
-      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,#2d1b4d_0%,transparent_70%)]"></div>
+      <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_40%,#2d1b4d_0%,transparent_70%)]"></div>
       <div className="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
       
+      {/* Rummy Header Dashboard */}
+      <div className="relative z-10 w-full max-w-4xl px-4 flex items-center justify-between py-2.5 bg-white/5 border border-white/10 rounded-2xl mb-2 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="px-2.5 py-1 bg-[#25103f] rounded-lg text-xs font-black text-pink-400 border border-pink-500/20">
+            ROUND {game.data.round || 1}
+          </span>
+          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+            Up to 300 Points
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-6">
+          <div className="flex flex-col items-end">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Your Score</span>
+            <span className="text-sm font-black text-emerald-400 tabular-nums">
+              {game.data.scores?.[myId] ?? 0} <span className="text-[10px] text-slate-500">/ 300</span>
+            </span>
+          </div>
+          <div className="w-px h-5 bg-white/10" />
+          <div className="flex flex-col items-start">
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">{opponent.displayName || 'Opponent'}</span>
+            <span className="text-sm font-black text-slate-300 tabular-nums">
+              {game.data.scores?.[opponent.id] ?? 0} <span className="text-[10px] text-slate-500">/ 300</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Opponent Section */}
       <div className="relative z-10 flex flex-col items-center gap-2">
         <div className="flex -space-x-10 lg:-space-x-14 opacity-40 scale-75 lg:scale-90">
@@ -1324,6 +1347,52 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
           <span className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest leading-none">
             {opponent.hand?.length} Cards
           </span>
+        </div>
+      </div>
+
+      {/* Center Table Melds Area */}
+      <div className="relative z-10 flex flex-col gap-4 w-full max-w-4xl px-4 py-3 bg-white/5 border border-white/10 rounded-2xl my-3 bg-[#110123]/30">
+        <div className="text-[10px] font-black tracking-widest text-[#967bb6] uppercase">Table Melds (Played Cards)</div>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Opponent played melds */}
+          <div className="flex flex-col gap-2 p-3 bg-black/30 rounded-xl border border-white/5 min-h-[90px]">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b border-white/5 pb-1">
+              {opponent.displayName || 'Opponent'}'s Melds
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {opponent.melds && opponent.melds.length > 0 ? (
+                opponent.melds.map((meld: any[], mIdx: number) => (
+                  <div key={mIdx} className="flex -space-x-8 bg-black/40 p-1.5 rounded-lg border border-white/10 shadow-lg scale-90 origin-left">
+                    {meld.map((card: any, cIdx: number) => (
+                      <Card key={cIdx} suit={card.suit} value={card.value} />
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <span className="text-[9px] text-slate-600 italic">No played cards yet</span>
+              )}
+            </div>
+          </div>
+
+          {/* My played melds */}
+          <div className="flex flex-col gap-2 p-3 bg-black/30 rounded-xl border border-white/5 min-h-[90px]">
+            <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest border-b border-white/5 pb-1">
+              Your Played Melds
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {me.melds && me.melds.length > 0 ? (
+                me.melds.map((meld: any[], mIdx: number) => (
+                  <div key={mIdx} className="flex -space-x-8 bg-black/40 p-1.5 rounded-lg border border-emerald-500/10 shadow-lg scale-90 origin-left">
+                    {meld.map((card: any, cIdx: number) => (
+                      <Card key={cIdx} suit={card.suit} value={card.value} />
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <span className="text-[9px] text-slate-600 italic">No played cards yet</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1392,21 +1461,28 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
         <div className="w-full flex items-center justify-between px-6 py-2 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
           <div className="flex items-center gap-4">
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Your Deadwood</span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Your Deadwood Penalty</span>
               <div className="flex items-center gap-2">
-                <span className={`text-xl lg:text-2xl font-black tabular-nums transition-colors ${scoreData.deadwood <= 10 ? 'text-emerald-400' : 'text-slate-200'}`}>
-                  {scoreData.deadwood}
+                <span className="text-xl lg:text-2xl font-black tabular-nums text-slate-200">
+                  {getDeadwoodScore(me.hand)} pts
                 </span>
-                {scoreData.deadwood <= 10 && (
-                  <div className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 rounded text-[9px] font-black text-emerald-400 uppercase animate-pulse">
-                    Ready to Knock
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {isMyTurn && turnPhase === 'discard' && scoreData.melds.length > 0 && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onMove({ type: 'play_melds' })}
+                className="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 border border-yellow-400/20 rounded-lg shadow-lg shadow-yellow-500/25 transition-all font-black text-[10px] text-white uppercase tracking-wider animate-bounce"
+              >
+                <Sparkles size={12} className="text-white animate-pulse" />
+                Play sets & runs
+              </motion.button>
+            )}
+
             <button 
               onClick={() => setSortBy(sortBy === 'rank' ? 'suit' : 'rank')}
               className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all group"
@@ -1427,7 +1503,6 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
                 layout
                 whileHover={{ translateY: -24, scale: 1.05 }}
                 onClick={() => handleDiscard(card.originalIndex)}
-                onContextMenu={(e) => { e.preventDefault(); handleKnock(card.originalIndex); }}
                 className={`relative cursor-pointer group transition-all ${
                   isMyTurn && turnPhase === 'discard' 
                   ? 'hover:ring-4 hover:ring-purple-500/50 rounded-xl' 
@@ -1439,24 +1514,19 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
                 </div>
                 
                 {isMelded && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 overflow-visible">
                     <div className="bg-emerald-500 rounded-full p-0.5 shadow-lg shadow-emerald-500/50">
-                      <Check size={8} className="text-white" />
+                      <Check size={8} className="text-white animate-pulse" />
                     </div>
                   </div>
                 )}
 
                 {isMyTurn && turnPhase === 'discard' && (
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none scale-75 group-hover:scale-100">
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none scale-75 group-hover:scale-100 z-30">
                     <div className="flex flex-col items-center gap-1">
                       <div className="bg-white px-2 py-0.5 rounded shadow-xl">
                         <span className="text-[9px] font-black text-slate-900 uppercase whitespace-nowrap leading-none flex items-center gap-1">
                           <MousePointer2 size={8} /> Discard
-                        </span>
-                      </div>
-                      <div className="bg-emerald-500 px-2 py-0.5 rounded shadow-xl">
-                        <span className="text-[9px] font-black text-white uppercase whitespace-nowrap leading-none">
-                          Right-Click Knock
                         </span>
                       </div>
                     </div>
@@ -1478,8 +1548,8 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
                 exit={{ opacity: 0, y: -10 }}
                 className="flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full"
               >
-                <div className="w-1.5 h-1.5 bg-slate-500 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Jade Vixen is thinking...</span>
+                <div className="w-1.5 h-1.5 bg-[#967bb6] rounded-full animate-pulse" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{opponent.displayName || 'Jade Vixen'} is thinking...</span>
               </motion.div>
             ) : (
               <motion.div 
@@ -1491,13 +1561,86 @@ const RummyGame: React.FC<{ game: GameState, onMove: (data: any) => void, isMyTu
               >
                 <Sparkles size={14} className="text-purple-400 animate-pulse" />
                 <span className="text-[10px] font-black text-purple-200 uppercase tracking-[0.2em]">
-                  {turnPhase === 'draw' ? 'Draw card from Stock or Discard' : 'Select a card to Discard (Right-click to Knock)'}
+                  {turnPhase === 'draw' ? 'Draw card from Stock or Discard' : 'Meld sets/runs or discard a card'}
                 </span>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Round End Modal Overlay */}
+      {game.data.roundOver && (
+        <div className="absolute inset-0 bg-[#07020a]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-md bg-[#130b1e] border border-[#967bb6]/30 p-6 lg:p-8 rounded-3xl shadow-2xl shadow-purple-500/10 flex flex-col items-center gap-6"
+          >
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="p-3 bg-purple-500/20 border border-purple-500/30 rounded-2xl text-purple-400 mb-2">
+                <Sparkles size={32} />
+              </div>
+              <h3 className="text-xl font-black text-white uppercase tracking-wider">
+                Round {game.data.round || 1} Finished!
+              </h3>
+              <p className="text-xs text-slate-400">
+                {game.data.roundWinner === myId ? 'You went out first and won the round!' : `${opponent.displayName || 'Opponent'} went out first and won the round.`}
+              </p>
+            </div>
+
+            <div className="w-full flex flex-col gap-3.5 bg-black/40 p-5 rounded-2xl border border-white/5">
+              <div className="grid grid-cols-3 text-[10px] font-black text-slate-500 uppercase tracking-wider pb-1.5 border-b border-white/5">
+                <span>Player</span>
+                <span className="text-center">Hand Penalty</span>
+                <span className="text-right">Total Score</span>
+              </div>
+              
+              {/* Me Row */}
+              <div className="grid grid-cols-3 items-center text-xs text-slate-300">
+                <span className="font-extrabold text-emerald-400 uppercase tracking-widest text-[10px]">YOU</span>
+                <span className="text-center text-red-400 font-mono font-bold leading-none">
+                  -{game.data.roundStats?.penalties?.[myId] ?? 0} pts
+                </span>
+                <span className="text-right font-black text-white text-sm tabular-nums">
+                  {game.data.roundStats?.newScores?.[myId] ?? 0} pts
+                </span>
+              </div>
+
+              {/* Opponent Row */}
+              <div className="grid grid-cols-3 items-center text-xs text-slate-300">
+                <span className="font-extrabold text-[#967bb6] uppercase tracking-widest text-[10px] truncate max-w-[80px]">
+                  {opponent.displayName || 'OPPONENT'}
+                </span>
+                <span className="text-center text-red-400 font-mono font-bold leading-none">
+                  -{game.data.roundStats?.penalties?.[opponent.id] ?? 0} pts
+                </span>
+                <span className="text-right font-black text-white text-sm tabular-nums">
+                  {game.data.roundStats?.newScores?.[opponent.id] ?? 0} pts
+                </span>
+              </div>
+            </div>
+
+            {game.data.gameFinished ? (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <h4 className="text-lg font-black text-yellow-400 uppercase tracking-widest">
+                  🏆 {game.data.gameWinner === myId ? 'YOU ARE THE CHAMPION!' : 'OPPONENT WINS THE GAME!'}
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  Target score of 300 points has been reached!
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={() => onMove({ type: 'next_round' })}
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-purple-600/30"
+              >
+                Deal Next Round
+              </button>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

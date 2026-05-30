@@ -44,6 +44,16 @@ export const createInitialGameState = (id: string, type: GameType, players: any[
     data.discardPile = [drawCard(data.deck)];
     data.status = 'playing';
     data.turnPhase = 'draw'; // 'draw' or 'discard'
+
+    // Rummy scores tracking across rounds
+    data.scores = {};
+    players.forEach(p => {
+      data.scores[p.id] = 0;
+    });
+    data.round = 1;
+    data.roundOver = false;
+    data.roundWinner = null;
+    data.roundStats = null;
   }
 
   return {
@@ -320,6 +330,25 @@ export const calculateRummyScore = (hand: any[]) => {
   return { deadwood: result.score, melds: result.bestMelds };
 };
 
+export const getCardPoints = (card: any): number => {
+  const rank = getRankValue(card.value);
+  if (rank === 1) return 15; // Ace is 15
+  if (rank >= 10) return 10; // 10, J, Q, K are 10
+  return 5; // 2-9 is 5
+};
+
+export const getRemainingCards = (hand: any[], melds: any[][]) => {
+  const meldedSet = new Set<string>();
+  melds.forEach(m => m.forEach((c: any) => meldedSet.add(`${c.suit}-${c.value}`)));
+  return hand.filter(c => !meldedSet.has(`${c.suit}-${c.value}`));
+};
+
+export const getDeadwoodScore = (hand: any[]) => {
+  const { melds } = calculateRummyScore(hand);
+  const remaining = getRemainingCards(hand, melds);
+  return remaining.reduce((sum, c) => sum + getCardPoints(c), 0);
+};
+
 export const handleMove = (game: GameState, userId: string, moveData: any): GameState => {
   const newData = JSON.parse(JSON.stringify(game.data)); // Deep clone
   let nextTurn = game.turn;
@@ -508,6 +537,8 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         status = 'finished';
         winner = userId;
       }
+    } else if (moveData.type === 'acknowledge_farkle') {
+      newData.farkled = false;
     }
   } else if (game.type === 'blackjack') {
     if (moveData.type === 'deal') {
@@ -566,7 +597,56 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
   } else if (game.type === 'rummy') {
     const { type: moveType, cardIndex, fromDiscard } = moveData;
     const player = newData.players.find((p: any) => p.id === userId);
-    
+
+    const endRoundLocal = (dataState: any, winId: string) => {
+      dataState.roundOver = true;
+      dataState.roundWinner = winId;
+      
+      const roundHandPenalties: Record<string, number> = {};
+      const oldScores: Record<string, number> = {};
+      const newScores: Record<string, number> = {};
+
+      dataState.players.forEach((p: any) => {
+        oldScores[p.id] = dataState.scores[p.id] || 0;
+        
+        // Count deadwood points left in hand for penalty
+        const penalty = getDeadwoodScore(p.hand);
+        roundHandPenalties[p.id] = penalty;
+
+        // Deduct penalty from cumulative scores
+        dataState.scores[p.id] = (dataState.scores[p.id] || 0) - penalty;
+        newScores[p.id] = dataState.scores[p.id];
+      });
+
+      dataState.roundStats = {
+        winnerId: winId,
+        oldScores,
+        penalties: roundHandPenalties,
+        toSub: roundHandPenalties,
+        newScores
+      };
+
+      // Check if someone reached 300 points
+      let reached300 = false;
+      let gameWinnerId = '';
+      let maxScore = -Infinity;
+      dataState.players.forEach((p: any) => {
+        const score = dataState.scores[p.id] || 0;
+        if (score >= 300) {
+          reached300 = true;
+        }
+        if (score > maxScore) {
+          maxScore = score;
+          gameWinnerId = p.id;
+        }
+      });
+
+      if (reached300) {
+        dataState.gameFinished = true;
+        dataState.gameWinner = gameWinnerId;
+      }
+    };
+
     if (moveType === 'draw') {
       if (newData.turnPhase !== 'draw') return game;
       
@@ -581,32 +661,132 @@ export const handleMove = (game: GameState, userId: string, moveData: any): Game
         player.hand.push(drawnCard);
         newData.turnPhase = 'discard';
       }
+    } else if (moveType === 'play_melds') {
+      if (newData.turnPhase !== 'discard') return game;
+
+      const scoreData = calculateRummyScore(player.hand);
+      if (scoreData.melds && scoreData.melds.length > 0) {
+        // Award positive points for EACH card in the played melds
+        let meldPoints = 0;
+        scoreData.melds.forEach((meld: any[]) => {
+          meld.forEach((card: any) => {
+            meldPoints += getCardPoints(card);
+          });
+        });
+        newData.scores[userId] = (newData.scores[userId] || 0) + meldPoints;
+
+        // Add to player's played melds
+        player.melds = (player.melds || []).concat(scoreData.melds);
+
+        // Remove these cards from the player's hand
+        player.hand = player.hand.filter((card: any) => 
+          !scoreData.melds.some((m: any[]) => m.some((mc: any) => mc.suit === card.suit && mc.value === card.value))
+        );
+
+        // Check if player goes out (0 cards in hand)
+        if (player.hand.length === 0) {
+          endRoundLocal(newData, userId);
+          if (newData.gameFinished) {
+            status = 'finished';
+            winner = newData.gameWinner;
+          }
+        }
+      }
     } else if (moveType === 'discard') {
       if (newData.turnPhase !== 'discard') return game;
-      
-      const discardedCard = player.hand.splice(cardIndex, 1)[0];
-      newData.discardPile.push(discardedCard);
-      
-      // Check for win (simplified: if hand is empty or all melded)
-      // For now, just check if they have 0 cards (which shouldn't happen in standard rummy but good for testing)
-      // or if they "knock"
-      if (moveData.knock) {
-        // Calculate scores
-        const myScore = calculateRummyScore(player.hand);
-        const opponent = newData.players.find((p: any) => p.id !== userId);
-        const oppScore = calculateRummyScore(opponent.hand);
+
+      if (userId === 'bot') {
+        // 1. Bot auto play all available melds first
+        const scoreData = calculateRummyScore(player.hand);
+        if (scoreData.melds && scoreData.melds.length > 0) {
+          let meldPoints = 0;
+          scoreData.melds.forEach((meld: any[]) => {
+            meld.forEach((card: any) => {
+              meldPoints += getCardPoints(card);
+            });
+          });
+          newData.scores['bot'] = (newData.scores['bot'] || 0) + meldPoints;
+          player.melds = (player.melds || []).concat(scoreData.melds);
+          player.hand = player.hand.filter((card: any) => 
+            !scoreData.melds.some((m: any[]) => m.some((mc: any) => mc.suit === card.suit && mc.value === card.value))
+          );
+
+          if (player.hand.length === 0) {
+            endRoundLocal(newData, 'bot');
+            if (newData.gameFinished) {
+              status = 'finished';
+              winner = newData.gameWinner;
+            }
+            return {
+              ...game,
+              turn: nextTurn,
+              status,
+              winner,
+              data: newData,
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+
+        // 2. Select the BEST card from remaining hand to discard
+        let bestCardIndex = 0;
+        let minDeadwood = Infinity;
+        for (let i = 0; i < player.hand.length; i++) {
+          const testHand = player.hand.filter((_: any, idx: number) => idx !== i);
+          const testDeadwood = getDeadwoodScore(testHand);
+          if (testDeadwood < minDeadwood) {
+            minDeadwood = testDeadwood;
+            bestCardIndex = i;
+          }
+        }
         
-        if (myScore < oppScore) {
-          status = 'finished';
-          winner = userId;
+        // Use best index
+        const discardedCard = player.hand.splice(bestCardIndex, 1)[0];
+        newData.discardPile.push(discardedCard);
+
+        if (player.hand.length === 0) {
+          endRoundLocal(newData, 'bot');
+          if (newData.gameFinished) {
+            status = 'finished';
+            winner = newData.gameWinner;
+          }
         } else {
-          status = 'finished';
-          winner = opponentId;
+          newData.turnPhase = 'draw';
+          nextTurn = opponentId;
         }
       } else {
-        newData.turnPhase = 'draw';
-        nextTurn = opponentId;
+        // Human player discard
+        const discardedCard = player.hand.splice(cardIndex, 1)[0];
+        newData.discardPile.push(discardedCard);
+
+        if (player.hand.length === 0) {
+          endRoundLocal(newData, userId);
+          if (newData.gameFinished) {
+            status = 'finished';
+            winner = newData.gameWinner;
+          }
+        } else {
+          newData.turnPhase = 'draw';
+          nextTurn = opponentId;
+        }
       }
+    } else if (moveType === 'next_round') {
+      // Setup the next round
+      const deck = createDeck();
+      newData.deck = deck;
+      newData.discardPile = [drawCard(newData.deck)];
+      newData.roundOver = false;
+      newData.roundWinner = null;
+      newData.roundStats = null;
+      newData.turnPhase = 'draw';
+      newData.round = (newData.round || 1) + 1;
+      
+      newData.players.forEach((p: any) => {
+        p.hand = Array(10).fill(0).map(() => drawCard(newData.deck));
+        p.melds = [];
+      });
+      // Alternate or reset dealer to round starter
+      nextTurn = newData.players[0].id;
     }
   }
 

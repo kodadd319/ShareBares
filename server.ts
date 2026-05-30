@@ -56,7 +56,7 @@ async function startServer() {
       id: 'post-1',
       userId: 'creator-1',
       content: 'Check out my new masterpiece! This took 40 hours to complete.',
-      mediaUrl: '/logo.png',
+      mediaUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?auto=format&fit=crop&q=80&w=800',
       mediaType: 'image',
       createdAt: new Date().toISOString(),
       likes: 450,
@@ -68,7 +68,7 @@ async function startServer() {
       id: 'post-2',
       userId: 'creator-1',
       content: 'Secret technique I used for the shading in my last piece.',
-      mediaUrl: '/logo.png',
+      mediaUrl: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
       likes: 120,
@@ -80,7 +80,7 @@ async function startServer() {
       id: 'post-3',
       userId: 'creator-2',
       content: 'Unboxing the latest Gemini 3 Developer Kit!',
-      mediaUrl: '/logo.png',
+      mediaUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 890,
@@ -92,7 +92,7 @@ async function startServer() {
       id: 'jade-post-1',
       userId: 'ai-jade',
       content: 'The ink tells the story that words can\'t. 🖤 New set showing off the full chest piece details. Who\'s ready to see the close-ups?',
-      mediaUrl: '/logo.png',
+      mediaUrl: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 1800000).toISOString(),
       likes: 1240,
@@ -104,7 +104,7 @@ async function startServer() {
       id: 'jade-post-2',
       userId: 'ai-jade',
       content: 'ShareBares sessions. The contrast of the black ink against the neon lights is everything. 🔥😈 Full gallery now in the store.',
-      mediaUrl: '/logo.png',
+      mediaUrl: 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?auto=format&fit=crop&q=80&w=800',
       mediaType: 'image',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       likes: 3500,
@@ -387,18 +387,23 @@ async function startServer() {
             botMove = val < 17 ? { type: 'hit' } : { type: 'stand' };
           }
         } else if (currentGame.type === 'rummy') {
-          // ... (keep rummy logic)
-          if (data.turnPhase === 'draw') {
-            const drawFromDiscard = data.discardPile.length > 0 && Math.random() > 0.5;
+          if (data.roundOver) {
+            // No automatic bot move on round summary screen
+          } else if (data.turnPhase === 'draw') {
+            const botPlayer = data.players.find((p: any) => p.id === 'bot');
+            let drawFromDiscard = false;
+            if (botPlayer && data.discardPile.length > 0) {
+              const topDiscard = data.discardPile[data.discardPile.length - 1];
+              const testHand = [...botPlayer.hand, topDiscard];
+              const scoreBefore = calculateRummyScore(botPlayer.hand).deadwood;
+              const scoreAfter = calculateRummyScore(testHand).deadwood;
+              if (scoreAfter < scoreBefore) {
+                drawFromDiscard = true;
+              }
+            }
             botMove = { type: 'draw', fromDiscard: drawFromDiscard };
           } else if (data.turnPhase === 'discard') {
-            const botPlayer = data.players.find((p: any) => p.id === 'bot');
-            if (botPlayer) {
-              const scoreData = calculateRummyScore(botPlayer.hand);
-              const deadwood = typeof scoreData === 'number' ? scoreData : scoreData.deadwood;
-              if (deadwood <= 10) botMove = { type: 'discard', cardIndex: 0, knock: true };
-              else botMove = { type: 'discard', cardIndex: Math.floor(Math.random() * botPlayer.hand.length) };
-            }
+            botMove = { type: 'discard' };
           }
         }
 

@@ -74,6 +74,8 @@ export interface User {
   isStableActive?: boolean;
   stableActivationDate?: string;
   storeActivationDate?: string;
+  cashAppTag?: string;
+  payPalUsername?: string;
   settings?: {
     pushNotifications: boolean;
     emailNotifications: boolean;

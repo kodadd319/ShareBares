@@ -7,15 +7,9 @@ export const CURRENT_USER_ID = 'admin-jtothek319';
 const CCBILL_CLIENT_ACCOUNT = import.meta.env.VITE_CCBILL_CLIENT_ACCOUNT || '000000';
 const CCBILL_SALT = import.meta.env.VITE_CCBILL_SALT || '';
 
-// CCBill is optimized for tiered payments and splits. 
-// For the 15 activation fees:
-export const STORE_ACTIVATION_LINK = CCBILL_CLIENT_ACCOUNT !== '000000' 
-  ? `https://api.ccbill.com/wap-frontflex/flexform/${import.meta.env.VITE_CCBILL_FLEXFORM_ID}?clientAccnum=${CCBILL_CLIENT_ACCOUNT}&clientSubacc=${import.meta.env.VITE_CCBILL_SUB_ACCOUNT || '0001'}&initialPrice=15.00&initialPeriod=99&currencyCode=840`
-  : "https://buy.stripe.com/test_store_activation_15";
-
-export const STABLE_MEMBERSHIP_LINK = CCBILL_CLIENT_ACCOUNT !== '000000'
-  ? `https://api.ccbill.com/wap-frontflex/flexform/${import.meta.env.VITE_CCBILL_FLEXFORM_ID}?clientAccnum=${CCBILL_CLIENT_ACCOUNT}&clientSubacc=${import.meta.env.VITE_CCBILL_SUB_ACCOUNT || '0002'}&initialPrice=15.00&initialPeriod=99&currencyCode=840`
-  : "https://buy.stripe.com/test_stable_membership_15";
+// Active stripe subscription billing payment links ($15.00/month)
+export const STORE_ACTIVATION_LINK = "https://buy.stripe.com/9B65kv34LbuK0Vt1XE73G00";
+export const STABLE_MEMBERSHIP_LINK = "https://buy.stripe.com/bJe3cnfRx56m0Vtaua73G01";
 
 export const APP_URL = import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://www.sharebares.com');
 
@@ -31,8 +25,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Miami',
     importantInfo: 'Discretion is guaranteed. Heavily inked, alternative style.',
     contactInfo: 'Phone/Text: @jadevixen_stable',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -44,8 +41,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'San Francisco',
     importantInfo: 'Available for travel. Professional settings only.',
     contactInfo: 'Signal: +1-555-TECH',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -57,8 +57,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Los Angeles',
     importantInfo: 'Materials included. Booking 2 weeks in advance.',
     contactInfo: 'Email: sarah@stable.com',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1504333638930-c8787321eee0?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1541963463532-d68292c34b19?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -70,8 +73,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Seattle',
     importantInfo: 'Dark, mysterious, and completely unfiltered.',
     contactInfo: 'Signal: @luna_noir',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1509248961158-e54f6934749c?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -83,8 +89,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Miami',
     importantInfo: 'Always chasing the sun. ☀️',
     contactInfo: 'Phone/Text: @siennasun',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -96,8 +105,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'New York',
     importantInfo: 'Strictly professional, high-end only.',
     contactInfo: 'Email: raven@ravenred.com',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -109,8 +121,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Las Vegas',
     importantInfo: 'Sweet, spicy, and everything in between.',
     contactInfo: 'Signal: @lexilace',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1469334031218-e382a71b716b?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1517230878791-4d28214057c2?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   },
   {
@@ -122,8 +137,11 @@ export const MOCK_STABLE_LISTINGS: StableListing[] = [
     city: 'Austin',
     importantInfo: 'Level up your fantasies. 🎮✨',
     contactInfo: 'Discord: misty_moon#0001',
-    avatarUrl: '/logo.png',
-    photos: ['/logo.png', '/logo.png'],
+    avatarUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=400&h=400',
+    photos: [
+      'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=800'
+    ],
     createdAt: new Date().toISOString(),
   }
 ];
@@ -136,12 +154,14 @@ export const MOCK_USERS: User[] = [
     email: 'jtothek319@gmail.com',
     password: '#Caleb918',
     isBanned: false,
-    avatar: '/logo.png',
-    coverImage: '/logo.png',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=400&h=400',
+    coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=1200',
     bio: 'System Administrator. Full access enabled.',
     isCreator: true,
     isAdmin: true,
     isStoreActive: true,
+    cashAppTag: '$jamesonadmin',
+    payPalUsername: 'jamesonadmin',
     subscribersCount: 0,
     followingCount: 0,
     friendIds: [],
@@ -182,6 +202,8 @@ export const MOCK_USERS: User[] = [
     },
     isCreator: true,
     isStoreActive: true,
+    cashAppTag: '$sarahart',
+    payPalUsername: 'sarahjenkins',
     subscribersCount: 850,
     followingCount: 120,
     friendIds: [],
@@ -221,6 +243,8 @@ export const MOCK_USERS: User[] = [
     },
     isCreator: true,
     isStoreActive: true,
+    cashAppTag: '$marcustech',
+    payPalUsername: 'marcustech',
     subscribersCount: 3200,
     followingCount: 45,
     friendIds: [],
@@ -261,6 +285,8 @@ export const MOCK_USERS: User[] = [
     },
     isCreator: true,
     isStoreActive: true,
+    cashAppTag: '$jadevixen',
+    payPalUsername: 'jadevixen',
     subscribersCount: 12500,
     followingCount: 214,
     friendIds: [],
@@ -273,9 +299,9 @@ export const MOCK_USERS: User[] = [
     fwbRequestsSentCount: 0,
     fanIds: [],
     photos: [
-      { id: 'jade-p1', url: '/logo.png', type: 'image', createdAt: new Date().toISOString(), isNSFW: false },
-      { id: 'jade-p2', url: '/logo.png', type: 'image', createdAt: new Date().toISOString(), isNSFW: false },
-      { id: 'jade-p3', url: '/logo.png', type: 'image', createdAt: new Date().toISOString(), isNSFW: false }
+      { id: 'jade-p1', url: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=800', type: 'image', createdAt: new Date().toISOString(), isNSFW: false },
+      { id: 'jade-p2', url: 'https://images.unsplash.com/photo-1492106087820-71f1a00d2b11?auto=format&fit=crop&q=80&w=800', type: 'image', createdAt: new Date().toISOString(), isNSFW: false },
+      { id: 'jade-p3', url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800', type: 'image', createdAt: new Date().toISOString(), isNSFW: false }
     ],
     storeUploads: [],
     blockedUserIds: [],
@@ -623,8 +649,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 's3',
     userId: 'creator-2',
     title: 'Future Tech Predictions 2026',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -632,8 +658,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 's4',
     userId: 'me-123',
     title: 'My Private Collection',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1200'],
     type: 'other',
     createdAt: new Date().toISOString(),
   },
@@ -653,8 +679,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'jade-s2',
     userId: 'ai-jade',
     title: 'Behind the Ink: The Chest Piece Story',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1590246814883-57f511e76533?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -662,13 +688,13 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'luna-s1',
     userId: 'luna_noir',
     title: 'ShareBares Rituals - Full Set',
-    thumbnailUrl: '/logo.png',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=600',
     mediaUrls: [
-      '/logo.png',
-      '/logo.png',
-      '/logo.png',
-      '/logo.png',
-      '/logo.png'
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=1200'
     ],
     type: 'picture_pack',
     createdAt: new Date().toISOString(),
@@ -677,8 +703,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'sienna-s1',
     userId: 'sienna_sun',
     title: 'Summer Heat - Bikini Collection',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -686,8 +712,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'raven-s1',
     userId: 'raven_red',
     title: 'The Red Room - Luxury Fetish',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -695,8 +721,8 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'lexi-s1',
     userId: 'lexi_lace',
     title: 'Lace & Leather - Private Session',
-    thumbnailUrl: '/logo.png',
-    mediaUrls: ['/logo.png'],
+    thumbnailUrl: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=600',
+    mediaUrls: ['https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'],
     type: 'video',
     createdAt: new Date().toISOString(),
   },
@@ -704,13 +730,13 @@ export const MOCK_STORE_ITEMS: StoreItem[] = [
     id: 'misty-s1',
     userId: 'misty_moon',
     title: 'Fantasy Quest - Cosplay Gallery',
-    thumbnailUrl: '/logo.png',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=600',
     mediaUrls: [
-      '/logo.png',
-      '/logo.png',
-      '/logo.png',
-      '/logo.png',
-      '/logo.png'
+      'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=1200',
+      'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&q=80&w=1200'
     ],
     type: 'picture_pack',
     createdAt: new Date().toISOString(),
