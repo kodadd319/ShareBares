@@ -134,14 +134,16 @@ export interface UploadProgress {
 
 const uploadFileLocally = (
   file: File,
+  path?: string,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onloadend = async () => {
       try {
-        if (onProgress) onProgress(50); // Simulate progress halfway
+        if (onProgress) onProgress(30);
         const base64String = reader.result as string;
+        if (onProgress) onProgress(60);
         const response = await fetch('/api/upload', {
           method: 'POST',
           headers: {
@@ -150,7 +152,8 @@ const uploadFileLocally = (
           body: JSON.stringify({
             name: file.name,
             type: file.type,
-            data: base64String
+            data: base64String,
+            path: path
           })
         });
 
@@ -180,99 +183,14 @@ export const uploadFile = (
   path: string, 
   onProgress?: (progress: number) => void
 ): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      reject(new Error('No file provided for upload'));
-      return;
-    }
-    
-    // Log upload details for debugging if needed
-    console.log(`Starting upload to ${path}`, { 
-      name: file.name, 
-      size: file.size, 
-      type: file.type,
-      bucket: firebaseConfig.storageBucket
-    });
-
-    let isSettled = false;
-
-    // Timeout mechanism to fall back to local upload if Firebase Storage hangs or retries excessively
-    const timeoutId = setTimeout(async () => {
-      if (!isSettled) {
-        console.warn(`Firebase Storage upload timed out for ${file.name}. Falling back immediately to local Express upload.`);
-        isSettled = true;
-        try {
-          if (uploadTask && typeof uploadTask.cancel === 'function') {
-            try { uploadTask.cancel(); } catch (_) {}
-          }
-        } catch (_) {}
-        try {
-          const localUrl = await uploadFileLocally(file, onProgress);
-          resolve(localUrl);
-        } catch (fallbackError: any) {
-          reject(new Error(`Firebase Storage upload timed out and local fallback failed: ${fallbackError.message}`));
-        }
-      }
-    }, 3500);
-
-    let uploadTask: any = null;
-
-    try {
-      const storageRef = ref(storage, path);
-      const metadata = {
-        contentType: file.type || 'application/octet-stream'
-      };
-      
-      uploadTask = uploadBytesResumable(storageRef, file, metadata);
-
-      uploadTask.on(
-        'state_changed',
-        (snapshot: any) => {
-          if (isSettled) return;
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          if (onProgress) onProgress(progress * 0.95); // leave 5% for the URL resolution
-          console.log(`Upload progress for ${file.name}: ${Math.round(progress)}%`);
-        },
-        async (error: any) => {
-          if (isSettled) return;
-          isSettled = true;
-          clearTimeout(timeoutId);
-          console.warn('Firebase Storage upload failed, falling back to local Express upload...', error);
-          try {
-            const localUrl = await uploadFileLocally(file, onProgress);
-            resolve(localUrl);
-          } catch (fallbackError: any) {
-            reject(new Error(`Firebase Storage upload failed (${error.message}) and local fallback failed: ${fallbackError.message}`));
-          }
-        },
-        async () => {
-          if (isSettled) return;
-          isSettled = true;
-          clearTimeout(timeoutId);
-          try {
-            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-            console.log(`Upload successful for ${file.name}: ${downloadURL}`);
-            resolve(downloadURL);
-          } catch (urlError: any) {
-            console.warn('Failed to get download URL, falling back to local Express upload...', urlError);
-            try {
-              const localUrl = await uploadFileLocally(file, onProgress);
-              resolve(localUrl);
-            } catch (fallbackError: any) {
-              reject(urlError);
-            }
-          }
-        }
-      );
-    } catch (err: any) {
-      if (!isSettled) {
-        isSettled = true;
-        clearTimeout(timeoutId);
-        console.warn('Failed to initialize Firebase Storage task, falling back to local Express upload immediately...', err);
-        uploadFileLocally(file, onProgress).then(resolve).catch(reject);
-      }
-    }
-  });
+  if (!file) {
+    return Promise.reject(new Error('No file provided for upload'));
+  }
+  
+  console.log(`uploadFile via server-side secure cloud gate for ${file.name} -> destination: ${path}`);
+  // Delegate directly to server-side upload which handles Firebase Storage upload via Admin SDK & local folder fallback.
+  // This bypasses browser iframe sandbox CORS errors, cookie restrictions, and sluggish client-side connection timeouts.
+  return uploadFileLocally(file, path, onProgress);
 };
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {

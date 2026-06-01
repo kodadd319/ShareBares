@@ -27,8 +27,9 @@ async function startServer() {
       if (!admin.apps.length) {
         admin.initializeApp({
           projectId: firebaseConfig.projectId,
+          storageBucket: firebaseConfig.storageBucket || `${firebaseConfig.projectId}.firebasestorage.app`,
         });
-        console.log("Firebase Admin initialized successfully.");
+        console.log("Firebase Admin initialized successfully with storage bucket.");
       }
     } else {
       console.warn("firebase-applet-config.json not found. Firebase features will be limited.");
@@ -528,10 +529,10 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  // Local Base64 File Upload API
+  // Local & Cloud Base64 File Upload API
   app.post("/api/upload", async (req, res) => {
     try {
-      const { name, type, data } = req.body;
+      const { name, type, data, path: targetPath } = req.body;
       if (!name || !data) {
         return res.status(400).json({ error: "Missing name or data" });
       }
@@ -539,14 +540,50 @@ async function startServer() {
       const buffer = Buffer.from(base64Data, 'base64');
       const sanitizedName = name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
       const filename = `${Date.now()}_${sanitizedName}`;
+      
+      // 1. Write locally first as a robust backup & to keep local system happy
       const filePath = path.join(uploadsDir, filename);
       fs.writeFileSync(filePath, buffer);
-      const fileUrl = `/uploads/${filename}`;
-      console.log(`Local upload complete: ${filename} (${buffer.length} bytes)`);
-      res.json({ url: fileUrl });
+      const localFileUrl = `/uploads/${filename}`;
+      
+      // 2. Try to uploading to cloud Firebase Storage using standard Firebase Admin SDK
+      try {
+        const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+        if (fs.existsSync(configPath)) {
+          const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+          const bucketName = config.storageBucket || `${config.projectId}.firebasestorage.app`;
+          const bucket = admin.storage().bucket(bucketName);
+          
+          // Use provided targetPath, or fall back to standard uploads filename
+          const cloudDestination = targetPath ? targetPath : `uploads/${filename}`;
+          const cloudFile = bucket.file(cloudDestination);
+          
+          // Generate standard firebase-compatible download token using node:crypto UUID generator
+          const crypto = await import("node:crypto");
+          const downloadToken = crypto.randomUUID();
+          
+          await cloudFile.save(buffer, {
+            metadata: {
+              contentType: type || 'application/octet-stream',
+              metadata: {
+                firebaseStorageDownloadTokens: downloadToken
+              }
+            }
+          });
+          
+          const cloudDownloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(cloudDestination)}?alt=media&token=${downloadToken}`;
+          console.log(`Cloud storage file upload successful: ${cloudDestination} URL: ${cloudDownloadUrl}`);
+          return res.json({ url: cloudDownloadUrl });
+        }
+      } catch (cloudErr: any) {
+        console.error("Cloud storage upload failed. Falling back to local file path.", cloudErr);
+      }
+      
+      console.log(`Local fallback upload complete: ${filename} (${buffer.length} bytes)`);
+      res.json({ url: localFileUrl });
     } catch (err: any) {
-      console.error("Local upload error info:", err);
-      res.status(500).json({ error: err.message || "Failed to upload file locally" });
+      console.error("Upload error details:", err);
+      res.status(500).json({ error: err.message || "Failed to upload file" });
     }
   });
 
