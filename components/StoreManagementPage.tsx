@@ -32,50 +32,25 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
   const [type, setType] = useState<'video' | 'picture_pack' | 'other'>('video');
   const [details, setDetails] = useState({
     title: '',
-    description: '',
-    price: 0
+    description: ''
   });
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
-
-  // Direct user-to-user pay details
-  const [cashAppTag, setCashAppTag] = useState(user.cashAppTag || '');
-  const [payPalUsername, setPayPalUsername] = useState(user.payPalUsername || '');
-  const [isSavingPayment, setIsSavingPayment] = useState(false);
+  
+  // Video Duration States
+  const [durationMin, setDurationMin] = useState<number>(0);
+  const [durationSec, setDurationSec] = useState<number>(0);
 
   // Edit mode state
   const [searchTitle, setSearchTitle] = useState('');
   const [editingItem, setEditingItem] = useState<StoreItem | null>(null);
   const [editDetails, setEditDetails] = useState({
     title: '',
-    description: '',
-    price: 0
+    description: ''
   });
-
-  const handleSavePaymentInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!onUpdateUser) {
-      toast.error('Unable to update payment details in this view.');
-      return;
-    }
-    
-    setIsSavingPayment(true);
-    try {
-      await onUpdateUser({
-        cashAppTag: cashAppTag.trim(),
-        payPalUsername: payPalUsername.trim()
-      });
-      toast.success('Your payment tags have been saved successfully.');
-    } catch (err: any) {
-      console.error(err);
-      toast.error(`Failed to save details: ${err.message || 'Error occurred'}`);
-    } finally {
-      setIsSavingPayment(false);
-    }
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -96,9 +71,12 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
             video.preload = 'metadata';
             video.onloadedmetadata = () => {
               window.URL.revokeObjectURL(video.src);
-              if (video.duration > 480) {
-                setUploadError('Warning: Video is over 8 minutes. It may be rejected or truncated.');
-              }
+              const totalSecs = Math.round(video.duration);
+              const mins = Math.floor(totalSecs / 60);
+              const secs = totalSecs % 60;
+              setDurationMin(mins);
+              setDurationSec(secs);
+              toast.success(`Detected video length: ${mins}m ${secs}s!`);
             };
             video.onerror = () => {
               console.warn('Could not read video metadata for duration check');
@@ -147,19 +125,34 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     
     const allFiles = thumbnailFile ? [thumbnailFile, ...files] : files;
 
+    const durationInSeconds = (durationMin * 60) + durationSec;
+    let computedPrice = 0;
+    if (type === 'video') {
+      if (durationInSeconds >= 120 && durationInSeconds <= 600) {
+        computedPrice = 20;
+      } else if (durationInSeconds > 600) {
+        computedPrice = 40;
+      }
+    } else if (type === 'picture_pack') {
+      computedPrice = 15;
+    }
+
     try {
       await onAddItem({
         title: details.title,
         description: details.description,
-        price: details.price,
         thumbnailUrl: '', // Handled by App.tsx
         mediaUrls: [], // Handled by App.tsx
-        type: type
+        type: type,
+        videoDuration: type === 'video' ? durationInSeconds : undefined,
+        price: computedPrice > 0 ? computedPrice : undefined
       }, allFiles);
 
       setFiles([]);
       setThumbnailFile(null);
-      setDetails({ title: '', description: '', price: 0 });
+      setDetails({ title: '', description: '' });
+      setDurationMin(0);
+      setDurationSec(0);
     } catch (err) {
       console.error('Error during store publish:', err);
     } finally {
@@ -173,8 +166,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
       setEditingItem(item);
       setEditDetails({
         title: item.title,
-        description: item.description || '',
-        price: item.price || 0
+        description: item.description || ''
       });
     } else {
       toast.error('Media item not found with that title.');
@@ -187,8 +179,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
 
     onUpdateItem(editingItem.id, {
       title: editDetails.title,
-      description: editDetails.description,
-      price: editDetails.price
+      description: editDetails.description
     });
 
     setEditingItem(null);
@@ -284,70 +275,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
         </div>
       </div>
 
-      {/* Direct Payment Setup */}
-      <div className="glass-panel rounded-[2.5rem] p-8 border-white/10 bg-white/[0.02] chrome-border mb-8 animate-in fade-in duration-300">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-            <DollarSign className="text-emerald-500" size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-white uppercase tracking-tight">Direct Payments Setup (User-to-User)</h2>
-            <p className="text-slate-500 uppercase text-[9px] tracking-widest font-black">Configure how viewers pay you directly for locked store items</p>
-          </div>
-        </div>
 
-        <form onSubmit={handleSavePaymentInfo} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cash App Tag</label>
-                <input 
-                  type="text" 
-                  value={cashAppTag}
-                  onChange={(e) => setCashAppTag(e.target.value)}
-                  placeholder="e.g. $yourtag"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all chrome-border font-bold placeholder-white/20 mt-1"
-                />
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">PayPal Username</label>
-                <input 
-                  type="text" 
-                  value={payPalUsername}
-                  onChange={(e) => setPayPalUsername(e.target.value)}
-                  placeholder="e.g. yourusername"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all chrome-border font-bold placeholder-white/20 mt-1"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2 border-t border-white/5">
-            <p className="text-[9px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest text-center sm:text-left">
-              Buyers will see these credentials when unlocking media. Direct payments are 100% yours (0% platform fee!).
-            </p>
-            <button 
-              type="submit"
-              disabled={isSavingPayment}
-              className="w-full sm:w-auto bg-white text-black hover:bg-slate-100 py-4 px-8 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl transition-all hover:scale-[1.02] active:scale-95 shrink-0 flex items-center justify-center space-x-2"
-            >
-              {isSavingPayment ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
-                  <span>Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Check size={16} />
-                  <span>Save Payment Info</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
 
       <div className="grid grid-cols-1 gap-8">
         {activeMode === 'upload' ? (
@@ -479,32 +407,17 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                     </div>
                   </div>
 
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Content Title</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={details.title}
-                        onChange={(e) => setDetails(prev => ({ ...prev, title: e.target.value }))}
-                        placeholder="e.g. Exclusive Summer Set"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Price (USD)</label>
-                      <input 
-                        type="number" 
-                        required
-                        min="0"
-                        step="0.01"
-                        value={details.price}
-                        onChange={(e) => setDetails(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                        placeholder="0.00"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                      />
-                    </div>
+                  {/* Details */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Content Title</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={details.title}
+                      onChange={(e) => setDetails(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="e.g. Exclusive Summer Set"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -516,6 +429,89 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                       className="w-full bg-white/5 border border-white/10 rounded-3xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all h-32 resize-none chrome-border"
                     />
                   </div>
+
+                  {type === 'video' && (
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-[#967bb6] uppercase tracking-widest ml-1">
+                        Video Duration (Monetized tiers are based on length)
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="relative flex items-center bg-white/5 border border-white/10 rounded-2xl">
+                          <input 
+                            type="number" 
+                            min="0"
+                            required
+                            value={durationMin || ''}
+                            onChange={(e) => setDurationMin(Math.max(0, parseInt(e.target.value) || 0))}
+                            placeholder="0"
+                            className="w-full bg-transparent border-0 py-4 px-6 text-white text-sm focus:outline-none focus:ring-0"
+                          />
+                          <span className="absolute right-6 text-[10px] font-black uppercase text-slate-500 tracking-widest pointer-events-none">MINS</span>
+                        </div>
+                        <div className="relative flex items-center bg-white/5 border border-white/10 rounded-2xl">
+                          <input 
+                            type="number" 
+                            min="0"
+                            max="59"
+                            required
+                            value={durationSec || ''}
+                            onChange={(e) => setDurationSec(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                            placeholder="0"
+                            className="w-full bg-transparent border-0 py-4 px-6 text-white text-sm focus:outline-none focus:ring-0"
+                          />
+                          <span className="absolute right-6 text-[10px] font-black uppercase text-slate-500 tracking-widest pointer-events-none">SECS</span>
+                        </div>
+                      </div>
+                      
+                      {/* Price split visual aid indicator */}
+                      {((durationMin * 60) + durationSec) > 0 && (
+                        <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs font-bold leading-relaxed space-y-2">
+                          {((durationMin * 60) + durationSec) < 120 ? (
+                            <p className="text-amber-500 uppercase text-[9px] tracking-widest font-black">
+                              ⚠️ Under 2 Minutes: Video will be set as FREE / Teaser (not monetized).
+                            </p>
+                          ): ((durationMin * 60) + durationSec) <= 600 ? (
+                            <>
+                              <p className="text-emerald-400 uppercase text-[10px] tracking-widest font-black">
+                                💰 Monetized Video: $20.00 USD
+                              </p>
+                              <div className="text-[10px] text-slate-500 uppercase tracking-wider space-y-1">
+                                <p>• Creator Payout (80%): <span className="text-white font-mono">$16.00</span></p>
+                                <p>• Platform Fee (20%): <span className="text-white font-mono">$4.00</span></p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-emerald-400 uppercase text-[10px] tracking-widest font-black">
+                                💰 Premium Video (over 10 mins): $40.00 USD
+                              </p>
+                              <div className="text-[10px] text-slate-500 uppercase tracking-wider space-y-1">
+                                <p>• Creator Payout (80%): <span className="text-white font-mono">$32.00</span></p>
+                                <p>• Platform Fee (20%): <span className="text-white font-mono">$8.00</span></p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {type === 'picture_pack' && (
+                    <div className="space-y-2 animate-in fade-in duration-300">
+                      <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-xs font-bold leading-relaxed space-y-2">
+                        <p className="text-emerald-400 uppercase text-[10px] tracking-widest font-black">
+                          💰 Monetized Picture Pack: $15.00 USD
+                        </p>
+                        <p className="text-slate-400 text-[9px] uppercase tracking-wider leading-relaxed">
+                          Picture bundles are automatically priced at $15 with standard 80/20 platform splitting.
+                        </p>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider space-y-1">
+                          <p>• Creator Payout (80%): <span className="text-white font-mono">$12.00</span></p>
+                          <p>• Platform Fee (20%): <span className="text-white font-mono">$3.00</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <button 
                     type="submit"
@@ -599,29 +595,15 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                     </div>
 
                     <form onSubmit={handleUpdate} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Title</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={editDetails.title}
-                            onChange={(e) => setEditDetails(prev => ({ ...prev, title: e.target.value }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Price (USD)</label>
-                          <input 
-                            type="number" 
-                            required
-                            min="0"
-                            step="0.01"
-                            value={editDetails.price}
-                            onChange={(e) => setEditDetails(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">New Title</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={editDetails.title}
+                          onChange={(e) => setEditDetails(prev => ({ ...prev, title: e.target.value }))}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#967bb6] transition-all chrome-border"
+                        />
                       </div>
 
                       <div className="space-y-2">

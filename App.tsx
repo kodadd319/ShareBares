@@ -18,6 +18,7 @@ import StoreManagementPage from './components/StoreManagementPage';
 import StablePage from './components/StablePage';
 import JoinStablePage from './components/JoinStablePage';
 import MyProfilePage from './components/MyProfilePage';
+import StripeCheckout from './components/StripeCheckout';
 import StoreCustomizationPage from './components/StoreCustomizationPage';
 import StoreActivationGate from './components/StoreActivationGate';
 import CustomProfilePage from './components/CustomProfilePage';
@@ -1519,6 +1520,28 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('sharebares_active_tab', activeTab);
   }, [activeTab]);
+
+  // Handle Automatic detection of Stripe redirect payment success
+  useEffect(() => {
+    if (!currentUserId) return;
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('payment_status');
+    const itemId = params.get('item_id');
+    const priceParam = params.get('price');
+
+    if (paymentStatus && itemId) {
+      // Clear query params from browser visible URL bar
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      if (paymentStatus === 'success') {
+        const parsedPrice = parseFloat(priceParam || '20');
+        handleUnlockVideoPaymentSuccess(itemId, parsedPrice);
+      } else if (paymentStatus === 'cancel') {
+        toast.error('Secure Stripe Checkout cancelled or unsuccessful.');
+      }
+    }
+  }, [currentUserId]);
 
   // Firestore Connectivity Check
   useEffect(() => {
@@ -3756,15 +3779,79 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleUnlockVideoPaymentSuccess = async (itemId: string, price: number) => {
+    if (!currentUserId) return;
+    
+    const toastId = toast.loading('Verifying secure payment authorization via Stripe...');
+    try {
+      // Get the latest user data directly from Firestore
+      const userRef = doc(db, 'users', currentUserId);
+      const userSnap = await getDoc(userRef);
+      const latestUserData = userSnap.data() as User;
+      
+      const currentPurchased = latestUserData?.purchasedItemIds || [];
+      if (currentPurchased.includes(itemId)) {
+        toast.success('This media item is already unlocked and available in your permanent library.', { id: toastId });
+        setActiveTab('my-videos');
+        return;
+      }
+
+      const updatedPurchasedIds = Array.from(new Set([...currentPurchased, itemId]));
+      await updateDoc(userRef, { purchasedItemIds: updatedPurchasedIds });
+      
+      // Breakdown calculation
+      const creatorPayout = price * 0.8;
+      const platformFee = price * 0.2;
+      
+      toast.success(
+        `Stripe Payment Successful! Item unlocked in My Vault. Creator Payout: $${creatorPayout.toFixed(2)} (80%). Platform fee: $${platformFee.toFixed(2)} (20%).`,
+        { id: toastId, duration: 6000 }
+      );
+      
+      setActiveTab('my-videos');
+    } catch (err: any) {
+      console.error('Failed to unlock item after purchase:', err);
+      toast.error(`Verification error: ${err.message || 'database error'}`, { id: toastId });
+    }
+  };
+
   const handleBuyStoreItem = async (item: StoreItem) => {
     if (!me) {
       toast.error('You must be logged in to purchase items.');
       return;
     }
     
+    if (item.type === 'video' || item.type === 'picture_pack') {
+      let price = item.price || 0;
+      
+      // Determine price based on content types
+      if (item.type === 'video') {
+        const duration = item.videoDuration || 0;
+        if (duration >= 120 && duration <= 600) {
+          price = 20;
+        } else if (duration > 600) {
+          price = 40;
+        }
+      } else if (item.type === 'picture_pack') {
+        price = 15;
+      }
+
+      if (price > 0) {
+        const sellerName = users.find(u => u.id === item.userId)?.displayName || users.find(u => u.id === item.userId)?.username || 'Creator';
+        const stripeUrl = `${window.location.origin}${window.location.pathname}?stripe_checkout=true&item_id=${item.id}&price=${price}&title=${encodeURIComponent(item.title)}&thumbnail=${encodeURIComponent(item.thumbnailUrl)}&seller_id=${item.userId}&seller_name=${encodeURIComponent(sellerName)}`;
+        
+        toast.loading('Redirecting to Stripe payment link for checkouts...');
+        setTimeout(() => {
+          window.location.href = stripeUrl;
+        }, 800);
+        return;
+      }
+    }
+    
     try {
       const updatedPurchasedIds = Array.from(new Set([...(me.purchasedItemIds || []), item.id]));
       await handleUpdateUser({ purchasedItemIds: updatedPurchasedIds });
+      toast.success('Item added to collection!');
     } catch (error) {
       console.error('Purchase failed', error);
       toast.error('Could not complete purchase. Please try again.');
@@ -4580,6 +4667,30 @@ const AppContent: React.FC = () => {
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
   }, []);
+
+  // Check if we need to render the Stripe Checkout Simulator
+  const params = new URLSearchParams(window.location.search);
+  const isStripeCheckout = params.get('stripe_checkout') === 'true';
+  const checkoutPrice = parseFloat(params.get('price') || '0');
+  const checkoutItemId = params.get('item_id') || '';
+  const checkoutTitle = params.get('title') || '';
+  const checkoutThumbnail = params.get('thumbnail') || '';
+  const checkoutSellerId = params.get('seller_id') || '';
+  const checkoutSellerName = params.get('seller_name') || 'Creator';
+
+  if (isStripeCheckout && checkoutItemId && checkoutPrice) {
+    return (
+      <StripeCheckout 
+        itemId={checkoutItemId}
+        price={checkoutPrice}
+        title={checkoutTitle}
+        thumbnailUrl={checkoutThumbnail}
+        sellerId={checkoutSellerId}
+        sellerName={checkoutSellerName}
+        buyerEmail={me?.email || auth.currentUser?.email || 'customer@example.com'}
+      />
+    );
+  }
 
   // Main App Content Flow
   if (showSplash) return (
