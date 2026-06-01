@@ -52,10 +52,23 @@ import {
 } from './firebase';
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Initialize Gemini with safety guard
+let ai: any = null;
+try {
+  const apiKey = process.env.GEMINI_API_KEY || (typeof window !== 'undefined' && (window as any).process?.env?.GEMINI_API_KEY);
+  if (apiKey) {
+    ai = new GoogleGenAI({ apiKey });
+  } else {
+    console.warn("GEMINI_API_KEY is not configured in client environment. Using fallbacks.");
+  }
+} catch (error) {
+  console.error("GoogleGenAI client initialization error:", error);
+}
 
 async function generateJadePost() {
+  if (!ai) {
+    return "Beautiful day to share something beautiful. 😉 #ShareBares";
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -69,6 +82,9 @@ async function generateJadePost() {
 }
 
 async function generateJadeComment(postContent: string) {
+  if (!ai) {
+    return "Looking good! 😉";
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -82,6 +98,9 @@ async function generateJadeComment(postContent: string) {
 }
 
 async function generateJadeResponse(message: string, history: any[]) {
+  if (!ai) {
+    return "I'm a bit overwhelmed right now, let's chat in a bit! 😘";
+  }
   try {
     // Format history if needed, but for now simple message
     const response = await ai.models.generateContent({
@@ -99,6 +118,9 @@ async function generateJadeResponse(message: string, history: any[]) {
 }
 
 async function generateCaptionSuggestion(content: string) {
+  if (!ai) {
+    return "Feeling free and wild. 😈";
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -1622,7 +1644,7 @@ const AppContent: React.FC = () => {
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>([]);
 
   const addNotification = useCallback(async (type: NotificationType, title: string, message: string, data?: Partial<AppNotification>) => {
-    if (!currentUserId || !auth.currentUser) return;
+    if (!currentUserId || !auth?.currentUser) return;
     
     const notifId = `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const newNotification: AppNotification = {
@@ -1668,7 +1690,7 @@ const AppContent: React.FC = () => {
   console.log('App Rendering - meRaw:', meRaw?.id, 'currentUserId:', currentUserId);
   const isAdminUser = meRaw?.isAdmin || 
                      meRaw?.email === 'jtothek319@gmail.com' || 
-                     auth.currentUser?.email === 'jtothek319@gmail.com' || 
+                     auth?.currentUser?.email === 'jtothek319@gmail.com' || 
                      meRaw?.username === 'jameson319' || 
                      currentUserId === 'admin-jtothek319';
   const me = meRaw ? { 
@@ -2014,6 +2036,13 @@ const AppContent: React.FC = () => {
   const profileUnsubRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    if (!auth) {
+      console.warn("Firebase Auth is not initialized. Custom offline fallback active.");
+      setIsAuthReady(true);
+      setAuthResolvedAtLeastOnce(true);
+      return;
+    }
+
     setPersistence(auth, browserLocalPersistence).catch(err => console.error('Failed to set persistence:', err));
 
     // Handle redirect result
@@ -2219,7 +2248,7 @@ const AppContent: React.FC = () => {
 
   // Real-time Listeners
   useEffect(() => {
-    if (!isLoggedIn || !auth.currentUser) {
+    if (!isLoggedIn || !auth?.currentUser) {
       setUsers([]);
       setPosts([]);
       setStoreItems([]);
@@ -2306,7 +2335,7 @@ const AppContent: React.FC = () => {
 
   // Notifications Listener
   useEffect(() => {
-    if (!currentUserId || !auth.currentUser) return;
+    if (!currentUserId || !auth?.currentUser) return;
 
     const unsubNotifs = onSnapshot(
       query(collection(db, 'notifications'), where('userId', '==', currentUserId), orderBy('timestamp', 'desc')),
@@ -2322,7 +2351,7 @@ const AppContent: React.FC = () => {
 
   // Messages Listener
   useEffect(() => {
-    if (!currentUserId || !auth.currentUser) {
+    if (!currentUserId || !auth?.currentUser) {
       setChatMessages({});
       return;
     }
@@ -2360,7 +2389,7 @@ const AppContent: React.FC = () => {
 
   // Jade AI Activity Loop
   useEffect(() => {
-    if (!isLoggedIn || !auth.currentUser || !me?.isAdmin) return;
+    if (!isLoggedIn || !auth?.currentUser || !me?.isAdmin) return;
 
     const jadeActivity = setInterval(async () => {
       const roll = Math.random();
@@ -2917,7 +2946,7 @@ const AppContent: React.FC = () => {
         const currentUser = users.find(u => u.id === currentUserId);
         cleanedData.id = currentUserId;
         cleanedData.username = profileData.username || currentUser?.username || '';
-        cleanedData.email = profileData.email || currentUser?.email || auth.currentUser?.email || '';
+        cleanedData.email = profileData.email || currentUser?.email || auth?.currentUser?.email || '';
         
         if (isInitialCreation) {
           cleanedData.createdAt = new Date().toISOString();
@@ -4687,7 +4716,7 @@ const AppContent: React.FC = () => {
         thumbnailUrl={checkoutThumbnail}
         sellerId={checkoutSellerId}
         sellerName={checkoutSellerName}
-        buyerEmail={me?.email || auth.currentUser?.email || 'customer@example.com'}
+        buyerEmail={me?.email || auth?.currentUser?.email || 'customer@example.com'}
       />
     );
   }
@@ -4745,7 +4774,7 @@ const AppContent: React.FC = () => {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <ProfileCreationPage 
         currentUserId={currentUserId}
-        initialEmail={auth.currentUser?.email || ''} 
+        initialEmail={auth?.currentUser?.email || ''} 
         onComplete={handleProfileUpdate} 
       />
     </motion.div>

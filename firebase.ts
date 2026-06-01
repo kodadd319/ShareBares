@@ -15,31 +15,68 @@ import {
 import firebaseConfig from './firebase-applet-config.json';
 
 // Initialize Firebase SDK
-const app = initializeApp(firebaseConfig);
+let app: any;
+try {
+  app = initializeApp(firebaseConfig);
+} catch (e) {
+  console.error("Firebase SDK initializeApp failed:", e);
+}
+
 const firestoreDbId = (firebaseConfig as any).firestoreDatabaseId;
 
-// Initialize Firestore with specific settings for better compatibility in iframe environments
-export const db = firestoreDbId 
-  ? initializeFirestore(app, { 
-      experimentalForceLongPolling: true,
-      localCache: {
-        kind: 'persistent',
-        initialTabManager: { kind: 'multi-tab' }
-      }
-    } as any, firestoreDbId)
-  : initializeFirestore(app, { 
-      experimentalForceLongPolling: true,
-      localCache: {
-        kind: 'persistent',
-        initialTabManager: { kind: 'multi-tab' }
-      }
-    } as any);
+// Initialize Firestore with specific settings and handle persistent storage sandbox errors gracefully
+let firestoreInstance: any = null;
+try {
+  firestoreInstance = firestoreDbId 
+    ? initializeFirestore(app, { 
+        experimentalForceLongPolling: true,
+        localCache: {
+          kind: 'persistent',
+          initialTabManager: { kind: 'multi-tab' }
+        }
+      } as any, firestoreDbId)
+    : initializeFirestore(app, { 
+        experimentalForceLongPolling: true,
+        localCache: {
+          kind: 'persistent',
+          initialTabManager: { kind: 'multi-tab' }
+        }
+      } as any);
+} catch (persistError) {
+  console.warn("Firestore persistent cache failed to initialize (commonly due to sandboxed iframe or third-party storage restrictions). Falling back to memory cache...", persistError);
+  try {
+    firestoreInstance = firestoreDbId 
+      ? initializeFirestore(app, { 
+          experimentalForceLongPolling: true,
+          localCache: { kind: 'memory' }
+        } as any, firestoreDbId)
+      : initializeFirestore(app, { 
+          experimentalForceLongPolling: true,
+          localCache: { kind: 'memory' }
+        } as any);
+  } catch (fallbackError) {
+    console.error("Firestore basic initialize with memory cache failed. Using getFirestore() fallback:", fallbackError);
+    try {
+      firestoreInstance = getFirestore(app);
+    } catch (ultimateError) {
+      console.error("Firestore ultimate fallback getFirestore failed:", ultimateError);
+    }
+  }
+}
 
-// Initialize Firebase Storage
-export const storage = getStorage(app);
+export const db = firestoreInstance;
+
+// Initialize Firebase Storage with safety guard
+let storageInstance: any = null;
+try {
+  if (app) storageInstance = getStorage(app);
+} catch (e) {
+  console.error("Firebase Storage initialization failed:", e);
+}
+export const storage = storageInstance;
 
 // Connection Heartbeat and Auto-Reconnect
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && db) {
   // Add a listener for online/offline events to nudge Firestore
   window.addEventListener('online', () => {
     console.log('Browser back online, nudging Firestore...');
@@ -47,7 +84,14 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export const auth = getAuth(app);
+// Initialize Firebase Auth with safety guard
+let authInstance: any = null;
+try {
+  if (app) authInstance = getAuth(app);
+} catch (e) {
+  console.error("Firebase Auth initialization failed:", e);
+}
+export const auth = authInstance;
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -78,6 +122,10 @@ export enum OperationType {
  * to handle transient initialization delays.
  */
 export async function testFirestoreConnection(retries = 3): Promise<boolean> {
+  if (!db) {
+    console.warn('Firestore database is not initialized. Skipping connection test.');
+    return false;
+  }
   for (let i = 0; i < retries; i++) {
     try {
       // Try to get a non-existent document from a test collection
@@ -200,12 +248,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: errMessage,
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         displayName: provider.displayName,
         email: provider.email,
