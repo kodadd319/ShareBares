@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, Edit3, Search, X, Palette, DollarSign, CreditCard, RefreshCw } from 'lucide-react';
+import { Upload, Image as ImageIcon, Video, Trash2, Plus, Check, AlertCircle, Lock, ShoppingBag, Edit3, Search, X, Palette, DollarSign, CreditCard } from 'lucide-react';
 import { User, StoreItem } from '../types';
 import { StoreItemSkeleton } from './Skeleton';
 import { toast } from 'sonner';
@@ -234,43 +234,23 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-black text-white uppercase tracking-tight">Store Usage Fee</h2>
-              <p className="text-[#967bb6] uppercase text-[9px] tracking-widest font-black">Monthly Store Usage Fee Plan</p>
+              <p className="text-[#967bb6] uppercase text-[9px] tracking-widest font-black">One-Time Store Activation</p>
             </div>
           </div>
           <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-4 py-2 rounded-2xl">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">ACTIVE & BILLED</span>
+            <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">ACTIVE & PAID</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8 pt-6 border-t border-white/5 text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 pt-6 border-t border-white/5 text-left">
           <div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Billing Amount</span>
-            <span className="text-lg font-black text-white font-mono">$15.00 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">/ month</span></span>
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Fee Type</span>
+            <span className="text-md font-black text-white uppercase tracking-wider">One-Time Store Use Fee</span>
           </div>
           <div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Billing Interval</span>
-            <span className="text-sm font-black text-white uppercase tracking-wider">Subscription Billed (Stripe)</span>
-          </div>
-          <div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Testing & Simulation</span>
-            <button 
-              onClick={async () => {
-                const confirmed = window.confirm(
-                  "Would you like to simulate a subscription lapse (force reblock)?\n\nThis will instantly lock your store and prompt you to pay the $15.00 monthly fee to resume access."
-                );
-                if (confirmed && onUpdateUser) {
-                  const toastId = toast.loading("Processing subscription lapse simulation...");
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  await onUpdateUser({ isStoreActive: false });
-                  toast.success("Subscription has lapsed! Access blocked.", { id: toastId });
-                }
-              }}
-              className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-500 font-bold uppercase text-[9px] tracking-wider py-2.5 px-4 rounded-xl transition-all active:scale-95 text-center flex items-center justify-center gap-2"
-            >
-              <RefreshCw size={12} />
-              <span>Force Reblock (Lapse Sub)</span>
-            </button>
+            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest block mb-1">Amount Paid</span>
+            <span className="text-lg font-black text-white font-mono">$20.00 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">USD</span></span>
           </div>
         </div>
       </div>

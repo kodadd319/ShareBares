@@ -37,17 +37,17 @@ const StoreActivationGate: React.FC<StoreActivationGateProps> = ({ user, onActiv
           🔐 STORE ACCESS BLOCKED
         </div>
         <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed">
-          Access to Store Management is blocked until the monthly store usage fee subscription of $15.00 is active.
+          Access to Store Management is blocked until the one-time store use fee of $20.00 is active.
         </p>
       </div>
 
       <PaymentGate 
-        title="Store Usage Fee"
-        description="Active Monthly Subscription Required"
-        amount={15}
+        title="Store Use Fee"
+        description="One-Time Activation Fee Required"
+        amount={20}
         paymentLink={STORE_ACTIVATION_LINK}
         onSuccess={handleSuccess}
-        isSubscription={true}
+        isSubscription={false}
       />
     </div>
   );

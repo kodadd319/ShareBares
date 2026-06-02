@@ -14,6 +14,7 @@ interface HomePageProps {
   comments: AppComment[];
   searchQuery: string;
   isLoading?: boolean;
+  dailyJoke: string;
   onSelectUser: (userId: string) => void;
   onLikePost?: (post: Post) => void;
   onCommentPost?: (post: Post, commenterId: string, text: string) => void;
@@ -33,6 +34,7 @@ const HomePage: React.FC<HomePageProps> = ({
   comments,
   searchQuery, 
   isLoading,
+  dailyJoke,
   onSelectUser, 
   onLikePost,
   onCommentPost,
@@ -90,12 +92,37 @@ const HomePage: React.FC<HomePageProps> = ({
             <p className="text-slate-400 max-w-md text-sm leading-relaxed mb-6">
               Check out what's happening in your network. New exclusive content from your favorite creators is waiting.
             </p>
-            <button 
-              onClick={onCreatePost}
-              className="px-6 py-3 bg-[#967bb6] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-[#967bb6]/20 hover:scale-105 transition-all chrome-border"
-            >
-              Create New Post
-            </button>
+            {/* Bare Bear's Daily Joke Box */}
+            <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 p-4 bg-gradient-to-r from-purple-950/30 via-black/45 to-slate-900/30 rounded-2xl border border-[#967bb6]/25 shadow-xl backdrop-blur-md">
+              <div className="flex-shrink-0 flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-full bg-gradient-to-b from-[#967bb6]/30 to-[#967bb6]/5 p-0.5 border border-[#967bb6]/30 shadow-lg shrink-0">
+                  <img
+                    src="/logo.png"
+                    alt="Bare Bear Mascot"
+                    className="w-full h-full object-cover rounded-full"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/logo.png';
+                    }}
+                  />
+                  <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-pink-500 text-[8px] font-black items-center justify-center text-white border border-white/25">18+</span>
+                  </span>
+                </div>
+                <div className="text-left sm:hidden">
+                  <span className="text-[10px] font-black uppercase text-pink-400 tracking-[0.2em]">Bare Bear</span>
+                </div>
+              </div>
+              <div className="flex-grow text-center sm:text-left space-y-1">
+                <div className="hidden sm:block">
+                  <span className="text-[9px] font-black uppercase text-pink-400 tracking-[0.2em]">Bare Bear Says:</span>
+                </div>
+                <p className="text-slate-100 font-medium italic text-xs sm:text-sm leading-relaxed tracking-wide">
+                  "{dailyJoke}"
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

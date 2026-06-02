@@ -1656,6 +1656,68 @@ const AppContent: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [stableListings, setStableListings] = useState<StableListing[]>([]);
   const [comments, setComments] = useState<AppComment[]>([]);
+  
+  const [dailyJoke, setDailyJoke] = useState<string>('Loading today\'s naughty joke from Bare Bear... 🐻🔞');
+
+  const ensureDailyJoke = async () => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0]; // e.g. "2026-06-02"
+      const jokeRef = doc(db, 'system_config', 'daily_joke');
+      const docSnap = await getDoc(jokeRef);
+      
+      let jokeText = '';
+      if (docSnap.exists() && docSnap.data().date === todayStr) {
+        jokeText = docSnap.data().joke;
+        console.log("Loaded cached daily joke from Firestore:", jokeText);
+      } else {
+        console.log("Generating fresh daily joke...");
+        if (ai) {
+          try {
+            const response = await ai.models.generateContent({
+              model: "gemini-3.5-flash",
+              contents: "Write a brand-new, extremely funny, dirty, edgy sex joke or pickup line. Keep it short, spicy, naughty and creative. Do not put surrounding quotes.",
+            });
+            jokeText = (response.text || '').trim().replace(/^"/, '').replace(/"$/, '');
+          } catch (err) {
+            console.error("Gemini failed to generate daily joke, using fallback", err);
+          }
+        }
+        
+        const fallbacks = [
+          "Why is sex like a game of bridge? If you don't have a good partner, you'd better have a good hand! 😜🐾",
+          "What did the left butt cheek say to the right butt cheek? 'Between you and me, something smells!' 🐻💨",
+          "What's the difference between hungry and horny? Where you put the cucumber! 🥒👅",
+          "Why do we call them 'PMS' symptoms? Because 'Mad Cow Disease' was already taken! My bad! 😉🐂",
+          "What do a roller coaster and a good friend with benefits have in common? They both make you scream, and it’s always better when you go down at least once! 🎢💦",
+          "Why did the bear go to the party in his birthday suit? Because he wanted to bare it all! 🐻🎉",
+          "What's the difference between a G-spot and a golf ball? A guy will actually spend 20 minutes looking for a golf ball! ⛳️🙈",
+          "What is the definition of making love? The most fun you can have without laughing! 😂👅"
+        ];
+        
+        if (!jokeText) {
+          jokeText = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+        }
+        
+        await setDoc(jokeRef, {
+          date: todayStr,
+          joke: jokeText
+        }, { merge: true });
+        console.log("Saved new daily joke to Firestore:", jokeText);
+      }
+      
+      setDailyJoke(jokeText);
+    } catch (error) {
+      console.error("Error ensuring daily joke:", error);
+      setDailyJoke("What's the difference between hungry and horny? Where you put the cucumber! 🥒👅");
+    }
+  };
+
+  useEffect(() => {
+    if (db) {
+      ensureDailyJoke();
+    }
+  }, [isLoggedIn]);
+
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostVisibility, setNewPostVisibility] = useState<PostVisibility>(PostVisibility.PUBLIC);
   const [newPostMedia, setNewPostMedia] = useState<File | null>(null);
@@ -4136,6 +4198,7 @@ const AppContent: React.FC = () => {
       comments={comments}
       searchQuery={searchQuery}
       isLoading={isDataLoading}
+      dailyJoke={dailyJoke}
       onSelectUser={navigateToProfile}
       onLikePost={handleLikePost}
       onCommentPost={handleCommentPost}
