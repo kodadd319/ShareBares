@@ -14,13 +14,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>ShareBares</title>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5765882849864509" crossorigin="anonymous"></script>
     <script>
         window.global = window;
         window.process = { env: {} };
         
+        // Dynamically load third-party scripts only when NOT in an iframe to prevent sandbox policy crashes
+        if (window.self === window.top) {
+            // Load Google AdSense
+            const adsenseScript = document.createElement('script');
+            adsenseScript.async = true;
+            adsenseScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5765882849864509";
+            adsenseScript.crossOrigin = "anonymous";
+            document.head.appendChild(adsenseScript);
+
+            // Load CrakPopIn affiliate script
+            const popinScript = document.createElement('script');
+            popinScript.src = "https://crxcr2.com/popin/latest/affstitial-min.js";
+            document.head.appendChild(popinScript);
+        } else {
+            console.log("Iframe preview detected: Skipping third-party advertiser plugins to avoid security sandbox exceptions.");
+        }
+
         // Register Service Worker
-        if ('serviceWorker' in navigator) {
+        if ('serviceWorker' in navigator && window.self === window.top) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(reg => console.log('SW registered!', reg))
@@ -29,38 +45,39 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;700&family=Anton&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Press+Start+2P&family=Orbitron:wght@400;700&family=Permanent+Marker&display=swap" rel="stylesheet">
-    <script src="https://crxcr2.com/popin/latest/affstitial-min.js"></script>
     <script>
-    var crakPopInParamsIframe = {
-      url: 'https://t.crdtg2.com/408699/4299/0?bo=2753,2754,2755,2756&source=Sharebares&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0016',
-      decryptUrl: false,
-      contentUrl: 'https://adultfriendfinder.com/www/guest/?aff_id=1&transaction_id=postitial#/',
-      decryptContentUrl: false,
-      contentType: 'iframe',
-      width: '85%',
-      height: '85%',
-      timeout: false,
-      delayClose: 0,
-      clickStart: false,
-      closeIntent: false,
-      postitialBehavior: true,
-      closeButtonColor: '#000',
-      closeCrossColor: '#fff',
-      shadow: true,
-      shadowColor: '#000',
-      shadowOpacity: '.5',
-      shadeColor: '#111',
-      shadeOpacity: '0',
-      border: '1px',
-      borderColor: '#000',
-      borderRadius: '0px',
-      leadOut: true,
-      animation: 'slide',
-      direction: 'up',
-      verticalPosition: 'center',
-      horizontalPosition: 'center',
-      expireDays: 0.01
-    };
+    if (window.self === window.top) {
+        window.crakPopInParamsIframe = {
+          url: 'https://t.crdtg2.com/408699/4299/0?bo=2753,2754,2755,2756&source=Sharebares&po=6456&aff_sub5=SF_006OG000004lmDN&aff_sub4=AT_0016',
+          decryptUrl: false,
+          contentUrl: 'https://adultfriendfinder.com/www/guest/?aff_id=1&transaction_id=postitial#/',
+          decryptContentUrl: false,
+          contentType: 'iframe',
+          width: '85%',
+          height: '85%',
+          timeout: false,
+          delayClose: 0,
+          clickStart: false,
+          closeIntent: false,
+          postitialBehavior: true,
+          closeButtonColor: '#000',
+          closeCrossColor: '#fff',
+          shadow: true,
+          shadowColor: '#000',
+          shadowOpacity: '.5',
+          shadeColor: '#111',
+          shadeOpacity: '0',
+          border: '1px',
+          borderColor: '#000',
+          borderRadius: '0px',
+          leadOut: true,
+          animation: 'slide',
+          direction: 'up',
+          verticalPosition: 'center',
+          horizontalPosition: 'center',
+          expireDays: 0.01
+        };
+    }
     </script>
 </head>
 <body>

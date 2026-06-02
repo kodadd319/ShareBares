@@ -523,8 +523,8 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  // Ensure uploads directory exists
-  const uploadsDir = path.join(process.cwd(), "uploads");
+  // Ensure uploads directory exists (use temporal directory outside workspace to avoid dev server reload / crash)
+  const uploadsDir = "/tmp/sharebares_uploads";
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -661,7 +661,7 @@ async function startServer() {
   });
 
   // Serve the uploads directory statically
-  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+  app.use("/uploads", express.static("/tmp/sharebares_uploads"));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

@@ -2,6 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { Lock, CreditCard, ShieldCheck, ArrowLeft, Info, ExternalLink, CheckCircle, HelpCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Safe Storage Helpers to prevent SecurityError exceptions inside sandboxed iframe previews
+const createInMemoryStorage = () => {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        return key in store ? store[key] : null;
+      } catch {
+        return null;
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        store[key] = String(value);
+      } catch {}
+    },
+    removeItem: (key: string): void => {
+      try {
+        delete store[key];
+      } catch {}
+    },
+    clear: (): void => {
+      try {
+        for (const k in store) {
+          delete store[k];
+        }
+      } catch {}
+    },
+    length: 0,
+    key: (index: number): string | null => null
+  };
+};
+
+let safeLocalStorage: Storage;
+
+try {
+  const testKey = '__storage_test__';
+  window.localStorage.setItem(testKey, testKey);
+  window.localStorage.removeItem(testKey);
+  safeLocalStorage = window.localStorage;
+} catch (e) {
+  console.warn("localStorage is not accessible in this context. Using custom in-memory fallback.");
+  safeLocalStorage = createInMemoryStorage() as unknown as Storage;
+}
+
 interface StripeCheckoutProps {
   itemId: string;
   price: number;
@@ -45,12 +90,12 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
   const stripePaymentLink = getStripeLink();
 
-  // Save pending purchase in localStorage on click
+  // Save pending purchase in safeLocalStorage on click
   const handleOpenStripe = () => {
     try {
-      localStorage.setItem('pending_stripe_item_id', itemId);
-      localStorage.setItem('pending_stripe_price', price.toString());
-      localStorage.setItem('pending_stripe_title', title);
+      safeLocalStorage.setItem('pending_stripe_item_id', itemId);
+      safeLocalStorage.setItem('pending_stripe_price', price.toString());
+      safeLocalStorage.setItem('pending_stripe_title', title);
       setPaymentClicked(true);
       toast.success('Official Stripe Checkout screen opened! Complete your payment there.', { duration: 5000 });
     } catch (e) {
@@ -71,9 +116,9 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
       setTimeout(() => {
         setIsProcessing(false);
         // Clear local storage indicators
-        localStorage.removeItem('pending_stripe_item_id');
-        localStorage.removeItem('pending_stripe_price');
-        localStorage.removeItem('pending_stripe_title');
+        safeLocalStorage.removeItem('pending_stripe_item_id');
+        safeLocalStorage.removeItem('pending_stripe_price');
+        safeLocalStorage.removeItem('pending_stripe_title');
 
         // Redirect back using the verified callback contract to finalize state
         const successUrl = `${window.location.origin}${window.location.pathname}?payment_status=success&item_id=${itemId}&price=${price}&txn_ref=ch_stripe_p_${Date.now()}`;
@@ -84,9 +129,9 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
 
   const handleCancel = () => {
     // Remove local storage indicators
-    localStorage.removeItem('pending_stripe_item_id');
-    localStorage.removeItem('pending_stripe_price');
-    localStorage.removeItem('pending_stripe_title');
+    safeLocalStorage.removeItem('pending_stripe_item_id');
+    safeLocalStorage.removeItem('pending_stripe_price');
+    safeLocalStorage.removeItem('pending_stripe_title');
     
     // Redirect back with cancelled payment status
     const cancelUrl = `${window.location.origin}${window.location.pathname}?payment_status=cancel&item_id=${itemId}`;
@@ -96,7 +141,7 @@ const StripeCheckout: React.FC<StripeCheckoutProps> = ({
   // Automated returning focus event to check on transaction status
   useEffect(() => {
     const handleWindowFocus = () => {
-      const pendingId = localStorage.getItem('pending_stripe_item_id');
+      const pendingId = safeLocalStorage.getItem('pending_stripe_item_id');
       if (pendingId === itemId && paymentClicked && !isProcessing) {
         // Automatically check/notify that payment is ready for authorization
         toast('Welcome back! If you completed the Stripe payment, verify below to unlock content inside your Vault.', {

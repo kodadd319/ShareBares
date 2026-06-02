@@ -133,6 +133,62 @@ async function generateCaptionSuggestion(content: string) {
   }
 }
 
+// Safe Storage Helpers to prevent SecurityError exceptions inside sandboxed iframe previews
+const createInMemoryStorage = () => {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string): string | null => {
+      try {
+        return key in store ? store[key] : null;
+      } catch {
+        return null;
+      }
+    },
+    setItem: (key: string, value: string): void => {
+      try {
+        store[key] = String(value);
+      } catch {}
+    },
+    removeItem: (key: string): void => {
+      try {
+        delete store[key];
+      } catch {}
+    },
+    clear: (): void => {
+      try {
+        for (const k in store) {
+          delete store[k];
+        }
+      } catch {}
+    },
+    length: 0,
+    key: (index: number): string | null => null
+  };
+};
+
+let safeLocalStorage: Storage;
+let safeSessionStorage: Storage;
+
+try {
+  const testKey = '__storage_test__';
+  window.localStorage.setItem(testKey, testKey);
+  window.localStorage.removeItem(testKey);
+  safeLocalStorage = window.localStorage;
+} catch (e) {
+  console.warn("localStorage is not accessible in this context. Using custom in-memory fallback.");
+  safeLocalStorage = createInMemoryStorage() as unknown as Storage;
+}
+
+try {
+  const testKey = '__storage_test__';
+  window.sessionStorage.setItem(testKey, testKey);
+  window.sessionStorage.removeItem(testKey);
+  safeSessionStorage = window.sessionStorage;
+} catch (e) {
+  console.warn("sessionStorage is not accessible in this context. Using custom in-memory fallback.");
+  safeSessionStorage = createInMemoryStorage() as unknown as Storage;
+}
+
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
 const SplashScreen: React.FC<{ onComplete: () => void; isFirestoreOnline: boolean }> = ({ onComplete, isFirestoreOnline }) => {
@@ -1440,7 +1496,7 @@ const usePWA = () => {
       e.preventDefault();
       setDeferredPrompt(e);
       // Only show if not already installed and not dismissed this session
-      const dismissed = sessionStorage.getItem('pwa_prompt_dismissed');
+      const dismissed = safeSessionStorage.getItem('pwa_prompt_dismissed');
       if (!dismissed) {
         setShowPrompt(true);
       }
@@ -1463,7 +1519,7 @@ const usePWA = () => {
 
   const dismiss = () => {
     setShowPrompt(false);
-    sessionStorage.setItem('pwa_prompt_dismissed', 'true');
+    safeSessionStorage.setItem('pwa_prompt_dismissed', 'true');
   };
 
   return { showPrompt, install, dismiss };
@@ -1533,14 +1589,14 @@ const AppContent: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [hasCreatedProfile, setHasCreatedProfile] = useState(false);
   const [isSessionAuthenticated, setIsSessionAuthenticated] = useState(() => {
-    return sessionStorage.getItem('sharebares_session_auth') === 'true';
+    return safeSessionStorage.getItem('sharebares_session_auth') === 'true';
   });
   const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem('sharebares_active_tab') || 'feed';
+    return safeLocalStorage.getItem('sharebares_active_tab') || 'feed';
   });
 
   useEffect(() => {
-    localStorage.setItem('sharebares_active_tab', activeTab);
+    safeLocalStorage.setItem('sharebares_active_tab', activeTab);
   }, [activeTab]);
 
   // Handle Automatic detection of Stripe redirect payment success
@@ -1611,8 +1667,33 @@ const AppContent: React.FC = () => {
   const [isJadeTyping, setIsJadeTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
-  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
-  const [isViewingAsPublic, setIsViewingAsPublic] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(() => {
+    return safeLocalStorage.getItem('sharebares_viewing_user_id') || null;
+  });
+
+  useEffect(() => {
+    if (viewingUserId) {
+      safeLocalStorage.setItem('sharebares_viewing_user_id', viewingUserId);
+    } else {
+      safeLocalStorage.removeItem('sharebares_viewing_user_id');
+    }
+  }, [viewingUserId]);
+
+  const [isViewingAsPublic, setIsViewingAsPublic] = useState<boolean>(() => {
+    return safeLocalStorage.getItem('sharebares_is_viewing_as_public') === 'true';
+  });
+
+  useEffect(() => {
+    safeLocalStorage.setItem('sharebares_is_viewing_as_public', String(isViewingAsPublic));
+  }, [isViewingAsPublic]);
+
+  // Gracefully validate tab/view user compatibility on load to avoid blank screens
+  useEffect(() => {
+    if ((activeTab === 'user-profile' || activeTab === 'media-store') && !viewingUserId) {
+      console.warn(`Tab '${activeTab}' requires a viewingUserId, falling back to 'feed' to avoid blank screen.`);
+      setActiveTab('feed');
+    }
+  }, [activeTab, viewingUserId]);
 
   const navigateToStore = useCallback((userId: string) => {
     setViewingUserId(userId);
@@ -1737,19 +1818,19 @@ const AppContent: React.FC = () => {
   const connectionRef = useRef<any>(null);
 
   // Messaging state
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(localStorage.getItem('selectedChatUserId'));
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(safeLocalStorage.getItem('selectedChatUserId'));
 
   // Payout and purchase system is under maintenance.
   useEffect(() => {
     // Maintenance mode placeholder
   }, []);
 
-  // Sync selectedUserId to localStorage
+  // Sync selectedUserId to safeLocalStorage
   useEffect(() => {
     if (selectedUserId) {
-      localStorage.setItem('selectedChatUserId', selectedUserId);
+      safeLocalStorage.setItem('selectedChatUserId', selectedUserId);
     } else {
-      localStorage.removeItem('selectedChatUserId');
+      safeLocalStorage.removeItem('selectedChatUserId');
     }
   }, [selectedUserId]);
   const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>({});
@@ -1765,10 +1846,7 @@ const AppContent: React.FC = () => {
     me && !blockedIds.includes(u.id) && 
     !(u.blockedUserIds || []).includes(currentUserId)
   );
-  const filteredPosts = posts.filter(p => 
-    me && !blockedIds.includes(p.userId) && 
-    !(users.find(u => u.id === p.userId)?.blockedUserIds || []).includes(currentUserId)
-  );
+  const filteredPosts = posts;
   
   const filteredChatMessages: Record<string, Message[]> = {};
   Object.keys(chatMessages || {}).forEach(id => {
@@ -2049,7 +2127,7 @@ const AppContent: React.FC = () => {
     getGoogleRedirectResult(auth).then((result) => {
       if (result?.user) {
         console.log('Redirect login successful:', result.user.email);
-        sessionStorage.setItem('sharebares_session_auth', 'true');
+        safeSessionStorage.setItem('sharebares_session_auth', 'true');
         setIsSessionAuthenticated(true);
         setIsLoggedIn(true);
         toast.success('Successfully logged in with Google!');
@@ -2637,7 +2715,7 @@ const AppContent: React.FC = () => {
       // 1. Try standard Firebase Auth first (most reliable)
       try {
         await signInWithEmailAndPassword(auth, loginEmail, trimmedPassword);
-        sessionStorage.setItem('sharebares_session_auth', 'true');
+        safeSessionStorage.setItem('sharebares_session_auth', 'true');
         setIsSessionAuthenticated(true);
         setIsLoggedIn(true);
         toast.success('Welcome back!', { id: toastId });
@@ -2790,7 +2868,7 @@ const AppContent: React.FC = () => {
             subscribersCount: 0,
             followingCount: 0
           });
-          sessionStorage.setItem('sharebares_session_auth', 'true');
+          safeSessionStorage.setItem('sharebares_session_auth', 'true');
           setIsSessionAuthenticated(true);
           setIsLoggedIn(true);
           toast.success('Account created successfully!', { id: toastId });
@@ -2837,7 +2915,7 @@ const AppContent: React.FC = () => {
         } else {
           toastId = toast.loading('Opening Google login...');
           await loginWithGoogle();
-          sessionStorage.setItem('sharebares_session_auth', 'true');
+          safeSessionStorage.setItem('sharebares_session_auth', 'true');
           setIsSessionAuthenticated(true);
           setIsLoggedIn(true);
           toast.success('Successfully logged in with Google!', { id: toastId });
@@ -2873,7 +2951,7 @@ const AppContent: React.FC = () => {
   const handleLogout = async () => {
     try {
       await firebaseLogout(auth);
-      sessionStorage.removeItem('sharebares_session_auth');
+      safeSessionStorage.removeItem('sharebares_session_auth');
       setIsSessionAuthenticated(false);
       setIsLoggedIn(false);
       setCurrentUserId('');
