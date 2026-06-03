@@ -34,11 +34,9 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     title: '',
     description: ''
   });
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const thumbInputRef = useRef<HTMLInputElement>(null);
   
   // Video Duration States
   const [durationMin, setDurationMin] = useState<number>(0);
@@ -106,25 +104,12 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
     }
   };
 
-  const handleThumbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type.startsWith('image')) {
-        setThumbnailFile(file);
-      } else {
-        toast.error('Please select an image for the thumbnail.');
-      }
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || !details.title || uploadError) return;
 
     setIsUploading(true);
     
-    const allFiles = thumbnailFile ? [thumbnailFile, ...files] : files;
-
     const durationInSeconds = (durationMin * 60) + durationSec;
     let computedPrice = 0;
     if (type === 'video') {
@@ -146,10 +131,9 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
         type: type,
         videoDuration: type === 'video' ? durationInSeconds : undefined,
         price: computedPrice > 0 ? computedPrice : undefined
-      }, allFiles);
+      }, files);
 
       setFiles([]);
-      setThumbnailFile(null);
       setDetails({ title: '', description: '' });
       setDurationMin(0);
       setDurationSec(0);
@@ -294,7 +278,7 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                   </div>
 
                   {/* File Upload Area */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="w-full">
                     <div 
                       onClick={() => fileInputRef.current?.click()}
                       className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
@@ -318,22 +302,28 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                           <p className="text-white font-black uppercase tracking-widest text-sm mb-1">
                             {type === 'picture_pack' ? `${files.length} Photos Selected` : files[0].name}
                           </p>
-                          <p className="text-slate-500 text-[10px] uppercase font-bold">
+                          <p className="text-slate-500 text-[10px] uppercase font-bold mb-2">
                             {type === 'picture_pack' 
                               ? `${(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB Total`
                               : `${(files[0].size / (1024 * 1024)).toFixed(2)} MB`
                             } • Click to change
                           </p>
+                          <div className="px-3 py-1.5 bg-[#967bb6]/10 border border-[#967bb6]/20 rounded-xl text-[9px] font-black text-pink-400 uppercase tracking-wider">
+                            ✨ Still photo thumbnail will be automatically created from this file!
+                          </div>
                         </div>
                       ) : (
                         <>
                           <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                             {type === 'video' ? <Video size={32} className="text-slate-600 group-hover:text-[#967bb6]" /> : <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />}
                           </div>
-                          <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
+                          <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-1">
                             {type === 'video' ? 'Select Video File' : type === 'picture_pack' ? 'Select 5 Photos' : 'Select Media File'}
                           </p>
-                          <p className="text-slate-600 text-[10px] uppercase font-bold">Drag and drop or click to browse device</p>
+                          <p className="text-slate-600 text-[10px] uppercase font-bold mb-3">Drag and drop or click to browse device</p>
+                          <div className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-white/[0.01] border border-white/5 rounded-xl py-1.5 px-3">
+                            ✨ System will automatically generate a thumbnail still photo for each file after upload!
+                          </div>
                         </>
                       )}
 
@@ -342,47 +332,6 @@ const StoreManagementPage: React.FC<StoreManagementPageProps> = ({
                           <AlertCircle size={14} />
                           <span className="text-[10px] font-black uppercase tracking-widest">{uploadError}</span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Thumbnail Upload (Only for Video) */}
-                    <div 
-                      onClick={() => thumbInputRef.current?.click()}
-                      className={`relative h-64 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-8 text-center cursor-pointer group ${
-                        thumbnailFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#967bb6]/30'
-                      }`}
-                    >
-                      <input 
-                        type="file" 
-                        ref={thumbInputRef}
-                        onChange={handleThumbChange}
-                        accept="image/*"
-                        className="hidden"
-                      />
-                      
-                      {thumbnailFile ? (
-                        <div className="flex flex-col items-center animate-in zoom-in duration-300 w-full h-full">
-                          <div className="w-full h-full rounded-2xl overflow-hidden relative">
-                            <img 
-                              src={URL.createObjectURL(thumbnailFile)} 
-                              alt="Thumbnail" 
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <p className="text-white font-black uppercase tracking-widest text-xs">Change Thumbnail</p>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <ImageIcon size={32} className="text-slate-600 group-hover:text-[#967bb6]" />
-                          </div>
-                          <p className="text-slate-300 font-bold uppercase tracking-widest text-xs mb-2">
-                            Thumbnail Image {type === 'video' ? '(Required)' : '(Optional)'}
-                          </p>
-                          <p className="text-slate-600 text-[10px] uppercase font-bold">Show fans what's inside</p>
-                        </>
                       )}
                     </div>
                   </div>

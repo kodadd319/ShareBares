@@ -69,7 +69,7 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ user, onBack, onSubmit,
             🔐 THE STABLE CREATION BLOCKED
           </div>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-wide leading-relaxed">
-            Creating a listing in The Stable is blocked until the monthly Stable listing fee subscription of $15.00 is active.
+            Creating a listing in The Stable is blocked until the Stable listing one time fee of $15.00 is paid.
           </p>
         </div>
 
@@ -83,16 +83,16 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ user, onBack, onSubmit,
           </button>
           <PaymentGate 
             title="Stable Listing Fee"
-            description="Active Monthly Subscription Required"
+            description="One Time Fee Required"
             amount={15}
             paymentLink={STABLE_MEMBERSHIP_LINK}
             onSuccess={handlePaymentSuccess}
             features={[
-              'Unlimited listings for "escort services" in "the stable" per month.',
+              'Unlimited listings for "escort services" in "the stable".',
               '"Displayed to users in your area"',
               'Small fee for unlimited earning potential.'
             ]}
-            isSubscription={true}
+            isSubscription={false}
           />
         </div>
       </div>
@@ -163,46 +163,14 @@ const JoinStablePage: React.FC<JoinStablePageProps> = ({ user, onBack, onSubmit,
                 <CreditCard className="text-[#967bb6]" size={20} />
               </div>
               <div>
-                <h4 className="text-sm font-black text-white uppercase tracking-tight">The Stable Listing Subscription</h4>
-                <p className="text-slate-500 uppercase text-[9px] tracking-widest font-black">Active $15.00/Month Stripe Plan</p>
+                <h4 className="text-sm font-black text-white uppercase tracking-tight">The Stable Listing Fee</h4>
+                <p className="text-slate-500 uppercase text-[9px] tracking-widest font-black">One Time Fee of $15.00 Paid</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-2xl">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[9px] font-black uppercase text-emerald-400 tracking-wider">ACTIVE & BILLED</span>
+              <span className="text-[9px] font-black uppercase text-emerald-400 tracking-wider">ACTIVE & PAID</span>
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 pt-4 border-t border-white/5">
-            <p className="text-[9px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest">
-              Lapsed or canceled subscriptions instantly block directory access.
-            </p>
-            <button 
-              type="button"
-              onClick={async () => {
-                const confirmed = window.confirm(
-                  "Would you like to simulate a Stable subscription lapse (force reblock)?\n\nThis will instantly lock your listing ability and prompt you to pay the $15.00 monthly fee to resume access."
-                );
-                if (confirmed) {
-                  const toastId = toast.loading("Processing subscription lapse simulation...");
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  if (onUpdateUser) {
-                    await onUpdateUser({ isStableActive: false });
-                  } else {
-                     // fallback
-                     const userRef = doc(db, 'users', user.id);
-                     await setDoc(userRef, { isStableActive: false }, { merge: true });
-                     const profileRef = doc(db, 'profiles', user.id);
-                     await setDoc(profileRef, { isStableActive: false }, { merge: true });
-                  }
-                  toast.success("Subscription has lapsed! Access blocked.", { id: toastId });
-                }
-              }}
-              className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-[#ff4a4a] font-bold uppercase text-[8px] tracking-wider py-2 px-3 rounded-xl transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 self-start sm:self-auto"
-            >
-              <RefreshCw size={10} />
-              <span>Force Reblock (Lapse Sub)</span>
-            </button>
           </div>
         </div>
 

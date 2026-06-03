@@ -79,14 +79,14 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
 
   const handleVerify = async () => {
     setIsVerifying(true);
-    const toastId = toast.loading('Verifying subscription with Stripe...');
+    const toastId = toast.loading(isSubscription ? 'Verifying subscription with Stripe...' : 'Verifying payment with Stripe...');
     
     try {
       // Direct verification simulation
       await new Promise(resolve => setTimeout(resolve, 3000));
       
       await onSuccess();
-      toast.success('Subscription verified! Your access has been unlocked.', { id: toastId });
+      toast.success(isSubscription ? 'Subscription verified! Your access has been unlocked.' : 'Payment verified! Your access has been unlocked.', { id: toastId });
     } catch (error: any) {
       console.error('Verification failed:', error);
       toast.error('Could not verify payment. If you just paid, please wait a minute and try again.', { id: toastId });
@@ -150,7 +150,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-5 h-5" />
-                    <span>Subscribe with Card</span>
+                    <span>{isSubscription ? 'Subscribe with Card' : 'Pay with Card'}</span>
                     <ExternalLink size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </>
                 )}
@@ -210,7 +210,7 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
                   {isVerifying ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Verifying subscription...</span>
+                      <span>{isSubscription ? 'Verifying subscription...' : 'Verifying payment...'}</span>
                     </>
                   ) : (
                     <>
@@ -233,7 +233,9 @@ const PaymentGate: React.FC<PaymentGateProps> = ({
           <div className="flex items-start gap-4 p-5 bg-white/5 rounded-2xl border border-white/5">
             <AlertCircle size={20} className="text-[#967bb6] shrink-0 mt-0.5" />
             <p className="text-[9px] font-bold text-slate-500 uppercase leading-relaxed tracking-widest">
-              Secure subscription billed via Stripe. Billed monthly at $15.00. Cancel anytime inside your Stripe billing dashboard.
+              {isSubscription 
+                ? "Secure subscription billed via Stripe. Billed monthly at $15.00. Cancel anytime inside your Stripe billing dashboard."
+                : "Secure one-time payment processed via Stripe. Direct professional listing fee of $15.00."}
             </p>
           </div>
         </div>

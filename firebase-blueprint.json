@@ -127,6 +127,16 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "postId", "userId", "text", "createdAt"]
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Global system configuration keys, like daily joke info",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "joke": { "type": "string" }
+      },
+      "required": ["date", "joke"]
     }
   },
   "firestore": {
@@ -157,6 +167,10 @@
     "/comments/{commentId}": {
       "schema": "Comment",
       "description": "Post comments"
+    },
+    "/system_config/{configId}": {
+      "schema": "SystemConfig",
+      "description": "System configuration documents"
     },
     "/_connection_test_/{docId}": {
       "schema": "object",

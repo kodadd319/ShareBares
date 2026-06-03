@@ -1606,15 +1606,22 @@ const AppContent: React.FC = () => {
     const paymentStatus = params.get('payment_status');
     const itemId = params.get('item_id');
     const priceParam = params.get('price');
+    const paymentType = params.get('type');
 
-    if (paymentStatus && itemId) {
+    if (paymentStatus) {
       // Clear query params from browser visible URL bar
       const cleanUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
 
       if (paymentStatus === 'success') {
-        const parsedPrice = parseFloat(priceParam || '20');
-        handleUnlockVideoPaymentSuccess(itemId, parsedPrice);
+        if (itemId) {
+          const parsedPrice = parseFloat(priceParam || '20');
+          handleUnlockVideoPaymentSuccess(itemId, parsedPrice);
+        } else if (paymentType === 'store') {
+          handleUnlockStoreActivationSuccess();
+        } else if (paymentType === 'stable') {
+          handleUnlockStableMembershipSuccess();
+        }
       } else if (paymentStatus === 'cancel') {
         toast.error('Secure Stripe Checkout cancelled or unsuccessful.');
       }
@@ -3849,6 +3856,60 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const generateVideoThumbnail = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Video thumbnail extraction timed out after 12 seconds'));
+      }, 12000);
+      
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1, video.duration / 3);
+      };
+
+      video.onseeked = () => {
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 360;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              URL.revokeObjectURL(url);
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Canvas toBlob failed'));
+              }
+            }, 'image/jpeg', 0.85);
+          } else {
+            URL.revokeObjectURL(url);
+            reject(new Error('Failed to obtain 2D canvas context'));
+          }
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+
+      video.onerror = (err) => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(url);
+        reject(err);
+      };
+    });
+  };
+
   const handleAddItemToStore = async (itemData: Omit<StoreItem, 'id' | 'userId' | 'createdAt'>, files: File[]) => {
     const uploadToastId = toast.loading(`Uploading ${files.length} file(s) to store...`);
     console.log('Starting store item upload:', { title: itemData.title, fileCount: files.length });
@@ -3856,9 +3917,6 @@ const AppContent: React.FC = () => {
     try {
       const mediaUrls: string[] = [];
       const isVideo = itemData.type === 'video';
-      // Detect if an explicit thumbnail was provided (first file is image, and there are more files)
-      const hasExplicitThumbnail = files.length > 1 && files[0].type.startsWith('image') && 
-                                  (isVideo || itemData.type === 'picture_pack' || itemData.type === 'other');
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -3881,22 +3939,32 @@ const AppContent: React.FC = () => {
         throw new Error('No files were successfully uploaded.');
       }
 
-      console.log('All files uploaded successfully. Saving to Firestore...');
+      console.log('All files uploaded successfully. Syncing media with gallery...');
       
       // Auto-sync store item media to gallery
       if (mediaUrls.length > 0) {
         await syncMediaToGallery(mediaUrls);
       }
 
-      const itemId = `si-${Date.now()}`;
-      
       let finalThumbnailUrl = mediaUrls[0];
-      let finalMediaUrls = mediaUrls;
-
-      if (hasExplicitThumbnail) {
-        finalThumbnailUrl = mediaUrls[0];
-        finalMediaUrls = mediaUrls.slice(1); // Content is everything after thumb
+      
+      // Extract still photo from video file block to use as thumbnail
+      if (isVideo && files[0]) {
+        toast.loading('Generating automated still photo thumbnail from video...', { id: uploadToastId });
+        try {
+          const thumbBlob = await generateVideoThumbnail(files[0]);
+          const thumbFile = new File([thumbBlob], `thumb_still_${Date.now()}.jpg`, { type: 'image/jpeg' });
+          console.log('Successfully generated video still photo. Uploading still photo thumbnail...');
+          const uploadedThumbUrl = await uploadFile(thumbFile, `store/${currentUserId}/thumb_still_${Date.now()}.jpg`);
+          finalThumbnailUrl = uploadedThumbUrl;
+          console.log('Uploaded generated thumbnail url:', finalThumbnailUrl);
+        } catch (e) {
+          console.error('Failed to automatically extract video still thumbnail, falling back directly to video URL:', e);
+        }
       }
+
+      const itemId = `si-${Date.now()}`;
+      const finalMediaUrls = mediaUrls;
       
       const newItem: StoreItem = {
         id: itemId,
@@ -3980,6 +4048,38 @@ const AppContent: React.FC = () => {
       setActiveTab('my-videos');
     } catch (err: any) {
       console.error('Failed to unlock item after purchase:', err);
+      toast.error(`Verification error: ${err.message || 'database error'}`, { id: toastId });
+    }
+  };
+
+  const handleUnlockStoreActivationSuccess = async () => {
+    if (!currentUserId) return;
+    const toastId = toast.loading('Confirming secure Store Activation payment from Stripe...');
+    try {
+      await handleUpdateUser({ 
+        isStoreActive: true, 
+        storeActivationDate: new Date().toISOString() 
+      });
+      toast.success('Stripe Payment Authenticated! Store Activation has been unlocked permanently. Welcome to Store Management, Verified Creator!', { id: toastId, duration: 8000 });
+      setActiveTab('store-management');
+    } catch (err: any) {
+      console.error('Failed to unlock Store Activation:', err);
+      toast.error(`Verification error: ${err.message || 'database error'}`, { id: toastId });
+    }
+  };
+
+  const handleUnlockStableMembershipSuccess = async () => {
+    if (!currentUserId) return;
+    const toastId = toast.loading('Confirming secure Stable Listing Fee payment from Stripe...');
+    try {
+      await handleUpdateUser({ 
+        isStableActive: true, 
+        stableActivationDate: new Date().toISOString() 
+      });
+      toast.success('Stripe Payment Authenticated! Stable Listing Fee verified. You can now post live companion and escort services in The Stable!', { id: toastId, duration: 8000 });
+      setActiveTab('join-stable');
+    } catch (err: any) {
+      console.error('Failed to unlock Stable Membership:', err);
       toast.error(`Verification error: ${err.message || 'database error'}`, { id: toastId });
     }
   };

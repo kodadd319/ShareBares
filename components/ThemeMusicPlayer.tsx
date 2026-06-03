@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Music, Volume2, VolumeX, Play, Pause, Disc } from 'lucide-react';
 import { ProfileCustomization } from '../types';
-import { toast } from 'sonner';
 
 interface ThemeMusicPlayerProps {
   customization?: ProfileCustomization;
@@ -32,7 +31,7 @@ const ThemeMusicPlayer: React.FC<ThemeMusicPlayerProps> = ({ customization }) =>
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.5);
+  const [volume, setVolume] = useState(0.4);
   const [songName, setSongName] = useState('Theme Track');
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
@@ -59,39 +58,54 @@ const ThemeMusicPlayer: React.FC<ThemeMusicPlayerProps> = ({ customization }) =>
     }
   };
 
+  // Setup audio element properties on url change and listen for unblocking gestures
   useEffect(() => {
     if (!audioUrl) return;
 
-    // Reset player state whenever track URL changes
     setIsPlaying(false);
     
-    const audio = new Audio(audioUrl);
-    audio.loop = true;
-    audio.volume = volume;
-    audio.muted = isMuted;
-    audioRef.current = audio;
-
-    // Attempt autoplay
-    playAudio();
-
-    // Register a global click listener on the entire document
-    // If browser auto-play was blocked, any click on the page will unblock and play the music
-    const handleGlobalClickForAutoplay = () => {
-      if (audioRef.current && audioRef.current.paused) {
+    // Slight delay to ensure DOM is ready and src attribute is bound
+    const playTimer = setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.volume = volume;
+        audioRef.current.muted = isMuted;
         playAudio();
       }
-      // Remove listener once we successfully play or make initial attempt
-      document.removeEventListener('click', handleGlobalClickForAutoplay);
+    }, 100);
+
+    // Keep active listeners to unblock on any real user gestural interaction with the app
+    const handleGestureUnblock = async () => {
+      if (audioRef.current) {
+        try {
+          if (audioRef.current.paused || !isPlaying) {
+            await audioRef.current.play();
+            setIsPlaying(true);
+            setAutoplayBlocked(false);
+          }
+          // Remove the event listeners only upon successful play activation
+          removeListeners();
+        } catch (e) {
+          console.warn('Additional unblock attempt failed:', e);
+          setAutoplayBlocked(true);
+        }
+      }
     };
 
-    document.addEventListener('click', handleGlobalClickForAutoplay);
+    const removeListeners = () => {
+      document.removeEventListener('click', handleGestureUnblock);
+      document.removeEventListener('keydown', handleGestureUnblock);
+      document.removeEventListener('touchstart', handleGestureUnblock);
+      window.removeEventListener('focus', handleGestureUnblock);
+    };
+
+    document.addEventListener('click', handleGestureUnblock);
+    document.addEventListener('keydown', handleGestureUnblock);
+    document.addEventListener('touchstart', handleGestureUnblock);
+    window.addEventListener('focus', handleGestureUnblock);
 
     return () => {
-      document.removeEventListener('click', handleGlobalClickForAutoplay);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      clearTimeout(playTimer);
+      removeListeners();
     };
   }, [audioUrl]);
 
@@ -131,15 +145,23 @@ const ThemeMusicPlayer: React.FC<ThemeMusicPlayerProps> = ({ customization }) =>
 
   return (
     <div id="theme-music-widget" className="fixed bottom-6 right-6 z-[120] animate-in fade-in slide-in-from-bottom-12 duration-500">
+      {/* Underlying standard audio player node in virtual DOM */}
+      <audio 
+        ref={audioRef} 
+        src={audioUrl} 
+        loop 
+        autoPlay 
+        playsInline 
+      />
       
       {/* Autoplay block alert - micro floating prompt */}
       {autoplayBlocked && (
         <div 
           onClick={togglePlay}
-          className="absolute bottom-full right-0 mb-3 bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider shadow-2xl flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 whitespace-nowrap animate-bounce"
+          className="absolute bottom-full right-0 mb-3 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-black px-4 py-2.5 rounded-2xl text-[10px] uppercase tracking-wider shadow-2xl flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95 whitespace-nowrap animate-bounce border border-white/20"
         >
-          <Music size={12} className="animate-spin" />
-          <span>Tap to Unblock Profile Theme Song</span>
+          <Music size={12} className="animate-spin-slow" />
+          <span>Tap to Unblock Music 🎵</span>
         </div>
       )}
 
@@ -152,7 +174,7 @@ const ThemeMusicPlayer: React.FC<ThemeMusicPlayerProps> = ({ customization }) =>
         <div className="flex items-center gap-3">
           <div className="relative shrink-0 w-10 h-10 bg-white/5 rounded-full flex items-center justify-center overflow-hidden border border-white/10">
             <Disc 
-              className={`text-slate-400 transition-transform ${isPlaying ? 'animate-spin' : ''}`} 
+              className={`text-slate-400 transition-transform ${isPlaying ? 'animate-spin-slow' : ''}`} 
               style={{ animationDuration: '6s', color: accentColor }} 
               size={20} 
             />
@@ -217,6 +239,13 @@ const ThemeMusicPlayer: React.FC<ThemeMusicPlayerProps> = ({ customization }) =>
         @keyframes pulseFast {
           0%, 100% { transform: scaleY(1); opacity: 0.6; }
           50% { transform: scaleY(1.8); opacity: 1; }
+        }
+        @keyframes spinSlow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spinSlow 8s linear infinite;
         }
         .animate-pulse-slow {
           animation: pulseSlow 1.2s ease-in-out infinite;

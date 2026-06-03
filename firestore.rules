@@ -68,6 +68,13 @@ service cloud.firestore {
              data.keys().size() <= 15;
     }
 
+    function isValidSystemConfig(data) {
+      return data.keys().hasAll(['date', 'joke']) &&
+             data.date is string && data.date.size() <= 64 &&
+             data.joke is string && data.joke.size() <= 25000 &&
+             data.keys().size() <= 5;
+    }
+
     // -----------------------------------------------------------------
     // 3. COLLECTION RULES
     // -----------------------------------------------------------------
@@ -168,6 +175,12 @@ service cloud.firestore {
         isAdmin()
       );
       allow update, delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // SYSTEM CONFIG
+    match /system_config/{configId} {
+      allow read: if true;
+      allow write: if true && isValidSystemConfig(incoming());
     }
 
     // CONNECTION TEST
